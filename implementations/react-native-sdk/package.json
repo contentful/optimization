@@ -35,10 +35,9 @@
     "@react-navigation/native-stack": "7.13.0",
     "contentful": "11.10.3",
     "react": "19.2.3",
-    "react-native": "0.84.0",
-    "react-native-safe-area-context": "5.6.2",
-    "react-native-screens": "4.23.0",
-    "hermes-compiler": "250829098.0.19"
+    "react-native": "0.87.1",
+    "react-native-safe-area-context": "5.10.1",
+    "react-native-screens": "4.27.0"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
@@ -52,8 +51,9 @@
     "@react-native-community/cli-platform-ios": "20.2.0",
     "@react-native/babel-preset": "0.87.1",
     "@react-native/codegen": "0.87.1",
-    "@react-native/gradle-plugin": "0.84.0",
-    "@react-native/metro-config": "0.84.0",
+    "@react-native/gradle-plugin": "0.87.1",
+    "@react-native/jest-preset": "0.87.1",
+    "@react-native/metro-config": "0.87.1",
     "@testing-library/react-native": "13.3.3",
     "@types/react": "19.2.18",
     "@types/react-test-renderer": "19.3.0",

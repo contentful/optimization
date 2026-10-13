@@ -36,5 +36,14 @@ target 'OptimizationImplementationApp' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Align AsyncStorage's iOS 13 resource bundle with the app minimum for Xcode 27.
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'AsyncStorage-AsyncStorage_resources'
+
+      target.build_configurations.each do |configuration|
+        configuration.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
+      end
+    end
   end
 end

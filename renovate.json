@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["local>contentful/renovate-config"],
-  "enabledManagers": ["github-actions", "npm", "gradle", "bundler"],
+  "enabledManagers": ["github-actions", "npm", "gradle", "gradle-wrapper", "bundler"],
   "includePaths": [
     ".github/workflows/**",
     "package.json",
@@ -31,20 +31,46 @@
       "schedule": ["* 8-11 * * 2"]
     },
     {
-      "description": "Keep React runtime versions aligned with the renderer embedded by React Native.",
-      "matchFileNames": ["implementations/react-native-sdk/package.json"],
-      "matchPackageNames": ["react", "react-test-renderer"],
-      "enabled": false
-    },
-    {
       "description": "Run Gradle dependency updates during the first-Monday morning maintenance window.",
-      "matchManagers": ["gradle"],
+      "matchManagers": ["gradle", "gradle-wrapper"],
       "schedule": ["* 9-12 1-7 * 1"]
     },
     {
       "description": "Run Bundler dependency updates during the first-Monday late-morning maintenance window.",
       "matchManagers": ["bundler"],
       "schedule": ["* 10-13 1-7 * 1"]
+    },
+    {
+      "description": "Review React Native runtime and native build-tool upgrades together.",
+      "matchFileNames": [
+        "implementations/react-native-sdk/package.json",
+        "implementations/react-native-sdk/android/build.gradle",
+        "implementations/react-native-sdk/android/gradle/wrapper/gradle-wrapper.properties"
+      ],
+      "matchPackageNames": [
+        "react",
+        "react-native",
+        "react-test-renderer",
+        "@types/react",
+        "@types/react-test-renderer",
+        "@react-native-community/cli",
+        "@react-native-community/cli-platform-android",
+        "@react-native-community/cli-platform-ios",
+        "@react-native/babel-preset",
+        "@react-native/codegen",
+        "@react-native/gradle-plugin",
+        "@react-native/jest-preset",
+        "@react-native/metro-config",
+        "hermes-compiler",
+        "gradle",
+        "com.android.tools.build:gradle",
+        "org.jetbrains.kotlin:kotlin-gradle-plugin"
+      ],
+      "groupName": "React Native runtime and build tools",
+      "schedule": ["* 9-12 1-7 * 1"],
+      "separateMajorMinor": false,
+      "separateMinorPatch": false,
+      "automerge": false
     }
   ]
 }

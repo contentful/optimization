@@ -39,12 +39,12 @@ for the entry contract.
 
 ## Prerequisites
 
-- Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
+- Node.js 24.15.0, matching the repository's `.nvmrc`
 - pnpm
-- Android SDK, `adb`, and at least one configured Android emulator for Android Detox flows. The
+- JDK 17, Android SDK platform/build tools 37, `adb`, and at least one configured Android emulator for Android Detox flows. The
   one-shot runner and Detox can launch a configured emulator; it does not need to be running before
   you start the flow.
-- Xcode with an iOS Simulator available for iOS Detox flows
+- Xcode 26 or later, CocoaPods, and an iOS Simulator available for iOS Detox flows
 
 ## Setup
 
@@ -196,6 +196,32 @@ Local Android E2E logging is intentionally minimal by default.
    - `implementations/react-native-sdk/logs/metro.log`
    - `implementations/react-native-sdk/logs/device.log`
    - `implementations/react-native-sdk/logs/test-results.log`
+
+## Upgrading React Native
+
+Treat React Native and its associated tooling as one upgrade. Renovate groups the implementation's
+React Native dependencies and native build tools into a reviewed PR with automerge disabled. The
+group collects available updates; it does not select compatible versions or migrate native project
+files.
+
+1. Compare the installed and target React Native releases with the
+   [Upgrade Helper](https://react-native-community.github.io/upgrade-helper/) and the target release's
+   [community template](https://github.com/react-native-community/template). Update the runtime,
+   Babel preset, Codegen, Gradle plugin, Metro config, and Jest preset together. Select compatible
+   React, test renderer, CLI, and native library versions from the target release's requirements.
+2. Apply the required Android and iOS project changes, including Gradle, Kotlin, Android SDK, and
+   Xcode requirements. Preserve the implementation's SDK integration and Detox configuration.
+3. Install through `pnpm implementation:run -- react-native-sdk implementation:install`. The
+   implementation uses the repository's generated SDK tarballs and does not track a pnpm lockfile.
+   Hermes compiler selection belongs to React Native; the implementation hoists that dependency for
+   the Gradle plugin instead of pinning it independently.
+4. Refresh iOS pods from `implementations/react-native-sdk` with `bundle install` and
+   `bundle exec pod update --no-repo-update --project-directory=ios`. Review the generated
+   `ios/Podfile.lock` for changes outside the upgrade and include it with the native project changes.
+5. Run the implementation's lint and typecheck commands, Android and iOS release builds, and the
+   maintained Detox flows before merging. Use `test:e2e:android:build:release` for Android and the
+   `ios.sim.release` Detox configuration for iOS. Verify navigation, tracking, offline behavior, and
+   the preview panel; a successful dependency install alone does not establish compatibility.
 
 ## Related
 
