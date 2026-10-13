@@ -401,7 +401,9 @@ fallback)`'s own fail-soft `catch` only fires on a cyclic self-referential map o
   (`ProcessLifecycleOwner` observer) calls `flush()` on `onStop` (app moving to background) for a
   best-effort drain. Both are created after bridge init. Queues are in-memory only (no durable outbox),
   capped at 100 offline Experience events by default (`OFFLINE_QUEUE_MAX_EVENTS`, tunable via
-  `QueuePolicy.offlineMaxEvents`); they do not survive process death. source: extern:NetworkMonitor + AppLifecycleHandler background flush — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/NetworkMonitor.kt#NetworkMonitor; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/AppLifecycleHandler.kt#AppLifecycleHandler; core-sdk#CoreStateful.ts#QueuePolicy
+  `QueuePolicy.offlineMaxEvents`); they do not survive process death. At capacity, incoming
+  Experience events are rejected and accepted events retain FIFO order. The deprecated
+  `onOfflineDrop` callback is inactive. source: extern:NetworkMonitor + AppLifecycleHandler background flush — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/NetworkMonitor.kt#NetworkMonitor; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/AppLifecycleHandler.kt#AppLifecycleHandler; core-sdk#CoreStateful.ts#QueuePolicy; core-sdk#queues/ExperienceQueue.ts#send
 - Android emulator localhost: the SDK has **no** localhost rewrite (contrast the React Native SDK,
   whose reference app rewrites `localhost`→`10.0.2.2` at runtime). The Android reference app instead
   hardcodes the emulator's stable host-loopback alias `http://10.0.2.2:8000` as its base host, avoiding

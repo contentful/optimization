@@ -347,12 +347,11 @@ component-local UI state, keep using hooks and React effects under the provider.
 
 ### Work before the initial page decision
 
-Use `beforeInitialPage` on an owned `OptimizationRoot` when browser identity or custom Experience
-event work must finish before that root's initial page decision. The initial page decision is the
-root's one choice to send the first browser page event or skip it because an applied handoff already
-owns that route. After the root's live owned runtime exists, the callback receives receiver-safe
-`identify`, `screen`, and `track` methods, so you can destructure and call them without losing the
-SDK receiver:
+Use `beforeInitialPage` on an owned `OptimizationRoot` when a browser-owned initial page needs
+identity or custom Experience event work first. When a handoff contains a prepared replay, the root
+does not run `beforeInitialPage`; it commits the replay through the Experience queue when its route
+matches. Without a prepared replay, the callback runs after the live owned runtime exists and
+receives receiver-safe `identify`, `screen`, and `track` methods:
 
 ```tsx
 <OptimizationRoot
@@ -374,10 +373,10 @@ SDK receiver:
 A root with `beforeInitialPage` requires `routeKey` and lazy `buildPagePayload`, and it does not
 accept `initialPagePayload`. The app owns `routeKey` as the stable identity of the current route and
 owns `buildPagePayload` as a lazy read of current page data. The root awaits the work returned by
-`run` or its watchdog, reads the latest route and payload builder for one direct page attempt,
-activates the existing page emitter with a non-emitting initial `skip` mark for the attempted route,
-and emits normally for later route changes. A successfully applied same-route handoff can make the
-direct page decision a `skip`; otherwise, the direct page attempt uses `emit`.
+`run` or its watchdog, reads the latest route and payload builder, then makes one direct browser
+page attempt before tracking later route changes. For paired server requests, prepare `initialEvents`
+and the page payload on the server, then pass the resulting handoff to the browser root for queue
+commitment.
 
 This root is the sole page owner for its subtree. Do not also mount a React Router, TanStack Router,
 Next.js App Router, or Next.js Pages Router automatic page tracker. Omit `beforeInitialPage` when a

@@ -1435,22 +1435,27 @@ jobs:
           disk-size: 8G
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: |
-            echo "Verifying JAVA_HOME: $JAVA_HOME"
-            java -version
-            echo "Setting up adb reverse port forwarding..."
-            adb reverse tcp:8000 tcp:8000
-            echo "Running E2E tests..."
-            pnpm run implementation:react-native-sdk -- test:e2e:android:run:release -- --loglevel error --retries 1 --shard=${{ matrix.shard }}/2
+          # The action runs each script line separately and tears down the emulator before returning.
+          # Keep tests and failure-time adb diagnostics in one shell command so adb can still reach it.
+          script: >-
+            set -e;
+            echo "Verifying JAVA_HOME: $JAVA_HOME";
+            java -version;
+            echo "Setting up adb reverse port forwarding...";
+            adb reverse tcp:8000 tcp:8000;
+            echo "Running E2E tests...";
+            if pnpm run implementation:react-native-sdk -- test:e2e:android:run:release -- --loglevel error --retries 1 --shard=${{ matrix.shard }}/2; then exit 0; else test_status=$?; fi;
+            mkdir -p /tmp/react-native-e2e-diagnostics || true;
+            timeout --signal=TERM --kill-after=5s 10s adb reverse --list > /tmp/react-native-e2e-diagnostics/adb-reverse-list.txt 2>&1 || true;
+            timeout --signal=TERM --kill-after=5s 20s adb logcat -d -v threadtime > /tmp/react-native-e2e-diagnostics/android-logcat.txt 2>&1 || true;
+            exit "$test_status"
 
-      - name: Capture Android E2E diagnostics on failure
-        if: failure()
+      - name: Capture host E2E diagnostics
+        if: always()
         run: |
           echo "=== Mock Server Logs ==="
           cat /tmp/mock-server.log || echo "No mock server logs found"
           mkdir -p /tmp/react-native-e2e-diagnostics
-          adb reverse --list > /tmp/react-native-e2e-diagnostics/adb-reverse-list.txt 2>&1 || true
-          adb logcat -d -v threadtime > /tmp/react-native-e2e-diagnostics/android-logcat.txt 2>&1 || true
           find /tmp -maxdepth 1 -name '*.detox.jsonl' -exec cp {} /tmp/react-native-e2e-diagnostics/ \; 2>/dev/null || true
 
       - name: Stop Mock Server

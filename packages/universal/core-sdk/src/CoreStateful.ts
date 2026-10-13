@@ -82,7 +82,6 @@ const createStatefulExperienceApiConfig = (
     ip: api?.ip,
     locale,
     plainText: api?.plainText,
-    preflight: api?.preflight,
   }
 
   return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
@@ -108,22 +107,20 @@ const createStatefulInsightsApiConfig = (
 export interface QueuePolicy {
   /** Shared retry/backoff/circuit policy for queued flushes. */
   flush?: QueueFlushPolicy
-  /** Maximum number of offline Experience events retained. */
+  /** Maximum number of offline Experience events admitted. */
   offlineMaxEvents?: number
-  /** Callback invoked when oldest offline Experience events are dropped. */
+  /** @deprecated Offline admission no longer evicts events; this callback is inactive. */
   onOfflineDrop?: (context: ExperienceQueueDropContext) => void
 }
 
 interface ResolvedQueuePolicy {
   flush: ReturnType<typeof resolveQueueFlushPolicy>
   offlineMaxEvents: number
-  onOfflineDrop?: QueuePolicy['onOfflineDrop']
 }
 
 const resolveQueuePolicy = (policy: QueuePolicy | undefined): ResolvedQueuePolicy => ({
   flush: resolveQueueFlushPolicy(policy?.flush),
   offlineMaxEvents: toPositiveInt(policy?.offlineMaxEvents, OFFLINE_QUEUE_MAX_EVENTS),
-  onOfflineDrop: policy?.onOfflineDrop,
 })
 
 /**
@@ -208,6 +205,10 @@ let statefulInstanceCounter = 0
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
+  private resetToken = {}
+  protected get isDestroyed(): boolean {
+    return this.destroyed
+  }
   protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
@@ -271,9 +272,12 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
       this.allowedEventTypes = allowedEventTypes ?? DEFAULT_ALLOWED_EVENT_TYPES
       this.onEventBlocked = onEventBlocked
       localeSignal.value = locale
+      const getResetToken = (): object | undefined => (this.destroyed ? undefined : this.resetToken)
       this.insightsQueue = new InsightsQueue({
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
+        getAnonymousId,
+        getResetToken,
         insightsApi: this.api.insights,
       })
       this.experienceQueue = new ExperienceQueue({
@@ -281,8 +285,8 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
         getAnonymousId: getAnonymousId ?? (() => undefined),
+        getResetToken,
         offlineMaxEvents: resolvedQueuePolicy.offlineMaxEvents,
-        onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
       installCoreBridgeCapabilities(this, this.interceptors.state)
@@ -329,22 +333,23 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
 
     effect(() => {
-      if (!onlineSignal.value) return
+      if (this.destroyed || !onlineSignal.value) return
 
       this.insightsQueue.clearScheduledRetry()
       this.experienceQueue.clearScheduledRetry()
-      void this.flushQueues({ force: true })
+      void this.insightsQueue.flush({ force: true })
+      void this.experienceQueue.flush({ force: true })
     })
   }
 
   protected async flushQueues(
     options: { force?: boolean } & InsightsApiClientRequestOptions = {},
   ): Promise<void> {
-    await this.insightsQueue.flush(options)
-    await this.experienceQueue.flush(options)
+    await Promise.all([this.insightsQueue.flush(options), this.experienceQueue.flush(options)])
   }
 
   private clearQueuedEvents(): void {
+    this.resetToken = {}
     this.insightsQueue.clearQueuedEvents()
     this.experienceQueue.clearQueuedEvents()
   }
@@ -435,20 +440,23 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   destroy(): void {
     if (this.destroyed) return
 
-    this.destroyed = true
     this.optimizationContexts.clear()
     void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
       logger.warn('Failed to flush insights queue during destroy()', String(error))
     })
-    void this.experienceQueue.flush({ force: true }).catch((error: unknown) => {
+    void this.experienceQueue.flushOnDestroy().catch((error: unknown) => {
       logger.warn('Failed to flush Experience queue during destroy()', String(error))
     })
+    this.destroyed = true
     this.insightsQueue.clearPeriodicFlushTimer()
+    this.insightsQueue.clearScheduledRetry()
+    this.experienceQueue.clearScheduledRetry()
 
     releaseStatefulRuntimeSingleton(this.singletonOwner)
   }
 
   reset(): void {
+    this.clearQueuedEvents()
     this.optimizationContexts.clear()
     batch(() => {
       blockedEventSignal.value = undefined
@@ -460,6 +468,10 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
   }
 
+  /**
+   * Wait for any active Insights and Experience queue attempts to settle.
+   * Scheduled retries remain independent of this promise.
+   */
   async flush(): Promise<void> {
     await this.flushQueues()
   }

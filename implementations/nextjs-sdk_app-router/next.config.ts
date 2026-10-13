@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 const configDir = dirname(fileURLToPath(import.meta.url))
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
   transpilePackages: ['e2e-web'],
   env: {
     PUBLIC_EXPERIENCE_API_BASE_URL: process.env.PUBLIC_EXPERIENCE_API_BASE_URL,

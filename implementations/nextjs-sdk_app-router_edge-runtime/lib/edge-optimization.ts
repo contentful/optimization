@@ -26,7 +26,6 @@ export function createEdgeCustomerSegmentHandoff(segment: CustomerSegment) {
     cacheVersion: segment.cacheVersion,
     entryIds: segment.baselineEntryIds,
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
     locale: segment.locale,
     permutationKey: segment.slug,
     selectedOptimizations: segment.selectedOptimizations,

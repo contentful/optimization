@@ -200,7 +200,8 @@
       const CONFIG = <%- JSON.stringify(config) %>
       const APP_LOCALE = <%- JSON.stringify(appLocale) %>
       const SERVER_APP_CONSENT = <%- JSON.stringify(appConsent) %>
-      const SERVER_OPTIMIZATION_DATA = <%- JSON.stringify(optimizationData) %>
+      const SERVER_OPTIMIZATION_DATA = <%- JSON.stringify(optimizationData).replaceAll('<', '\\u003c') %>
+      const SERVER_OPTIMIZATION_HANDOFF = <%- JSON.stringify(optimizationHandoff).replaceAll('<', '\\u003c') %>
     </script>
     <script>
       /* --- Standard Initialization Code --- */
@@ -227,6 +228,11 @@
         app: { name: document.title, version: '0.0.0' },
       })
       const contentfulOptimization = window.contentfulOptimization
+      if (SERVER_OPTIMIZATION_HANDOFF !== null) {
+        void contentfulOptimization.hydrateAndTrackCurrentPage(SERVER_OPTIMIZATION_HANDOFF, {
+          routeKey: `${window.location.pathname}${window.location.search}`,
+        })
+      }
       attachOptimizationPreviewPanel({
         contentful: contentfulClient,
         optimization: window.contentfulOptimization,
@@ -367,7 +373,7 @@
       }
 
       let renderEntriesPromise = Promise.resolve()
-      let hasEmittedClientConsentPage = SERVER_OPTIMIZATION_DATA !== null
+      let hasStartedPageTracking = SERVER_OPTIMIZATION_HANDOFF !== null
 
       // Render optimized entries
       async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
@@ -497,8 +503,8 @@
         if (typeof consent === 'boolean') setAppConsentCookie(consent)
         toggleConsent(consent)
 
-        if (consent === true && !hasEmittedClientConsentPage) {
-          hasEmittedClientConsentPage = true
+        if (consent === true && !hasStartedPageTracking) {
+          hasStartedPageTracking = true
           void contentfulOptimization.page()
         }
       })

@@ -18,7 +18,7 @@
 
 This reference implementation integrates `@contentful/optimization-nextjs` with the Next.js App
 Router. It demonstrates request-bound personalization, public permutation handoff, analytics-only
-rendering, Cache Components routes, and browser takeover without importing lower-level SDKs.
+rendering, blocking request SSR, and browser takeover without importing lower-level SDKs.
 
 For a complete integration walkthrough, see
 [Integrate the Optimization SDK in a Next.js App Router app](../../documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md).
@@ -28,10 +28,12 @@ Edge runtime routes live in the
 ## What this covers
 
 - A single server binding in `lib/optimization.ts`.
-- A client-only binding in `lib/optimization-client.ts` that runs optional before-initial-page work
-  before the request root's browser-owned page event.
+- Request `initialEvents` and the page event are prepared with the server handoff for the browser
+  queue.
 - Request-bound Server Components with browser hydration and live updates.
 - Static public permutation and analytics-only handoff.
+- Browser consent bootstrap for public handoffs, preserving a consented visitor's profile across
+  static selection and analytics-only routes.
 - App-owned and SDK-managed Contentful entry fetching.
 - Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`.
 
@@ -56,7 +58,7 @@ export const config = {
 ```
 
 Next.js 13 to 15 uses the same handler from `middleware.ts` with a `middleware` export. The linked
-guide covers forwarding and trusted handoff options.
+guide covers request-context forwarding.
 
 ## Compose a private island
 
@@ -87,19 +89,20 @@ async function PrivateRequestSlot() {
 
 Keep provider-dependent tools inside `RequestOptimizationRoot`.
 
-## Run before-initial-page work
+## Prepare request events for browser commitment
 
-`lib/optimization-client.ts` binds a client-only `beforeInitialPage` callback. The maintained
-callback identifies only when the URL contains `?beforeInitialPage=readiness`; ordinary routes do
-nothing. `lib/optimization.ts` injects that module's `ClientRequestOptimizationRoot` into the server
-request family as a Client Component reference.
+`lib/optimization.ts` configures `request.initialEvents` for the maintained
+`?beforeInitialPage=readiness` scenario; ordinary routes have no extra initial event. The request
+family builds that event together with the page event, previews the batch through the Experience
+API, and returns the preview state for server rendering with a private handoff. Preview does not
+commit the profile or events. After hydration, the browser admits the matching replay to its normal
+Experience queue. The request template mounts the route tracker for browser navigation, so keep one
+tracker at that routing boundary.
 
-The server passes only children, defaults, handoff, and hydration through the request root. The
-client root derives the current App Router route and lazy page payload in the browser, so neither the
-callback nor a payload-builder function crosses the Server Component boundary. It makes the direct
-initial page attempt, marks that attempted route through the existing non-emitting initial `skip`
-path, and emits once for each later route. Do not mount a separate request page tracker in the same
-subtree.
+The request route uses the visible pathname and search as the replay route key. Next.js transport
+URLs do not become route identity. On a preview failure the replay remains available for browser
+commitment, while the server can render baseline content. Server consent and the API-issued profile
+cookie continue to control event admission and durable identity persistence.
 
 ## Choose entry-fetch ownership
 
@@ -164,6 +167,9 @@ Run the shared Playwright setup and suite:
 pnpm setup:e2e:nextjs-sdk_app-router
 pnpm test:e2e:nextjs-sdk_app-router
 ```
+
+The runner uses `E2E_FLAGS=CSR,HYDRATION,SSR`, so JavaScript-disabled SSR checks run alongside
+hydration and browser checks. Do not enable `SKIP_NO_JS` for this reference implementation.
 
 ## Related
 

@@ -91,9 +91,10 @@ Common Experience API options:
 | `ip`              | No        | `undefined`                           | IP address override for Experience API analysis |
 | `locale`          | No        | API default                           | Locale query parameter for localized responses  |
 | `plainText`       | No        | Endpoint-specific                     | Sends single-profile mutation endpoints as text |
-| `preflight`       | No        | `false`                               | Aggregates a profile state without storing it   |
 
 Experience mutation request options except `baseUrl` can also be provided per mutation request.
+The per-request `preflight` option is available only on `createProfile`, `updateProfile`, and
+`upsertProfile`; it evaluates the mutation without committing its profile or event changes.
 `getProfile` is a read request and only uses `locale` from per-call options; mutation-only options
 such as `enabledFeatures`, `ip`, `plainText`, and `preflight` do not apply. Single-profile mutation
 requests default to `plainText: true` and send `text/plain` unless overridden. Batch profile updates

@@ -2,7 +2,7 @@ import ContentfulOptimization from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import type {
-  EventEmissionResult,
+  OptimizationHandoff,
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import cookieParser from 'cookie-parser'
@@ -18,6 +18,9 @@ const limiter = rateLimit({
 })
 
 const app: Express = express()
+app.get('/health', (_req, res) => {
+  res.type('text/plain').send('ok')
+})
 app.use(cookieParser())
 app.use(limiter)
 const APP_LOCALE = 'en-US'
@@ -59,11 +62,13 @@ type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
 type QsValue = QsPrimitive | QsArray | undefined
 interface ProfileResult {
   readonly appLocale: string
+  readonly handoff?: OptimizationHandoff
   readonly optimizationData: OptimizationData | undefined
 }
 interface RenderResponseOptions {
   readonly appConsent: boolean | undefined
   readonly appLocale: string
+  readonly handoff?: OptimizationHandoff
   readonly id?: string
   readonly optimizationData?: OptimizationData
   readonly userId?: string
@@ -129,13 +134,9 @@ function getAppConsentFromCookies(cookies: unknown): boolean | undefined {
   return undefined
 }
 
-function getAcceptedOptimizationData(result: EventEmissionResult): OptimizationData | undefined {
-  return result.accepted ? result.data : undefined
-}
-
 function respond(
   res: Response,
-  { appConsent, appLocale, id, optimizationData, userId }: RenderResponseOptions,
+  { appConsent, appLocale, handoff, id, optimizationData, userId }: RenderResponseOptions,
 ): void {
   if (appConsent === true && id) {
     res.cookie(ANONYMOUS_ID_COOKIE, id, {
@@ -150,6 +151,7 @@ function respond(
     config,
     appConsent: appConsent ?? null,
     appLocale,
+    optimizationHandoff: handoff ?? null,
     identified: userId,
     optimizationData: optimizationData ?? null,
   })
@@ -177,32 +179,29 @@ async function getProfile(
     profile: cookieProfile,
   })
 
-  if (!userId) {
-    return {
-      appLocale: APP_LOCALE,
-      optimizationData: getAcceptedOptimizationData(await requestOptimization.page()),
-    }
-  }
-
-  await requestOptimization.identify({
-    userId,
-    traits: { identified: true },
+  const { data, handoff } = await requestOptimization.prepareRequestHandoff({
+    routeKey: req.originalUrl,
+    initialEvents: userId
+      ? [{ type: 'identify', userId, traits: { identified: true } }]
+      : undefined,
   })
 
   return {
     appLocale: APP_LOCALE,
-    optimizationData: getAcceptedOptimizationData(await requestOptimization.page()),
+    handoff,
+    optimizationData: data,
   }
 }
 
 app.get('/', limiter, async (req, res) => {
   const appConsent = getAppConsentFromCookies(req.cookies)
-  const { appLocale, optimizationData } = await getProfile(req, appConsent)
+  const { appLocale, handoff, optimizationData } = await getProfile(req, appConsent)
 
   respond(res, {
     appConsent,
     appLocale,
-    id: optimizationData?.profile.id,
+    handoff,
+    id: optimizationData?.profile.id ?? handoff?.profileId,
     optimizationData,
   })
 })
@@ -211,6 +210,7 @@ app.get('/smoke-test', limiter, (_, res) => {
     appConsent: null,
     config,
     appLocale: APP_LOCALE,
+    optimizationHandoff: null,
     optimizationData: null,
   })
 })
@@ -218,12 +218,18 @@ app.get('/user/:id', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
   const appConsent = getAppConsentFromCookies(req.cookies)
   const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  const { appLocale, optimizationData } = await getProfile(req, appConsent, userId, anonymousId)
+  const { appLocale, handoff, optimizationData } = await getProfile(
+    req,
+    appConsent,
+    userId,
+    anonymousId,
+  )
 
   respond(res, {
     appConsent,
     appLocale,
-    id: optimizationData?.profile.id,
+    handoff,
+    id: optimizationData?.profile.id ?? handoff?.profileId,
     optimizationData,
     userId,
   })

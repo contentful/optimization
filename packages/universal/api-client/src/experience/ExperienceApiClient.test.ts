@@ -118,6 +118,63 @@ describe('ExperienceApiClient', () => {
     rs.restoreAllMocks()
   })
 
+  describe('preflight transport', () => {
+    it.each([
+      { method: 'createProfile', profileId: 'profile-id' },
+      { method: 'updateProfile', profileId: 'profile-id' },
+      { method: 'upsertProfile', profileId: 'profile-id' },
+      { method: 'upsertProfile', profileId: '' },
+    ] as const)(
+      'enables preview only for the current $method call ($profileId)',
+      async ({ method, profileId }) => {
+        const requestedUrls: URL[] = []
+        const captureMutation = ({ request }: { request: Request }): Response => {
+          requestedUrls.push(new URL(request.url))
+          return HttpResponse.json({
+            data: { profile: { id: 'profile-id' }, experiences: [], changes: [] },
+          })
+        }
+
+        server.use(
+          http.post(
+            `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`,
+            captureMutation,
+          ),
+          http.post(
+            `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles/:profileId`,
+            captureMutation,
+          ),
+        )
+
+        const client = makeClient({ locale: 'en-US' })
+        const params = { events: [makeTrackEvent('paired-delivery')], profileId }
+
+        await client[method](params, { preflight: true, locale: 'de-DE' })
+        await client[method](params, { preflight: false })
+        await client[method](params)
+
+        expect(requestedUrls.map((url) => url.searchParams.get('type'))).toEqual([
+          'preflight',
+          null,
+          null,
+        ])
+        expect(requestedUrls.map((url) => url.searchParams.get('locale'))).toEqual([
+          'de-DE',
+          'en-US',
+          'en-US',
+        ])
+        const expectedPath = `/v3/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/profiles${
+          method !== 'createProfile' && profileId ? `/${profileId}` : ''
+        }`
+        expect(requestedUrls.map((url) => url.pathname)).toEqual([
+          expectedPath,
+          expectedPath,
+          expectedPath,
+        ])
+      },
+    )
+  })
+
   describe('getProfile', () => {
     it('throws on empty profile id', async () => {
       const client = makeClient()
@@ -125,7 +182,13 @@ describe('ExperienceApiClient', () => {
     })
 
     it('getProfile hits the correct URL with default environment and optional locale', async () => {
-      const requested: { space?: string; env?: string; id?: string; locale?: string | null } = {}
+      const requested: {
+        space?: string
+        env?: string
+        id?: string
+        locale?: string | null
+        type?: string | null
+      } = {}
 
       server.use(
         http.get(
@@ -137,6 +200,7 @@ describe('ExperienceApiClient', () => {
             requested.env = env
             requested.id = id
             requested.locale = getLocaleParam(request.url)
+            requested.type = getParam(request.url)
 
             return HttpResponse.json({ data: { id } }, { status: 200 })
           },
@@ -152,6 +216,7 @@ describe('ExperienceApiClient', () => {
       expect(requested.env).toBe(ENVIRONMENT)
       expect(requested.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(requested.locale).toBeNull()
+      expect(requested.type).toBeNull()
 
       // with locale
       const profile2 = await client.getProfile('a19c3f54d2b84e37a93f6d1c0e5b7284', {
@@ -160,6 +225,7 @@ describe('ExperienceApiClient', () => {
       expect(profile2).toBeDefined()
       expect(requested.id).toBe('a19c3f54d2b84e37a93f6d1c0e5b7284')
       expect(requested.locale).toBe('de-DE')
+      expect(requested.type).toBeNull()
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'ApiClient:Experience',
@@ -454,12 +520,14 @@ describe('ExperienceApiClient', () => {
     it('upsertManyProfiles posts to /events and defaults to application/json (plainText=false)', async () => {
       let content: string | null = null
       let anonymousId: string | undefined
+      let typeQuery: string | null = null
 
       server.use(
         http.post(
           `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/events`,
           async ({ request }) => {
             content = getContent(request.headers)
+            typeQuery = getParam(request.url)
             const body = await request.json()
 
             if (typeof body === 'object' && body !== null && 'events' in body) {
@@ -503,6 +571,7 @@ describe('ExperienceApiClient', () => {
       expect(Array.isArray(profiles)).toBe(true)
       expect(content).toBe('application/json')
       expect(anonymousId).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
+      expect(typeQuery).toBeNull()
     })
 
     it('throws when upsertManyProfiles is called with an empty event batch', async () => {

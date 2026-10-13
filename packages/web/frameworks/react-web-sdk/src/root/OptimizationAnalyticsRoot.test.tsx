@@ -2,7 +2,7 @@ import ContentfulOptimization from '@contentful/optimization-web'
 import type { AnalyticsOptimizationHandoff } from '@contentful/optimization-web/analytics'
 import { InterceptorManager, signals } from '@contentful/optimization-web/core-sdk'
 import { describe, expect, it, rs } from '@rstest/core'
-import { act, StrictMode, type ReactElement } from 'react'
+import { act, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useOptimization } from '../hooks/useOptimization'
 import { captureRenderError } from '../test/sdkTestUtils'
@@ -20,7 +20,6 @@ const testConfig = {
 const analyticsHandoff: AnalyticsOptimizationHandoff = {
   cache: { scope: 'static' },
   hydration: 'analytics-only',
-  initialPageEvent: 'emit',
   state: { selectedOptimizations: [] },
 }
 
@@ -133,7 +132,6 @@ describe('OptimizationAnalyticsRoot', () => {
 
     expect(trackCurrentPage).toHaveBeenCalledWith({
       buildPayload: buildPagePayload,
-      initialPageEvent: 'emit',
       routeKey: '/segments/a',
     })
     expect(resolveOptimizedEntry).not.toHaveBeenCalled()
@@ -141,101 +139,6 @@ describe('OptimizationAnalyticsRoot', () => {
     rendered.unmount()
     trackCurrentPage.mockRestore()
     resolveOptimizedEntry.mockRestore()
-  })
-
-  it('skips only the initially hydrated analytics route', async () => {
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-      .mockResolvedValue({ accepted: true })
-    const buildPagePayload = rs.fn(() => ({}))
-    const handoff: AnalyticsOptimizationHandoff = {
-      ...analyticsHandoff,
-      initialPageEvent: 'skip',
-    }
-
-    const rendered = await renderClientAsync(
-      <OptimizationAnalyticsRoot
-        {...testConfig}
-        handoff={handoff}
-        routeKey="/"
-        buildPagePayload={buildPagePayload}
-      >
-        <div />
-      </OptimizationAnalyticsRoot>,
-    )
-
-    await rendered.rerender(
-      <OptimizationAnalyticsRoot
-        {...testConfig}
-        handoff={handoff}
-        routeKey="/products"
-        buildPagePayload={buildPagePayload}
-      >
-        <div />
-      </OptimizationAnalyticsRoot>,
-    )
-
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      buildPayload: buildPagePayload,
-      initialPageEvent: 'skip',
-      routeKey: '/',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      buildPayload: buildPagePayload,
-      initialPageEvent: 'emit',
-      routeKey: '/products',
-    })
-
-    rendered.unmount()
-    trackCurrentPage.mockRestore()
-  })
-
-  it('keeps a skipped initial analytics route skipped through StrictMode replay', async () => {
-    const page = rs.spyOn(ContentfulOptimization.prototype, 'page').mockResolvedValue({
-      accepted: true,
-    })
-    const buildPagePayload = rs.fn(() => ({ properties: { route: 'client' } }))
-    const handoff: AnalyticsOptimizationHandoff = {
-      ...analyticsHandoff,
-      initialPageEvent: 'skip',
-    }
-
-    const rendered = await renderClientAsync(
-      <StrictMode>
-        <OptimizationAnalyticsRoot
-          {...testConfig}
-          defaults={{ consent: true }}
-          handoff={handoff}
-          routeKey="/"
-          buildPagePayload={buildPagePayload}
-        >
-          <div />
-        </OptimizationAnalyticsRoot>
-      </StrictMode>,
-    )
-
-    expect(page).not.toHaveBeenCalled()
-
-    await rendered.rerender(
-      <StrictMode>
-        <OptimizationAnalyticsRoot
-          {...testConfig}
-          defaults={{ consent: true }}
-          handoff={handoff}
-          routeKey="/products"
-          buildPagePayload={buildPagePayload}
-        >
-          <div />
-        </OptimizationAnalyticsRoot>
-      </StrictMode>,
-    )
-
-    expect(page).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledWith({ properties: { route: 'client' } })
-
-    rendered.unmount()
-    page.mockRestore()
   })
 
   it('hydrates analytics handoff with a serializable initial payload', async () => {
@@ -257,13 +160,11 @@ describe('OptimizationAnalyticsRoot', () => {
 
     expect(trackCurrentPage).toHaveBeenCalledWith({
       buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
       routeKey: '/segments/a',
     })
     const firstCall = trackCurrentPage.mock.calls[0]
     if (firstCall === undefined) throw new Error('Expected trackCurrentPage to be called.')
     const [{ buildPayload }] = firstCall
-    if (buildPayload === undefined) throw new Error('Expected buildPayload to be provided.')
     expect(buildPayload({ isInitialEmission: true })).toBe(initialPagePayload)
 
     rendered.unmount()
@@ -331,7 +232,6 @@ describe('OptimizationAnalyticsRoot', () => {
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
     expect(trackCurrentPage).toHaveBeenCalledWith({
       buildPayload: buildPagePayload,
-      initialPageEvent: 'emit',
       routeKey: '/segments/b',
     })
 

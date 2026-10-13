@@ -146,6 +146,32 @@ describe('bridge contract', () => {
     expect(onError).toHaveBeenCalledWith('trackClick payload must include a string "componentId".')
   })
 
+  it('returns rejected admission when the offline Experience queue is full', async () => {
+    bridge.initialize({
+      spaceId: 'test-client',
+      environment: 'main',
+      defaults: { consent: true },
+      queuePolicy: { offlineMaxEvents: 1 },
+    })
+    bridge.setOnline(false)
+    try {
+      const track = (event: string): Promise<unknown> =>
+        new Promise((resolve, reject) => {
+          bridge.track(
+            { event },
+            (json) => resolve(JSON.parse(json)),
+            (error) => reject(new Error(error)),
+          )
+        })
+
+      await expect(track('first')).resolves.toEqual({ accepted: true })
+      await expect(track('second')).resolves.toEqual({ accepted: false })
+    } finally {
+      bridge.destroy()
+      bridge.setOnline(true)
+    }
+  })
+
   it('accepts optimizationContextId on native tracking payloads', async () => {
     bridge.initialize({
       spaceId: 'test-client',

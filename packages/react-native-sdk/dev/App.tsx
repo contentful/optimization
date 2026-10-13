@@ -17,8 +17,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import type { ContentfulOptimization } from '@contentful/optimization-react-native'
-import { OptimizationRoot } from '@contentful/optimization-react-native'
+import { OptimizationRoot, useOptimization } from '@contentful/optimization-react-native'
 import {
   isMergeTagEntry,
   isRecord,
@@ -44,7 +43,6 @@ import {
   fetchDemoEntries,
   fetchEntriesFromMockServer,
   fetchMergeTagEntry,
-  initializeSDK,
 } from './utils/sdkHelpers'
 
 type ScreenType = 'home' | 'tracking' | 'optimization'
@@ -112,14 +110,19 @@ const contentfulClient = createClient({
 })
 
 // eslint-disable-next-line complexity -- Main app component requires conditional rendering and state management logic
-function App(): React.JSX.Element {
+function Dashboard(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark'
   const colors = getThemeColors(isDarkMode)
 
-  const [sdkLoaded, setSdkLoaded] = useState(false)
+  const sdk = useOptimization()
+  const sdkLoaded = true
   const [sdkError, setSdkError] = useState<string | null>(null)
-  const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null)
-  const [sdk, setSdk] = useState<ContentfulOptimization | null>(null)
+  const [sdkInfo] = useState<SDKInfo>(() => ({
+    spaceId: ENV_CONFIG.optimization.spaceId,
+    environment: ENV_CONFIG.optimization.environment,
+    initialized: true,
+    timestamp: new Date().toISOString(),
+  }))
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home')
   const [optimizedEntry, setOptimizedEntry] = useState<Entry | null>(null)
   const [productEntry, setProductEntry] = useState<Entry | null>(null)
@@ -133,7 +136,6 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     async function initialize(): Promise<void> {
-      await initializeSDK(setSdkInfo, setSdk, setSdkLoaded, setSdkError)
       try {
         await fetchMergeTagEntry(setMergeTagEntry)
       } catch (error) {
@@ -146,8 +148,6 @@ function App(): React.JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (!sdk) return
-
     // Demonstrate direct screen tracking via sdk.screen()
     // This sends a "screen" event to track this screen view
     void sdk.screen({ name: 'Home', properties: { source: 'dev-app-direct' } })
@@ -162,7 +162,7 @@ function App(): React.JSX.Element {
   }, [sdk])
 
   useEffect(() => {
-    if (!mergeTagEntry || !profile || !sdk) return
+    if (!mergeTagEntry || !profile) return
 
     const { fields } = mergeTagEntry
     const richTextField = Object.values(fields).find(isRichTextDocument)
@@ -243,12 +243,12 @@ function App(): React.JSX.Element {
     setCurrentScreen('home')
   }
 
-  if (currentScreen === 'optimization' && sdk && demoEntries) {
+  if (currentScreen === 'optimization' && demoEntries) {
     return (
-      <OptimizationRoot instance={sdk}>
+      <>
         <OptimizationDemoScreen colors={colors} onBack={handleBack} demoEntries={demoEntries} />
         <PreviewPanelOverlay contentfulClient={contentfulClient} />
-      </OptimizationRoot>
+      </>
     )
   }
 
@@ -256,9 +256,9 @@ function App(): React.JSX.Element {
     return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
   }
 
-  if (currentScreen === 'tracking' && sdk && optimizedEntry && productEntry) {
+  if (currentScreen === 'tracking' && optimizedEntry && productEntry) {
     return (
-      <OptimizationRoot instance={sdk}>
+      <>
         <TestTrackingScreen
           colors={colors}
           onBack={handleBack}
@@ -267,7 +267,7 @@ function App(): React.JSX.Element {
           productEntry={productEntry}
         />
         <PreviewPanelOverlay contentfulClient={contentfulClient} />
-      </OptimizationRoot>
+      </>
     )
   }
 
@@ -275,12 +275,8 @@ function App(): React.JSX.Element {
     return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
   }
 
-  if (!sdk) {
-    return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
-  }
-
   return (
-    <OptimizationRoot instance={sdk}>
+    <>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -295,7 +291,7 @@ function App(): React.JSX.Element {
 
           <SDKStatusCard sdkLoaded={sdkLoaded} sdkError={sdkError} colors={colors} />
 
-          {sdkInfo && <SDKConfigCard sdkInfo={sdkInfo} colors={colors} />}
+          <SDKConfigCard sdkInfo={sdkInfo} colors={colors} />
           {mergeTagDetails.length > 0 && (
             <MergeTagDetailCard
               mergeTagDetails={mergeTagDetails}
@@ -335,6 +331,19 @@ function App(): React.JSX.Element {
         </ScrollView>
       </SafeAreaView>
       <PreviewPanelOverlay contentfulClient={contentfulClient} />
+    </>
+  )
+}
+
+function App(): React.JSX.Element {
+  return (
+    <OptimizationRoot
+      {...ENV_CONFIG.optimization}
+      api={ENV_CONFIG.api}
+      defaults={{ consent: true, persistenceConsent: true }}
+      logLevel="debug"
+    >
+      <Dashboard />
     </OptimizationRoot>
   )
 }

@@ -17,7 +17,8 @@ helpers, or a manual server-to-browser handoff.
 Legacy server code commonly uses `NinetailedAPIClient`, SSR plugin continuity, `ntaid`, or ESR
 preflight helpers. The Optimization Node SDK is stateless: create one process-level SDK, bind each
 incoming request with `forRequest()`, and let the app own cookies, consent, profile persistence,
-request context, and caching.
+request context, and caching. When the browser continues a server-rendered page, the server
+previews prepared events and the browser commits them through its SDK queue.
 
 Follow the [Node SDK integration guide](./integrating-the-node-sdk-in-a-node-app.md) unless a
 Next.js adapter owns the route.
@@ -53,8 +54,8 @@ Identify which server code owns each responsibility:
 - Resolves Contentful entries before rendering.
 - Hands state to the browser.
 
-This inventory prevents one request from being evaluated twice or from losing the profile before
-browser takeover.
+This inventory identifies legacy first-page calls to remove before the browser commits a prepared
+handoff.
 
 ### Replace Node API client calls
 
@@ -77,9 +78,19 @@ guide so the adapter owns request state, provider handoff, page-event dedupe, an
 For a manual Node/Web hybrid, the app owns the profile cookie. The Node SDK exports
 `ANONYMOUS_ID_COOKIE` from `@contentful/optimization-node/constants`, and its value is
 `ctfl-opt-aid`, but Node does not read, write, or clear cookies for you. Read the cookie from the
-incoming request, pass it as `forRequest({ profile: { id } })`, write the returned profile ID only
-when persistence consent allows it, and keep the cookie browser-readable if the Web SDK must
-continue the same visitor.
+incoming request and pass it as `forRequest({ profile: { id } })`. On a paired page, call
+`prepareRequestHandoff({ routeKey, initialEvents, page })` with the pathname and search used by the
+browser. The request previews those events with per-request `preflight: true`; its returned `data`
+can select useful server-rendered content, and its `handoff` carries the prepared replay. Serialize
+the handoff to the browser and call `hydrateAndTrackCurrentPage(handoff, { routeKey })` there. The
+browser admits a matching replay to the SDK queue, subject to current consent and queue capacity;
+preview success does not establish backend event commitment. A preview failure retains the replay
+while the server can render baseline content.
+
+Write only an existing or API-issued profile ID when persistence consent allows it, and keep the
+cookie browser-readable if the Web SDK must continue the same visitor. Do not invent a profile ID
+on the server. A standalone Node event path that has no browser handoff can continue to use
+request-bound `page()` directly.
 
 ### Replace server content resolution
 
@@ -101,12 +112,13 @@ Verify the request boundary:
 - Blocked events do not throw and surface diagnostics.
 - The app persists the profile only when persistence consent allows it.
 - Entry resolution uses request selections.
-- Browser takeover uses a compatible target SDK path.
+- Browser takeover uses the same pathname and search route key and admits prepared events through
+  the Web SDK queue.
 
 ## Validate the migration
 
 - Search for `@ninetailed/experience.js-node`, SSR plugin imports, ESR helper imports, and `ntaid`.
-- Verify one accepted request and one denied-consent request.
+- Verify server preview, browser event delivery, and denied consent as separate outcomes.
 - Verify a resolved server entry falls back to baseline with no selection.
 - Verify cache keys do not share personalized output across visitors.
 

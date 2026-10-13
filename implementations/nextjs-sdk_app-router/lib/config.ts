@@ -12,3 +12,16 @@ export const appConfig = {
       env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/',
   },
 } as const
+
+export const optimizationSdkConfig = {
+  spaceId: appConfig.spaceId,
+  environment: appConfig.environment,
+  locale: appConfig.locale,
+  logLevel: 'debug',
+  api: appConfig.api,
+  app: {
+    name: 'Contentful Optimization Next.js SDK App Router',
+    version: '0.1.0',
+  },
+  trackEntryInteraction: { views: true, clicks: true, hovers: true },
+} as const

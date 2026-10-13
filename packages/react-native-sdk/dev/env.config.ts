@@ -7,13 +7,18 @@
 
 import { Platform } from 'react-native'
 
-const PUBLIC_EXPERIENCE_API_BASE_URL = 'http://localhost:8000/experience/'
-const PUBLIC_INSIGHTS_API_BASE_URL = 'http://localhost:8000/insights/'
-const PUBLIC_CONTENTFUL_TOKEN = 'test-token'
-const PUBLIC_CONTENTFUL_ENVIRONMENT = 'master'
-const PUBLIC_CONTENTFUL_SPACE_ID = 'test-space'
-const PUBLIC_CONTENTFUL_CDA_HOST = 'localhost:8000'
-const PUBLIC_CONTENTFUL_BASE_PATH = '/contentful/'
+const mockServerPort = process.env.MOCK_SERVER_PORT ?? '8000'
+
+const PUBLIC_EXPERIENCE_API_BASE_URL =
+  process.env.PUBLIC_EXPERIENCE_API_BASE_URL ?? `http://localhost:${mockServerPort}/experience/`
+const PUBLIC_INSIGHTS_API_BASE_URL =
+  process.env.PUBLIC_INSIGHTS_API_BASE_URL ?? `http://localhost:${mockServerPort}/insights/`
+const PUBLIC_CONTENTFUL_TOKEN = process.env.PUBLIC_CONTENTFUL_TOKEN ?? 'test-token'
+const PUBLIC_CONTENTFUL_ENVIRONMENT = process.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'
+const PUBLIC_CONTENTFUL_SPACE_ID = process.env.PUBLIC_CONTENTFUL_SPACE_ID ?? 'test-space'
+const PUBLIC_CONTENTFUL_CDA_HOST =
+  process.env.PUBLIC_CONTENTFUL_CDA_HOST ?? `localhost:${mockServerPort}`
+const PUBLIC_CONTENTFUL_BASE_PATH = process.env.PUBLIC_CONTENTFUL_BASE_PATH ?? '/contentful/'
 
 interface EnvConfig {
   contentful: {
