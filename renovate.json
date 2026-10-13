@@ -61,7 +61,6 @@
         "@react-native/gradle-plugin",
         "@react-native/jest-preset",
         "@react-native/metro-config",
-        "hermes-compiler",
         "gradle",
         "com.android.tools.build:gradle",
         "org.jetbrains.kotlin:kotlin-gradle-plugin"
