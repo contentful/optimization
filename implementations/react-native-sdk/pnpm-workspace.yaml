@@ -1,5 +1,10 @@
 sharedWorkspaceLockfile: false
 
+# The React Native Gradle plugin looks for this compiler at the app's node_modules root.
+# Hoist React Native's own dependency instead of maintaining an independent version pin.
+publicHoistPattern:
+  - hermes-compiler
+
 overrides:
   '@contentful/optimization-api-client': 'file:../../pkgs/contentful-optimization-api-client-local.tgz'
   '@contentful/optimization-core': 'file:../../pkgs/contentful-optimization-core-local.tgz'
