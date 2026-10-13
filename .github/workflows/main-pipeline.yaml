@@ -332,7 +332,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: needs.build.result == 'success'
         with:
           name: sdk-package-tarballs
@@ -460,7 +460,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -507,7 +507,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -554,7 +554,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -601,7 +601,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -648,7 +648,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -695,7 +695,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -743,7 +743,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -792,7 +792,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -842,7 +842,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -917,7 +917,7 @@ jobs:
         run: pnpm install --prefer-offline --frozen-lockfile
 
       - name: Download SDK package tarballs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -1077,7 +1077,7 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: android-apks
           path: android-apks
@@ -1381,7 +1381,7 @@ jobs:
         run: pnpm install --prefer-offline --frozen-lockfile
 
       - name: Download SDK package tarballs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -1397,7 +1397,7 @@ jobs:
         run: cp implementations/react-native-sdk/.env.example implementations/react-native-sdk/.env
 
       - name: Download pre-built Detox APKs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: detox-android-apks
           path: implementations/react-native-sdk/android/app/build/outputs/apk/
@@ -1510,7 +1510,7 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ios-uitest-bundles
           path: /tmp/ios-artifact/
