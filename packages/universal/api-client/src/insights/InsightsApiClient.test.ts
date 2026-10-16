@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
-import { BatchInsightsEventArray } from '../api-schemas'
+import { BatchInsightsEventArray, type UniversalEventProperties } from '../api-schemas'
 import ApiClientBase from '../ApiClientBase'
 import type { FetchMethod } from '../fetch'
 import { server } from '../test/setup'
@@ -27,15 +27,8 @@ function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsA
   return new InsightsApiClient(config)
 }
 
-// TODO: Find a better place for this sort of thing
-function generateBatchEventArray(
-  id: string,
-  eventType: 'component' | 'component_click' | 'component_hover' = 'component',
-): BatchInsightsEventArray {
-  const baseEvent = {
-    componentType: 'Entry' as const,
-    componentId: crypto.randomUUID(),
-    variantIndex: 0,
+function generateUniversalEventProperties(): UniversalEventProperties {
+  return {
     channel: 'web' as const,
     context: {
       campaign: {},
@@ -59,6 +52,19 @@ function generateBatchEventArray(
     originalTimestamp: new Date().toISOString(),
     sentAt: new Date().toISOString(),
     timestamp: new Date().toISOString(),
+  }
+}
+
+// TODO: Find a better place for this sort of thing
+function generateBatchEventArray(
+  id: string,
+  eventType: 'component' | 'component_click' | 'component_hover' = 'component',
+): BatchInsightsEventArray {
+  const baseEvent = {
+    ...generateUniversalEventProperties(),
+    componentType: 'Entry' as const,
+    componentId: crypto.randomUUID(),
+    variantIndex: 0,
   }
 
   const event =
@@ -196,17 +202,8 @@ describe('InsightsApiClient.sendBatchEvents', () => {
   it.each(['default', 'root-variant'])(
     'serializes Fragment parent variant %s without stripping it',
     async (parentVariantId) => {
-      const [batch] = generateBatchEventArray('exo-profile')
-      if (!batch) throw new Error('Missing test batch')
-      const [base] = batch.events
-      if (!base) throw new Error('Missing test event')
       const properties = {
-        channel: base.channel,
-        context: base.context,
-        messageId: base.messageId,
-        originalTimestamp: base.originalTimestamp,
-        sentAt: base.sentAt,
-        timestamp: base.timestamp,
+        ...generateUniversalEventProperties(),
         entityId: 'fragment-1',
         entityKind: 'Fragment' as const,
         parentExperienceId: 'root-1',
@@ -215,7 +212,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
       }
       const batches = [
         {
-          profile: batch.profile,
+          profile: { id: 'exo-profile' },
           events: [
             {
               ...properties,
