@@ -192,7 +192,7 @@ describe('ContentfulOptimization', () => {
       .mockResolvedValue(OPTIMIZATION_DATA)
     const requestOptimization = node.forRequest({
       consent: true,
-      experienceOptions: { locale: 'de-DE', preflight: true },
+      experienceOptions: { locale: 'de-DE' },
       profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
@@ -210,7 +210,7 @@ describe('ContentfulOptimization', () => {
           }),
         ],
       }),
-      expect.objectContaining({ locale: 'de-DE', preflight: true }),
+      expect.objectContaining({ locale: 'de-DE' }),
     )
   })
 
@@ -222,7 +222,7 @@ describe('ContentfulOptimization', () => {
     const requestOptimization = node.forRequest({
       consent: true,
       eventContext: { locale: 'en-US' },
-      experienceOptions: { locale: 'fr-FR', preflight: true },
+      experienceOptions: { locale: 'fr-FR' },
       locale: ' de_DE ',
       profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
@@ -242,7 +242,7 @@ describe('ContentfulOptimization', () => {
           }),
         ],
       }),
-      expect.objectContaining({ locale: 'de-DE', preflight: true }),
+      expect.objectContaining({ locale: 'de-DE' }),
     )
   })
 

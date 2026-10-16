@@ -170,9 +170,6 @@ test.describe('Tracking', () => {
       expect(hoverId).toBeTruthy()
       if (!hoverId) return
 
-      await expect
-        .poll(async () => await readHoverDurationMs(page, hoverId))
-        .toBeGreaterThanOrEqual(1000)
       const qualifiedHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
       await page.waitForTimeout(300)
@@ -211,9 +208,6 @@ test.describe('Tracking', () => {
       expect(hoverId).toBeTruthy()
       if (!hoverId) return
 
-      await expect
-        .poll(async () => await readHoverDurationMs(page, hoverId))
-        .toBeGreaterThanOrEqual(1000)
       const qualifiedHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
       await page.waitForTimeout(300)

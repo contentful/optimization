@@ -5,7 +5,7 @@ import {
   type BatchInsightsEventArray,
   type InsightsEventArray,
   type InsightsEvent as InsightsEventPayload,
-  type Profile,
+  type PartialProfile,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
@@ -19,11 +19,12 @@ const coreLogger = createScopedLogger('CoreStateful')
 const MAX_QUEUED_INSIGHTS_EVENTS = 25
 
 interface QueuedProfileEvents {
-  profile: Profile
+  profile: PartialProfile
   events: InsightsEventArray
 }
 
 interface InsightsQueueOptions {
+  getAnonymousId?: () => string | undefined
   getResetToken?: () => object | undefined
   eventInterceptors: LifecycleInterceptors['event']
   flushPolicy: ResolvedQueueFlushPolicy
@@ -49,7 +50,8 @@ export class InsightsQueue {
   private readonly flushIntervalMs: number
   private readonly flushRuntime: QueueFlushRuntime
   private readonly insightsApi: InsightsQueueOptions['insightsApi']
-  private readonly queuedInsightsByProfile = new Map<Profile['id'], QueuedProfileEvents>()
+  private readonly queuedInsightsByProfile = new Map<string, QueuedProfileEvents>()
+  private readonly getAnonymousId: () => string | undefined
   private resetToken: object = {}
   private readonly getResetToken: () => object | undefined
   private insightsPeriodicFlushTimer: ReturnType<typeof setInterval> | undefined
@@ -58,6 +60,7 @@ export class InsightsQueue {
     const { eventInterceptors, flushPolicy, insightsApi } = options
     const { flushIntervalMs } = flushPolicy
 
+    this.getAnonymousId = options.getAnonymousId ?? (() => undefined)
     this.eventInterceptors = eventInterceptors
     this.flushIntervalMs = flushIntervalMs
     this.insightsApi = insightsApi
@@ -97,7 +100,9 @@ export class InsightsQueue {
   ): Promise<void> {
     const { resetToken: token } = this
     if (!this.isCurrent(token)) return
-    const { value: profile } = profileSignal
+    const anonymousId = this.getAnonymousId()
+    const profile =
+      profileSignal.value ?? (anonymousId === undefined ? undefined : { id: anonymousId })
 
     if (!profile) {
       coreLogger.warn('Attempting to emit an event without an Optimization profile')
@@ -152,7 +157,10 @@ export class InsightsQueue {
     token: object,
   ): Promise<void> {
     try {
-      const sendSuccess = await this.trySendBatches(batches, beacon ? { beacon } : undefined)
+      const sendSuccess = await this.trySendBatches(
+        batches,
+        beacon === undefined ? undefined : { beacon },
+      )
       if (!this.isCurrent(token)) return
 
       if (sendSuccess) {

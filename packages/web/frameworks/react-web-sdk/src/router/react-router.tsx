@@ -5,6 +5,7 @@ import { useLocation, useMatches, type Location, type UIMatch } from 'react-rout
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
 import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+import type { ContentOptimizationHandoff } from '../handoff'
 
 function toRouteKey(location: Pick<Location, 'pathname' | 'search' | 'hash'>): string {
   return `${location.pathname}${location.search}${location.hash}`
@@ -50,16 +51,21 @@ export interface ReactRouterAutoPageContext {
   readonly url: string
 }
 
-export interface ReactRouterAutoPageTrackerProps extends AutoPagePayloadOptions<ReactRouterAutoPageContext> {}
+export interface ReactRouterAutoPageTrackerProps extends AutoPagePayloadOptions<ReactRouterAutoPageContext> {
+  /** Pass the root's handoff to share paired startup; replay matching uses pathname/search. */
+  readonly handoff?: ContentOptimizationHandoff
+}
 
 export function ReactRouterAutoPageTracker({
+  handoff,
   pagePayload,
   getPagePayload,
 }: ReactRouterAutoPageTrackerProps): ReactElement | null {
   const location = useLocation()
   const matches = useMatches()
-  const routeKey = toRouteKey(location)
   const { hash, pathname, search } = location
+  const url = toRouteKey(location)
+  const routeKey = handoff === undefined ? url : `${pathname}${search}`
 
   const routerPayload = useMemo(
     () => buildRouterPayload({ hash, pathname, search }),
@@ -81,7 +87,7 @@ export function ReactRouterAutoPageTracker({
             pathname,
             routeKey,
             search,
-            url: routeKey,
+            url,
           },
         },
       ),
@@ -95,10 +101,11 @@ export function ReactRouterAutoPageTracker({
       routeKey,
       routerPayload,
       search,
+      url,
     ],
   )
 
-  useAutoPageEmitter({ enabled: true, routeKey, buildPayload })
+  useAutoPageEmitter({ enabled: true, handoff, routeKey, buildPayload })
 
   return null
 }

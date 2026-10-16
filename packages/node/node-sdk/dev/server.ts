@@ -6,14 +6,18 @@ import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import ContentfulOptimization from '../src'
+import ContentfulOptimization, { createRequestHandoffFromData } from '../src'
 import type { PartialProfile, Profile, SelectedOptimization } from '../src/api-schemas'
 import { isMergeTagEntry, isRichTextDocument } from '../src/api-schemas'
+import { ANONYMOUS_ID_COOKIE, createPageContextFromUrl } from '../src/core-sdk'
 
 /* eslint-disable @typescript-eslint/naming-convention -- standardized var names */
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 /* eslint-enable @typescript-eslint/naming-convention -- standardized var names */
+
+const BAD_REQUEST_STATUS = 400
+const DEFAULT_DEV_PORT = 3001
 
 const limiter = rateLimit({
   windowMs: 30_000,
@@ -209,6 +213,38 @@ async function getRequestOptimizationData({
   }
 }
 
+// Shared preview input for the Web and React dev harnesses. Browser delivery uses the SDK queue.
+app.get('/__handoff', limiter, async (req, res) => {
+  if (typeof req.query.url !== 'string') {
+    res.status(BAD_REQUEST_STATUS).json({ error: 'Supply the visible page URL.' })
+    return
+  }
+  const page = createPageContextFromUrl(req.query.url)
+  const cookie = req.headers.cookie
+    ?.split(';')
+    .find((part) => part.trim().startsWith(`${ANONYMOUS_ID_COOKIE}=`))
+  const profileId = cookie?.trim().slice(ANONYMOUS_ID_COOKIE.length + 1)
+  const request = sdk.forRequest({
+    consent: true,
+    profile: profileId ? { id: profileId } : undefined,
+    eventContext: { page, userAgent: req.get('user-agent') },
+  })
+  const { handoff, data } = await request.prepareRequestHandoff({
+    routeKey: `${page.path}${page.search}`,
+    page: { properties: page },
+    initialEvents: [
+      { type: 'identify', userId: 'paired-dev-visitor', traits: { continent: 'EU' } },
+    ],
+  })
+  if (handoff.profileId)
+    res.cookie(ANONYMOUS_ID_COOKIE, handoff.profileId, { path: '/', sameSite: 'lax' })
+  res.set('Cache-Control', 'no-store').json({
+    ...handoff,
+    ...createRequestHandoffFromData({ data }),
+    hydration: 'preserve-server',
+  })
+})
+
 app.get('/', limiter, async (req, res) => {
   const profileId = applyRequestState(req.query)
   const { consent, userId } = profileId ? (profileState.get(profileId) ?? {}) : {}
@@ -278,7 +314,7 @@ app.get('/', limiter, async (req, res) => {
   res.render('index', { ...pageData })
 })
 
-const port = 3000
+const port = Number(process.env.PORT ?? DEFAULT_DEV_PORT)
 
 app.listen(port, () => {
   // eslint-disable-next-line no-console -- debug
