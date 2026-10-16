@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.2](https://github.com/contentful/optimization/compare/optimization-react-native-v2.0.1...optimization-react-native-v2.0.2) (2026-10-16)
+
+### Bug Fixes
+
+- **deps:** update dependency androidx.appcompat:appcompat to v1.8.0 ([#525](https://github.com/contentful/optimization/issues/525)) ([77f55a8](https://github.com/contentful/optimization/commit/77f55a8e8230c213ab5f389b06fd1cb915f28be2))
+
+### Reverts
+
+- **runtime:** defer server preview and browser commit ([#548](https://github.com/contentful/optimization/issues/548)) ([28f12f5](https://github.com/contentful/optimization/commit/28f12f53652047b2fd6dc2526390aa8bcf2d5780))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.0.2
+
 ## [2.0.1](https://github.com/contentful/optimization/compare/optimization-react-native-v2.0.0...optimization-react-native-v2.0.1) (2026-09-23)
 
 ### Dependencies

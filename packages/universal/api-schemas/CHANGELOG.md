@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.3](https://github.com/contentful/optimization/compare/optimization-api-schemas-v1.2.2...optimization-api-schemas-v1.2.3) (2026-10-16)
+
+### Reverts
+
+- **runtime:** defer server preview and browser commit ([#548](https://github.com/contentful/optimization/issues/548)) ([28f12f5](https://github.com/contentful/optimization/commit/28f12f53652047b2fd6dc2526390aa8bcf2d5780))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-api-client bumped to 2.1.0
+    - @contentful/optimization-core bumped to 2.0.2
+
 ## [1.2.2](https://github.com/contentful/optimization/compare/optimization-api-schemas-v1.2.1...optimization-api-schemas-v1.2.2) (2026-09-23)
 
 ### Dependencies

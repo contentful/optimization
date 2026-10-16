@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.2](https://github.com/contentful/optimization/compare/optimization-nextjs-v2.0.1...optimization-nextjs-v2.0.2) (2026-10-16)
+
+### Reverts
+
+- **runtime:** defer server preview and browser commit ([#548](https://github.com/contentful/optimization/issues/548)) ([28f12f5](https://github.com/contentful/optimization/commit/28f12f53652047b2fd6dc2526390aa8bcf2d5780))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-node bumped to 2.0.2
+    - @contentful/optimization-react-web bumped to 2.0.2
+
 ## [2.0.1](https://github.com/contentful/optimization/compare/optimization-nextjs-v2.0.0...optimization-nextjs-v2.0.1) (2026-09-23)
 
 ### Dependencies

@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.1.0](https://github.com/contentful/optimization/compare/optimization-api-client-v2.0.1...optimization-api-client-v2.1.0) (2026-10-16)
+
+### Features
+
+- **api-client:** preserve ExO parent variant attribution [EXA-2560] ([#547](https://github.com/contentful/optimization/issues/547)) ([28f3f7a](https://github.com/contentful/optimization/commit/28f3f7afcd9e4fbc990182d73044d0211669704f))
+
+### Reverts
+
+- **runtime:** defer server preview and browser commit ([#548](https://github.com/contentful/optimization/issues/548)) ([28f12f5](https://github.com/contentful/optimization/commit/28f12f53652047b2fd6dc2526390aa8bcf2d5780))
+
 ## [2.0.1](https://github.com/contentful/optimization/compare/optimization-api-client-v2.0.0...optimization-api-client-v2.0.1) (2026-09-23)
 
 ### Bug Fixes
