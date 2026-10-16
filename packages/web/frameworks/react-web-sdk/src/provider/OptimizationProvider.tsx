@@ -59,8 +59,6 @@ interface OptimizationHandoffProps {
    * Server/static/edge Optimization handoff to apply before provider children mount.
    */
   readonly handoff?: ContentOptimizationHandoff
-  /** Current router route; defaults to the visible browser pathname/search. */
-  readonly routeKey?: string
   /**
    * Overrides the content hydration presentation mode published to optimized entries.
    */
@@ -121,7 +119,6 @@ function createOwnedSdkBinding(props: OptimizationProviderConfigProps): Provider
     onStatesReady: _onStatesReady,
     sdk: _sdk,
     handoff: _handoff,
-    routeKey: _routeKey,
     hydration: _hydration,
     prefetchManagedEntries: _prefetchManagedEntries,
     trackEntryInteraction,
@@ -156,21 +153,12 @@ async function initializeServerOptimizationState(
   sdkBinding: ProviderSdkBinding,
   handoff: ContentOptimizationHandoff,
   onStatesReady: OnStatesReady | undefined,
-  {
-    retainOwnedSdkOnHydrationError,
-    routeKey,
-    isCurrent,
-  }: {
-    readonly retainOwnedSdkOnHydrationError: boolean
-    readonly routeKey?: string
-    readonly isCurrent: () => boolean
-  },
+  retainOwnedSdkOnHydrationError: boolean,
 ): Promise<ProviderSdkInitialization> {
   try {
     const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
       sdkBinding.sdk,
       handoff,
-      { routeKey, isCurrent },
     ])
 
     if (isPromiseLike(hydrationResult)) {
@@ -185,7 +173,6 @@ async function initializeServerOptimizationState(
     throw error
   }
 
-  if (!isCurrent()) return { sdkBinding }
   try {
     return { sdkBinding: bindOnStatesReady(sdkBinding, onStatesReady) }
   } catch (error: unknown) {
@@ -196,10 +183,9 @@ async function initializeServerOptimizationState(
 
 function initializeProviderSdk(
   props: OptimizationProviderProps,
-  sdkBinding: ProviderSdkBinding,
-  isCurrent: () => boolean,
 ): ProviderSdkInitialization | Promise<ProviderSdkInitialization> {
   const ownsSdk = props.sdk === undefined
+  const sdkBinding = ownsSdk ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
 
   if (props.handoff === undefined) {
     try {
@@ -210,11 +196,7 @@ function initializeProviderSdk(
     }
   }
 
-  return initializeServerOptimizationState(sdkBinding, props.handoff, props.onStatesReady, {
-    retainOwnedSdkOnHydrationError: ownsSdk,
-    routeKey: props.routeKey,
-    isCurrent,
-  })
+  return initializeServerOptimizationState(sdkBinding, props.handoff, props.onStatesReady, ownsSdk)
 }
 
 function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
@@ -269,6 +251,7 @@ function createPrefetchedManagedEntries(
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
   const { children } = props
   const initialPropsRef = useRef(props)
+  const hydratedHandoffRef = useRef(props.handoff)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
@@ -318,15 +301,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     }
 
     try {
-      sdkBinding =
-        initialProps.sdk === undefined
-          ? createOwnedSdkBinding(initialProps)
-          : createInjectedSdkBinding(initialProps)
-      const initializedBinding = initializeProviderSdk(
-        initialProps,
-        sdkBinding,
-        () => !setupState.disposed,
-      )
+      const initializedBinding = initializeProviderSdk(initialProps)
 
       if (!isPromiseLike(initializedBinding)) {
         setInitializedState(initializedBinding)
@@ -357,7 +332,12 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       return
     }
 
+    if (hydratedHandoffRef.current === handoff) {
+      return
+    }
+
     let disposed = false
+    hydratedHandoffRef.current = handoff
 
     function setHydrationError(error: unknown): void {
       if (!disposed) {
@@ -369,7 +349,6 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
         runtime,
         handoff,
-        { routeKey: props.routeKey, isCurrent: () => !disposed },
       ])
 
       if (isPromiseLike(hydrationResult)) {
@@ -382,7 +361,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     return () => {
       disposed = true
     }
-  }, [props.handoff, props.routeKey, state.isLive, state.runtime])
+  }, [props.handoff, state.isLive, state.runtime])
 
   useLayoutEffect(() => {
     if (!state.isLive || state.runtime === undefined || props.sdk !== undefined) {
@@ -409,25 +388,20 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       return
     }
 
-    const entries = props.prefetchManagedEntries.filter(
-      (entry) =>
-        !prefetchedManagedEntries?.has(
-          getOptimizedEntrySourceKey(typeof entry === 'string' ? { entryId: entry } : entry),
-        ),
-    )
-    if (entries.length === 0) return
     let disposed = false
 
-    void state.runtime.prefetchManagedEntries(entries).catch((error: unknown) => {
-      if (!disposed) {
-        setState({ error: toError(error), isLive: true, runtime: state.runtime })
-      }
-    })
+    void state.runtime
+      .prefetchManagedEntries(props.prefetchManagedEntries)
+      .catch((error: unknown) => {
+        if (!disposed) {
+          setState({ error: toError(error), isLive: true, runtime: state.runtime })
+        }
+      })
 
     return () => {
       disposed = true
     }
-  }, [prefetchedManagedEntries, props.prefetchManagedEntries, state.isLive, state.runtime])
+  }, [props.prefetchManagedEntries, state.isLive, state.runtime])
 
   const contextValue = useMemo(
     () => ({

@@ -121,19 +121,18 @@ function hasIdentifyEvent(events: readonly ExperienceEvent[] | undefined): boole
 function getResponseBody(
   profileId?: string,
   events?: readonly ExperienceEvent[],
-  commit = true,
 ): ExperienceResponse {
   const fixtures = getLoadedFixtures()
 
   profileId ??= crypto.randomUUID()
-  if (commit) knownProfileIds.add(profileId)
+  knownProfileIds.add(profileId)
 
   const identified = identifiedState[profileId] ?? false
 
   let responseBody: ExperienceResponse = cloneDeep(fixtures.newVisitor)
 
   if (identified || hasIdentifyEvent(events)) {
-    if (commit) identifiedState[profileId] = true
+    identifiedState[profileId] = true
     responseBody = cloneDeep(fixtures.identifiedVisitor)
   }
 
@@ -207,9 +206,7 @@ export function getHandlers(
           )
         }
 
-        const commit = new URL(request.url).searchParams.get('type') !== 'preflight'
-
-        return HttpResponse.json(getResponseBody(undefined, parsedEvents.data, commit), {
+        return HttpResponse.json(getResponseBody(undefined, parsedEvents.data), {
           headers: CORS_HEADERS,
         })
       },
@@ -244,9 +241,7 @@ export function getHandlers(
           )
         }
 
-        const commit = new URL(request.url).searchParams.get('type') !== 'preflight'
-
-        return HttpResponse.json(getResponseBody(profileId.toString(), parsedEvents.data, commit), {
+        return HttpResponse.json(getResponseBody(profileId.toString(), parsedEvents.data), {
           headers: CORS_HEADERS,
         })
       },

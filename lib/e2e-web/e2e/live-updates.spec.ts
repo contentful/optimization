@@ -1,5 +1,4 @@
 import { type Locator, type Page, expect, test } from '@playwright/test'
-import { CUSTOMER_SEGMENTS } from '../src/fixtures'
 import { isPreviewPanelEnabled, onlyWithPreviewPanel, skipIf } from './utils'
 
 async function getEntryId(locator: Locator): Promise<string> {
@@ -30,9 +29,13 @@ test.describe('Live Updates', () => {
       await expect(page.locator('ctfl-opt-preview-panel')).toHaveCount(0)
     }
     await expect(page.getByTestId('live-updates-examples')).toBeVisible()
-    await expect(page.getByTestId('entry-text-live-default')).toContainText(
-      CUSTOMER_SEGMENTS['new-visitor'].resolvedEntryText,
-    )
+    await expect
+      .poll(async () => {
+        const text = await page.getByTestId('selected-optimizations-count').innerText()
+        const value = Number.parseInt(text, 10)
+        return Number.isNaN(value) ? 0 : value
+      })
+      .toBeGreaterThan(0)
   })
 
   test('default behavior locks to first value when global live updates is OFF', async ({

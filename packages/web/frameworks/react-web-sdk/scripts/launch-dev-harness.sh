@@ -25,7 +25,7 @@
 #
 # Prerequisites:
 #   - Node.js >= 20.19.0 (see .nvmrc for recommended version)
-#   - the pnpm version pinned in package.json
+#   - pnpm 10.x
 #
 # Logs:
 #   Background logs are written to packages/web/frameworks/react-web-sdk/logs/:
@@ -130,20 +130,18 @@ stop_process_tree() {
 
     log_info "Stopping ${name} (PID: ${pid})..."
 
-    local child
-    for child in $(pgrep -P "$pid" || true); do
-        stop_process_tree "$child" "${name} child" "$timeout_seconds"
-    done
+    pkill -TERM -P "$pid" 2>/dev/null || true
     kill -TERM "$pid" 2>/dev/null || true
 
     while kill -0 "$pid" 2>/dev/null && [[ $elapsed -lt $timeout_seconds ]]; do
         sleep 1
-        elapsed=$((elapsed + 1))
+        ((elapsed++))
     done
 
     if kill -0 "$pid" 2>/dev/null; then
         log_warn "${name} did not stop within ${timeout_seconds}s; force killing..."
-            kill -KILL "$pid" 2>/dev/null || true
+        pkill -KILL -P "$pid" 2>/dev/null || true
+        kill -KILL "$pid" 2>/dev/null || true
     fi
 
     wait "$pid" 2>/dev/null || true
@@ -154,6 +152,11 @@ cleanup() {
 
     if [[ -n "$MOCK_SERVER_PID" ]]; then
         stop_process_tree "$MOCK_SERVER_PID" "mock server" 8
+    fi
+
+    if lsof -ti:"${MOCK_SERVER_PORT}" > /dev/null 2>&1; then
+        log_info "Killing any remaining processes on mock server port ${MOCK_SERVER_PORT}..."
+        lsof -ti:"${MOCK_SERVER_PORT}" | xargs kill -9 2>/dev/null || true
     fi
 
     log_info "Cleanup complete"
@@ -177,7 +180,7 @@ wait_for_port() {
 
         echo -n "."
         sleep 1
-        attempt=$((attempt + 1))
+        ((attempt++))
     done
 
     echo ""
@@ -195,7 +198,7 @@ check_prerequisites() {
     log_info "Node.js $(node --version) found"
 
     if ! command -v pnpm &> /dev/null; then
-        log_error "pnpm is not installed. Please install the pnpm version pinned in package.json"
+        log_error "pnpm is not installed. Please install pnpm 10.x"
         exit 1
     fi
     log_info "pnpm $(pnpm --version) found"
@@ -236,18 +239,14 @@ start_mock_server() {
 
     if lsof -ti:"${MOCK_SERVER_PORT}" > /dev/null 2>&1; then
         log_warn "Port ${MOCK_SERVER_PORT} is already in use"
-        if curl --fail --silent "http://localhost:${MOCK_SERVER_PORT}/health" > /dev/null; then
-            log_info "Reusing the existing mock server"
-            return 0
-        fi
-        log_error "The occupied port is not a healthy mock server"
-        exit 1
+        log_info "Assuming mock server is already running"
+        return 0
     fi
 
     log_info "Starting mock server on port ${MOCK_SERVER_PORT}..."
 
     if [[ "$STREAM_BACKGROUND_LOGS" == "true" ]]; then
-        (PORT="${MOCK_SERVER_PORT}" pnpm --dir "${ROOT_DIR}" serve:mocks 2>&1 | tee "$MOCK_SERVER_LOG") &
+        PORT="${MOCK_SERVER_PORT}" pnpm --dir "${ROOT_DIR}" serve:mocks 2>&1 | tee "$MOCK_SERVER_LOG" &
     else
         PORT="${MOCK_SERVER_PORT}" pnpm --dir "${ROOT_DIR}" serve:mocks > "$MOCK_SERVER_LOG" 2>&1 &
     fi

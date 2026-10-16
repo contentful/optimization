@@ -28,7 +28,6 @@ import type {
   TrackBuilderArgs,
   ViewBuilderArgs,
 } from './events'
-import { validatePreparedEvents, withEventConsent } from './events/preparedEvents'
 import type { ExperienceQueue } from './queues/ExperienceQueue'
 import type { InsightsQueue } from './queues/InsightsQueue'
 import {
@@ -82,7 +81,6 @@ abstract class CoreStatefulEventEmitter
   protected abstract readonly experienceQueue: ExperienceQueue
   protected abstract readonly insightsQueue: InsightsQueue
   protected abstract readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
-  protected abstract get isDestroyed(): boolean
   protected abstract getEventOptimizationContext(
     optimizationContextId: string | undefined,
   ): EventOptimizationContext | undefined
@@ -196,8 +194,8 @@ abstract class CoreStatefulEventEmitter
    * @returns Whether the event was accepted and, for sticky views, any resulting
    * {@link OptimizationData}.
    * @remarks
-   * Experience receives sticky entry views only. Accepted views invoke Insights
-   * regardless of `sticky`; a rejected sticky view does not enqueue an Insights event.
+   * Experience receives sticky entry views only; Insights is always invoked
+   * regardless of `sticky`.
    * @example
    * ```ts
    * await core.trackView({ componentId: 'entry-123', sticky: true })
@@ -206,7 +204,6 @@ abstract class CoreStatefulEventEmitter
   async trackView(
     payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
-    if (this.isDestroyed) return { accepted: false }
     const optimizationContext = this.getEventOptimizationContext(payload.optimizationContextId)
     if (!this.hasConsent('trackView')) {
       this.onBlockedByConsent('trackView', [payload])
@@ -296,7 +293,7 @@ abstract class CoreStatefulEventEmitter
     return hasEventConsent(name, consentSignal.value, this.allowedEventTypes)
   }
 
-  protected onBlockedByConsent(name: string, args: readonly unknown[]): void {
+  private onBlockedByConsent(name: string, args: readonly unknown[]): void {
     coreLogger.warn(
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
     )
@@ -309,40 +306,15 @@ abstract class CoreStatefulEventEmitter
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<EventEmissionResult> {
-    if (this.isDestroyed) return { accepted: false }
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return { accepted: false }
     }
 
-    return await this.experienceQueue.send(event, optimizationContext)
-  }
+    const data = await this.experienceQueue.send(event, optimizationContext)
+    if (data === undefined) return { accepted: true }
 
-  protected async sendPreparedExperienceEvents(
-    events: readonly ExperienceEventPayload[],
-    profileId?: string,
-    locale?: string,
-  ): Promise<EventEmissionResult> {
-    if (this.isDestroyed) return { accepted: false }
-    let validEvents: ExperienceEventPayload[] = []
-    try {
-      validEvents = validatePreparedEvents(events)
-    } catch (error) {
-      coreLogger.warn('Invalid prepared Experience events; delivery was not admitted.', error)
-      return { accepted: false }
-    }
-    for (const event of validEvents) {
-      if (!this.hasConsent(event.type)) {
-        this.onBlockedByConsent(event.type, [event])
-        return { accepted: false }
-      }
-    }
-    return await Promise.resolve(
-      this.experienceQueue.sendPrepared(
-        validEvents.map((event) => withEventConsent(event, consentSignal.value === true)),
-        { profileId, locale },
-      ),
-    )
+    return { accepted: true, data }
   }
 
   protected async sendInsightsEvent(
@@ -351,7 +323,6 @@ abstract class CoreStatefulEventEmitter
     event: InsightsEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<void> {
-    if (this.isDestroyed) return
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return

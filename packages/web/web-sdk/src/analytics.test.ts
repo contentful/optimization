@@ -98,6 +98,7 @@ function createAnalyticsHandoff(
   return {
     cache: { scope: 'private-request' },
     hydration: 'analytics-only',
+    initialPageEvent: 'emit',
     state: {
       profile,
       selectedOptimizations,
@@ -304,6 +305,7 @@ describe('Optimization analytics handoff runtime', () => {
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
     expect(trackCurrentPage).toHaveBeenCalledWith({
       buildPayload: secondPayload,
+      initialPageEvent: 'emit',
       routeKey: '/segment-b',
     })
 
@@ -381,6 +383,32 @@ describe('Optimization analytics handoff runtime', () => {
     expect(LocalStore.selectedOptimizations).toEqual(selectedOptimizations)
   })
 
+  it('warns without throwing when skipping the page event without profile continuity', async () => {
+    const warn = rs.spyOn(console, 'warn').mockImplementation(() => undefined)
+    runtime = initializeOptimizationAnalyticsRuntime({
+      ...config,
+      logLevel: 'warn',
+    })
+
+    await expect(
+      hydrateOptimizationAnalyticsHandoff(
+        runtime,
+        createAnalyticsHandoff({
+          initialPageEvent: 'skip',
+          state: { selectedOptimizations },
+        }),
+        {
+          routeKey: '/segment-a',
+          buildPagePayload: () => ({}),
+        },
+      ),
+    ).resolves.toBeUndefined()
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('without handoff profile state or browser profile continuity'),
+    )
+  })
+
   it('rejects content handoffs', async () => {
     runtime = initializeOptimizationAnalyticsRuntime(config)
 
@@ -390,6 +418,7 @@ describe('Optimization analytics handoff runtime', () => {
         {
           cache: { scope: 'static' },
           hydration: 'preserve-server',
+          initialPageEvent: 'emit',
         },
         {
           routeKey: '/',
@@ -397,6 +426,24 @@ describe('Optimization analytics handoff runtime', () => {
         },
       ]),
     ).rejects.toThrow('analytics-only optimization handoffs')
+  })
+
+  it('rejects invalid initialPageEvent values', async () => {
+    runtime = initializeOptimizationAnalyticsRuntime(config)
+
+    await expect(
+      Reflect.apply(hydrateOptimizationAnalyticsHandoff, undefined, [
+        runtime,
+        {
+          ...createAnalyticsHandoff(),
+          initialPageEvent: 'invalid',
+        },
+        {
+          routeKey: '/',
+          buildPagePayload: () => ({}),
+        },
+      ]),
+    ).rejects.toThrow('initialPageEvent')
   })
 
   it('rejects public profile state before hydrating browser signals', async () => {
@@ -414,7 +461,7 @@ describe('Optimization analytics handoff runtime', () => {
         },
       ),
     ).rejects.toThrow(
-      'Profile state, identity and replay must not be included in public or static optimization caches.',
+      'Profile state should not be included in public or static optimization caches.',
     )
 
     expect(signals.profile.value).toBeUndefined()

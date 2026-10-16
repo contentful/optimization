@@ -55,21 +55,25 @@ public struct OptimizationApiConfig {
     public let experienceBaseUrl: String?
     public let insightsBaseUrl: String?
     public let enabledFeatures: [String]?
+    public let preflight: Bool?
 
     public init(
         experienceBaseUrl: String? = nil,
         insightsBaseUrl: String? = nil,
-        enabledFeatures: [String]? = nil
+        enabledFeatures: [String]? = nil,
+        preflight: Bool? = nil
     ) {
         self.experienceBaseUrl = experienceBaseUrl
         self.insightsBaseUrl = insightsBaseUrl
         self.enabledFeatures = enabledFeatures
+        self.preflight = preflight
     }
 
     var isEmpty: Bool {
         experienceBaseUrl == nil
             && insightsBaseUrl == nil
             && enabledFeatures == nil
+            && preflight == nil
     }
 
     func toDictionary() -> [String: Any] {
@@ -82,6 +86,9 @@ public struct OptimizationApiConfig {
         }
         if let enabledFeatures {
             dict["enabledFeatures"] = enabledFeatures
+        }
+        if let preflight {
+            dict["preflight"] = preflight
         }
         return dict
     }
@@ -155,19 +162,15 @@ public struct QueueFlushPolicy {
     }
 }
 
-/// Queue capacity and native flush callbacks. Offline admission defaults to 100 events.
+/// Queue policy and native queue observability callbacks.
 public struct QueuePolicy {
     public let flush: QueueFlushPolicy?
-    /// Maximum offline Experience events admitted; the default is 100.
     public let offlineMaxEvents: Int?
-    /// Inactive compatibility callback. Offline capacity rejects incoming events without dropping queued events.
-    @available(*, deprecated, message: "Inspect EventEmissionResult.accepted for offline capacity rejection.")
     public let onOfflineDrop: ((QueueEvent) -> Void)?
     public let onFlushFailure: ((QueueEvent) -> Void)?
     public let onCircuitOpen: ((QueueEvent) -> Void)?
     public let onFlushRecovered: ((QueueEvent) -> Void)?
 
-    /// `onOfflineDrop` is retained for source compatibility and is no longer called.
     public init(
         flush: QueueFlushPolicy? = nil,
         offlineMaxEvents: Int? = nil,
@@ -209,8 +212,6 @@ public struct BlockedEvent {
 
 /// Queue callback event type.
 public enum QueueEventType: String {
-    /// Retained for compatibility; the bridge no longer emits this event.
-    @available(*, deprecated, message: "Offline capacity rejects incoming events without a queue event.")
     case offlineDrop
     case flushFailure
     case circuitOpen

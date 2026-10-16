@@ -21,7 +21,7 @@ import { normalizeExplicitLocale } from './locale'
  */
 export interface CoreStatelessRequestOptions extends Pick<
   ExperienceApiClientRequestOptions,
-  'ip' | 'locale' | 'plainText'
+  'ip' | 'locale' | 'plainText' | 'preflight'
 > {}
 
 /**

@@ -6,7 +6,7 @@ export const runtime = 'edge'
 export async function GET(request: Request): Promise<Response> {
   const runtimeWitness = assertEdgeRuntime()
   const url = new URL(request.url)
-  const { handoff, persist } = await createEdgeRequestHandoff({
+  const { handoff, pageResult, persist } = await createEdgeRequestHandoff({
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
     pagePayload: { properties: { path: url.pathname, url: request.url } },
@@ -14,10 +14,11 @@ export async function GET(request: Request): Promise<Response> {
   })
   const response = Response.json(
     {
+      accepted: pageResult.accepted,
       cache: handoff.cache,
       hasState: handoff.state !== undefined,
       hydration: handoff.hydration,
-      replay: handoff.replay,
+      initialPageEvent: handoff.initialPageEvent,
       runtime: runtimeWitness,
     },
     {

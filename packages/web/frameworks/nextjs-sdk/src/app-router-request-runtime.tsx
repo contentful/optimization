@@ -1,3 +1,4 @@
+import { createRequestHandoffFromData } from '@contentful/optimization-node'
 import type {
   OptimizationCacheMetadata,
   PrivateRequestOptimizationCacheMetadata,
@@ -5,7 +6,12 @@ import type {
 import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
 import { cookies, headers } from 'next/headers'
 import { cache, createElement, type ReactElement } from 'react'
-import { assertRequestHandoffCacheMetadata, toHandoffDefaults } from './app-router-request-handoff'
+import {
+  assertRequestHandoffCacheMetadata,
+  readNextjsForwardedServerData,
+  toForwardedProfileOptions,
+  toHandoffDefaults,
+} from './app-router-request-handoff'
 import type {
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
@@ -18,15 +24,13 @@ import type {
   NextjsOptimizationServerConsent,
   NextjsOptimizationServerConsentResolver,
 } from './bound-component-types'
-import type {
-  BrowserOptimizationHandoff,
-  ContentOptimizationHandoff,
-  ContentOptimizationHydrationMode,
-} from './handoff'
 import {
-  NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
-  normalizeNextjsAppRequestUrl,
-} from './request-context'
+  addBrowserHandoffMetadata,
+  type BrowserOptimizationHandoff,
+  type ContentOptimizationHandoff,
+  type ContentOptimizationHydrationMode,
+} from './handoff'
+import { NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER } from './request-context'
 import {
   createNextjsRequestHandoff,
   type ContentfulOptimization,
@@ -45,6 +49,7 @@ export type AppRouterCreateRequestHandoffOptions = Omit<
   readonly hydration: ContentOptimizationHydrationMode
   readonly locale?: string
   readonly request: NextjsRequestLike
+  readonly trustedRequestHandoff?: true
 }
 
 interface BindNextjsAppRouterRequestRuntimeOptions {
@@ -92,6 +97,34 @@ export function bindNextjsAppRouterRequestRuntime({
     }
     assertRequestHandoffCacheMetadata(cacheMetadata)
 
+    const forwardedServerData = readNextjsForwardedServerData(
+      options.request.headers,
+      options.trustedRequestHandoff,
+    )
+    if (forwardedServerData !== undefined) {
+      const data =
+        forwardedServerData.profileId === undefined
+          ? undefined
+          : await sdk.api.experience.getProfile(
+              forwardedServerData.profileId,
+              toForwardedProfileOptions(options, config.locale),
+            )
+      const handoff = addBrowserHandoffMetadata(
+        createRequestHandoffFromData({
+          cache: cacheMetadata,
+          data,
+          entries: options.entries,
+        }),
+        {
+          hydration: options.hydration,
+          initialPageEvent: forwardedServerData.pageAccepted ? 'skip' : 'emit',
+        },
+      )
+      rememberRequestHandoff(handoff, toHandoffDefaults(forwardedServerData.consent))
+
+      return handoff
+    }
+
     const consent = await resolveServerConsent(config.consent?.server, {
       cookies: options.request.cookies ?? EMPTY_COOKIE_READER,
       headers: options.request.headers,
@@ -101,7 +134,7 @@ export function bindNextjsAppRouterRequestRuntime({
       cache: cacheMetadata,
       consent,
       locale: options.locale ?? config.locale,
-      request: { ...options.request, url: normalizeNextjsAppRequestUrl(options.request.url) },
+      request: options.request,
     })
 
     rememberRequestHandoff(handoff, toHandoffDefaults(consent))
@@ -120,34 +153,20 @@ export function bindNextjsAppRouterRequestRuntime({
       )
     }
 
-    const visibleRequestUrl = normalizeNextjsAppRequestUrl(requestUrl)
-    const url = new URL(visibleRequestUrl)
+    const url = new URL(requestUrl)
     const routeKey = `${url.pathname}${url.search}`
-    const context = {
-      requestUrl: visibleRequestUrl,
-      routeKey,
-      cookies: cookieStore,
-      headers: requestHeaders,
+    const pagePayload = {
+      properties: { path: url.pathname, search: url.search, url: requestUrl },
     }
-    const requestConfig = config.request ?? {}
-    const { initialEvents: configuredEvents, pagePayload: configuredPage } = requestConfig
-    const initialEvents =
-      typeof configuredEvents === 'function' ? await configuredEvents(context) : configuredEvents
-    const pagePayload =
-      typeof configuredPage === 'function'
-        ? await configuredPage(context)
-        : (configuredPage ?? {
-            properties: { path: url.pathname, search: url.search, url: visibleRequestUrl },
-          })
     const hydration =
-      typeof requestConfig.hydration === 'function'
-        ? requestConfig.hydration(context)
-        : (requestConfig.hydration ?? 'preserve-server')
+      typeof config.request?.hydration === 'function'
+        ? config.request.hydration({ requestUrl, routeKey })
+        : (config.request?.hydration ?? 'preserve-server')
     const handoff = await createRequestHandoff({
       hydration,
       pagePayload,
-      initialEvents,
-      request: { cookies: cookieStore, headers: requestHeaders, url: visibleRequestUrl },
+      request: { cookies: cookieStore, headers: requestHeaders, url: requestUrl },
+      trustedRequestHandoff: config.request?.trustedRequestHandoff,
     })
 
     return { handoff, hydration, pagePayload, routeKey }
@@ -180,7 +199,7 @@ export function bindNextjsAppRouterRequestRuntime({
   ): Promise<ReactElement | null> {
     const { prefetchManagedEntries, ...providerProps } = props
     const requestInputs = getRequestRenderInputs()
-    const [{ hydration, routeKey }, handoff] = await Promise.all([
+    const [{ hydration }, handoff] = await Promise.all([
       requestInputs,
       resolveHandoffEntries(
         requestInputs.then((inputs) => inputs.handoff),
@@ -188,7 +207,7 @@ export function bindNextjsAppRouterRequestRuntime({
       ),
     ])
 
-    return await OptimizationProvider({ ...providerProps, handoff, hydration, routeKey })
+    return await OptimizationProvider({ ...providerProps, handoff, hydration })
   }
 
   const RequestOptimizedEntry: NextjsBoundOptimizedEntryComponent<Promise<ReactElement>> = async (
@@ -202,7 +221,7 @@ export function bindNextjsAppRouterRequestRuntime({
 
     return createElement(NextAppAutoPageTracker, {
       ...props,
-      handoff,
+      initialPageEvent: handoff.initialPageEvent,
     })
   }
 

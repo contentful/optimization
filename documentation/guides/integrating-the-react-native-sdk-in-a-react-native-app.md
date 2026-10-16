@@ -1083,9 +1083,8 @@ behavior beyond the default React Native settings.
    before any screen or identify path can run, or accept that pre-consent screen and identify
    events will be dropped.
 2. Use `onEventBlocked` to surface consent or guard failures in diagnostics.
-3. Configure `queuePolicy.offlineMaxEvents` when the offline Experience buffer needs an explicit
-   bound. At capacity, incoming Experience events return `{ accepted: false }`, while accepted events
-   keep their order. The deprecated `onOfflineDrop` callback is inactive.
+3. Configure `queuePolicy.offlineMaxEvents` and `queuePolicy.onOfflineDrop` when the offline
+   Experience buffer must have explicit bounds and observability.
 4. Configure `queuePolicy.flush` only when flush behavior must differ from SDK defaults across shared
    Insights and Experience delivery.
 5. Use `api` endpoint overrides and `fetchOptions` for staging, mocks, and request-level options such
@@ -1105,6 +1104,10 @@ behavior beyond the default React Native settings.
   queuePolicy={{
     // Bound the offline Experience buffer for constrained mobile networks.
     offlineMaxEvents: 50,
+    onOfflineDrop: ({ droppedCount }) => {
+      // The callback receives a context object; droppedCount is how many events were dropped.
+      diagnostics.log('Dropped offline Experience events', { droppedCount })
+    },
   }}
   fetchOptions={{
     requestTimeout: 3000, // ms before a request times out (default 3000).

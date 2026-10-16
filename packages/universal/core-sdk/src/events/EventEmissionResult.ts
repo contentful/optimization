@@ -4,9 +4,9 @@ import type { OptimizationData } from '../api-schemas'
  * Result returned by Experience-event methods.
  *
  * @remarks
- * `{ accepted: false }` means consent, queue capacity, or SDK guards blocked the event.
+ * `{ accepted: false }` means consent or SDK guards blocked the event.
  * `{ accepted: true, data }` means the SDK accepted the event. Accepted
- * queued/offline events may not have data yet. Acceptance does not guarantee delivery.
+ * queued/offline events may not have data yet.
  *
  * @public
  */

@@ -27,6 +27,8 @@ export interface CoreStatefulApiConfig extends CoreSharedApiConfig {
   ip?: ExperienceApiClientConfig['ip']
   /** Experience API plain-text request toggle. */
   plainText?: ExperienceApiClientConfig['plainText']
+  /** Experience API preflight request toggle. */
+  preflight?: ExperienceApiClientConfig['preflight']
 }
 
 /**

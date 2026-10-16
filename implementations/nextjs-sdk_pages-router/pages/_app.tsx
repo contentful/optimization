@@ -60,7 +60,7 @@ export default function App({
               <Link data-testid="link-home" href="/">
                 Home
               </Link>
-              <Link data-testid="link-page-two" href="/page-two" prefetch={false}>
+              <Link data-testid="link-page-two" href="/page-two">
                 Page Two
               </Link>
               <Link data-testid="link-selection-handoff" href="/selection-handoff/new-visitor">

@@ -1,6 +1,7 @@
 import { rs } from '@rstest/core'
 import { act, StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { resetAutoPageEmitterState } from '../auto-page/useAutoPageEmitter'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
 import { createOptimizationSdk, defaultLiveUpdatesContext } from '../test/sdkTestUtils'
@@ -62,6 +63,7 @@ describe('NextPagesAutoPageTracker', () => {
   })
 
   beforeEach(() => {
+    resetAutoPageEmitterState()
     routerState.asPath = '/'
     routerState.isReady = true
     routerState.pathname = '/'
@@ -133,6 +135,37 @@ describe('NextPagesAutoPageTracker', () => {
     await rendered.rerender(<NextPagesAutoPageTracker />)
 
     expect(page).toHaveBeenCalledTimes(1)
+
+    await rendered.unmount()
+  })
+
+  it('skips only the initial route when server rendering already emitted its page event', async () => {
+    const page = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({ page })
+    const rendered = await renderTracker(<NextPagesAutoPageTracker initialPageEvent="skip" />, sdk)
+
+    expect(page).not.toHaveBeenCalled()
+
+    routerState.asPath = '/products'
+    routerState.pathname = '/products'
+
+    await rendered.rerender(<NextPagesAutoPageTracker initialPageEvent="skip" />)
+
+    expect(page).toHaveBeenCalledTimes(1)
+
+    await rendered.rerender(<NextPagesAutoPageTracker />)
+
+    expect(page).toHaveBeenCalledTimes(1)
+
+    routerState.asPath = '/'
+    routerState.pathname = '/'
+
+    await rendered.rerender(<NextPagesAutoPageTracker initialPageEvent="skip" />)
+
+    expect(page).toHaveBeenCalledTimes(2)
 
     await rendered.unmount()
   })

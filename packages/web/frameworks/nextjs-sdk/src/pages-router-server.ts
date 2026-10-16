@@ -4,6 +4,7 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { toHandoffDefaults } from './app-router-request-handoff'
 import type {
   NextjsOptimizationComponentsConfig,
+  NextjsOptimizationCookieConfig,
   NextjsOptimizationServerConsent,
   NextjsOptimizationServerConsentResolver,
 } from './bound-component-types'
@@ -11,7 +12,6 @@ import {
   createCookieReaderFromHeader,
   createCookieReaderFromRecord,
   createNextjsAnonymousIdSetCookieHeader,
-  toNextjsAnonymousIdCookieOptions,
   type PersistNextjsAnonymousIdOptions,
 } from './cookies'
 import type { BrowserOptimizationHandoff } from './handoff'
@@ -29,6 +29,7 @@ import {
   type OptimizationNodeConfig,
 } from './server'
 
+const SECONDS_IN_DAY = 86_400
 const EMPTY_COOKIE_READER = {
   get: () => undefined,
 }
@@ -76,7 +77,7 @@ export function bindNextjsPagesRouterServerOptimization(
       const { handoff } = await createNextjsPagesRouterRequestHandoff(sdk, context, {
         ...options,
         consent,
-        cookieOptions: options.cookieOptions ?? toNextjsAnonymousIdCookieOptions(config.cookie),
+        cookieOptions: options.cookieOptions ?? toAnonymousIdCookieOptions(config.cookie),
         locale: options.locale ?? config.locale ?? context.locale,
       })
 
@@ -100,14 +101,6 @@ export async function createNextjsPagesRouterRequestHandoff(
     ...requestOptions
   } = options
   const request = createPagesRouterRequest(context)
-  const entriesPromise =
-    prefetchManagedEntries === undefined
-      ? undefined
-      : prefetchServerManagedEntries(
-          sdk.forRequest({ consent: requestOptions.consent, locale: locale ?? context.locale }),
-          prefetchManagedEntries,
-        )
-  void entriesPromise?.catch(() => undefined)
   const result = await createNextjsRequestHandoff(sdk, {
     ...requestOptions,
     locale: locale ?? context.locale,
@@ -119,7 +112,7 @@ export async function createNextjsPagesRouterRequestHandoff(
     result.data,
     {
       anonymousIdCookieName: requestOptions.anonymousIdCookieName,
-      cookieOptions: { ...cookieOptions, httpOnly: false },
+      cookieOptions,
       deleteWhenProfileCannotPersist,
     },
   )
@@ -132,7 +125,10 @@ export async function createNextjsPagesRouterRequestHandoff(
     }
   }
 
-  const entries = (await entriesPromise) ?? []
+  const entries = await prefetchServerManagedEntries(
+    result.requestOptimization,
+    prefetchManagedEntries,
+  )
 
   const handoff: PagesRouterRequestDefaultsHandoff = {
     ...requestHandoff,
@@ -276,4 +272,19 @@ function toServerOptimizationConfig(
   } = config
 
   return serverConfig as OptimizationNodeConfig
+}
+
+function toAnonymousIdCookieOptions(
+  cookie: NextjsOptimizationCookieConfig | undefined,
+): PersistNextjsAnonymousIdOptions['cookieOptions'] {
+  if (cookie === undefined) return undefined
+
+  const cookieOptions: NonNullable<PersistNextjsAnonymousIdOptions['cookieOptions']> = {
+    ...(cookie.domain ? { domain: cookie.domain } : {}),
+    ...(typeof cookie.expires === 'number' && Number.isFinite(cookie.expires)
+      ? { maxAge: Math.trunc(cookie.expires * SECONDS_IN_DAY) }
+      : {}),
+  }
+
+  return Object.keys(cookieOptions).length === 0 ? undefined : cookieOptions
 }

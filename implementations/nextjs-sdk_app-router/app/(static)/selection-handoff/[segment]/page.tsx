@@ -5,30 +5,29 @@ import {
 } from '@/lib/contentful'
 import { getCustomerSegment, getCustomerSegmentStaticParams } from '@/lib/customer-segments'
 import { createCustomerSegmentHandoff, ExplicitOptimizedEntry } from '@/lib/optimization'
-import { unstable_cache } from 'next/cache'
+import { cacheLife, cacheTag } from 'next/cache'
 import { notFound } from 'next/navigation'
-
-export const revalidate = 60
 
 export function generateStaticParams() {
   return getCustomerSegmentStaticParams()
 }
 
 async function loadSelectionHandoffPage(segmentSlug: string) {
+  'use cache'
+
+  cacheLife({ revalidate: 60 })
+
   const segment = getCustomerSegment(segmentSlug)
 
   if (segment === undefined) return undefined
 
-  const handoff = createCustomerSegmentHandoff(segment)
-  const entries = await unstable_cache(
-    () =>
-      loadRequiredPageEntries([segment.baselineEntryId], {
-        onMissingEntry: staticPublicHandoffMissingRequiredEntryBehavior,
-      }),
-    [`selection-handoff:${segment.slug}`],
-    { revalidate, tags: [...(handoff.cache.tags ?? [])] },
-  )()
+  const entries = await loadRequiredPageEntries([segment.baselineEntryId], {
+    onMissingEntry: staticPublicHandoffMissingRequiredEntryBehavior,
+  })
   if (entries === undefined) return undefined
+
+  const handoff = createCustomerSegmentHandoff(segment)
+  if (handoff.cache.tags !== undefined) cacheTag(...handoff.cache.tags)
 
   return { entries, handoff }
 }
