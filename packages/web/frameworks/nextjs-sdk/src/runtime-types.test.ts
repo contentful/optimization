@@ -205,6 +205,7 @@ export function acceptAppRouterRequestConfig(
     request: {
       hydration: ({ requestUrl, routeKey }) =>
         requestUrl.includes(routeKey) ? 'preserve-server' : 'client-only-hidden-until-ready',
+      trustedRequestHandoff: true,
     },
   }
   void resolvedConfig
@@ -215,6 +216,7 @@ export function acceptBoundPublicPermutationHandoffOverload(
 ): ContentOptimizationHandoff {
   return components.createPublicPermutationHandoff({
     hydration: 'preserve-server',
+    initialPageEvent: 'emit',
     permutationKey: 'new-visitor',
     selectedOptimizations: [],
   })
@@ -266,8 +268,8 @@ export function rejectAppRouterRequestOwnedProps(
     hydration: 'preserve-server',
   })
   void components.request.NextAppAutoPageTracker({
-    // @ts-expect-error Request page trackers own the prepared handoff.
-    handoff,
+    // @ts-expect-error Request page trackers own the initial page event.
+    initialPageEvent: 'emit',
   })
 }
 
@@ -283,12 +285,13 @@ export function acceptAppRouterRootPageEventProps(
   })
 }
 
-export function acceptAppRouterProviderRouteKey(
+export function rejectAppRouterProviderRouteKey(
   components: NextjsAppClientComponents,
   props: BoundNextjsOptimizationProviderProps,
 ): void {
   components.OptimizationProvider({
     ...props,
+    // @ts-expect-error Bound provider does not own page route wiring.
     routeKey: '/products',
   })
 }

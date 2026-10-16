@@ -36,7 +36,7 @@ Vocabulary used below:
 - **Customer-owned** means owned by your application team. It does not mean a site visitor owns the
   selection.
 - Cache scope and hydration strings such as `public-permutation`, `static`, `private-request`,
-  `preserve-server`, `client-only-hidden-until-ready`, and `analytics-only` are
+  `preserve-server`, `client-only-hidden-until-ready`, `analytics-only`, `emit`, and `skip` are
   SDK-owned exact values. Route keys, payload `properties`, environment variable names, and helper
   names are application-owned. `permutationKey`, `cacheVersion`, and Next.js tags are
   application-owned cache inputs; `handoff.cache.key` and `ctfl-opt-cache-key` are SDK-generated
@@ -70,10 +70,9 @@ Start with one App Router Cache Components route whose permutation is owned by y
 The example expects these app-owned helpers:
 
 - `@/lib/optimization` exports the `optimization` server binding from
-  `@contentful/optimization-nextjs/app-router/server` for public handoff creation and server entry
-  resolution. `@/components/PublicHandoffRoots` owns the browser roots and initializes them from the
-  current app consent decision. These public inputs remain separate from the nested private request
-  family.
+  `@contentful/optimization-nextjs/app-router/server`. The examples alias its top-level root as
+  `ExplicitOptimizationRoot`. These explicit-input exports are separate from the nested private
+  request family.
 - `getHeroEntry()` fetches the baseline Contentful entry for the route.
 - `getPublicSegments()` returns the public segment slugs that Next.js can pre-render.
 - `getPublicSegment(slug)` returns
@@ -113,73 +112,6 @@ The SDK hydrates the selected state your app supplies; it does not discover the 
 selected optimizations. Start with one approved segment whose selected variant has distinctive text;
 the route below fetches the baseline and calls `resolveEntriesForSelections()` with that segment.
 
-The public route's browser runtime needs the app's current consent decision when it starts. A fixed
-`consent.clientDefaults` value from a request-route binding is not a fresh browser consent read.
-Keep the server-rendered permutation independent of visitor cookies. This app-owned client boundary
-reads the browser-visible `app-consent=accepted` cookie written by the app-owned
-[consent controls in the App Router integration guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#consent-identity-profile-and-reset)
-when each root mounts. Match the cookie name and accepted value to your app's writer; an absent cookie
-resolves to `false` here. Replace the reader with your consent manager when it owns the decision. If
-the decision is asynchronous, wait for it before mounting the SDK root.
-
-**Adapt this to your use case:**
-
-```tsx
-// components/PublicHandoffRoots.tsx
-'use client'
-
-import {
-  OptimizationAnalyticsRoot,
-  OptimizationRoot,
-  type AutoPagePayload,
-  type OptimizationAnalyticsRootProps,
-  type OptimizationRootProps,
-} from '@contentful/optimization-nextjs/client'
-import type { ReactNode } from 'react'
-
-const browserConfig = {
-  spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
-  environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
-} as const
-
-type ContentProps = {
-  children: ReactNode
-  handoff: NonNullable<OptimizationRootProps['handoff']>
-  initialPagePayload: AutoPagePayload
-  locale: string
-  routeKey: string
-}
-
-type AnalyticsProps = {
-  children: ReactNode
-  handoff: OptimizationAnalyticsRootProps['handoff']
-  initialPagePayload: AutoPagePayload
-  locale: string
-  routeKey: string
-}
-
-function browserDefaults() {
-  const consent =
-    typeof document !== 'undefined' && document.cookie.split('; ').includes('app-consent=accepted')
-  return { consent, persistenceConsent: consent }
-}
-
-export function PublicContentRoot(props: ContentProps) {
-  return <OptimizationRoot {...browserConfig} {...props} defaults={browserDefaults()} />
-}
-
-export function PublicAnalyticsRoot(props: AnalyticsProps) {
-  return <OptimizationAnalyticsRoot {...browserConfig} {...props} defaults={browserDefaults()} />
-}
-```
-
-If your app decides event and persistence consent separately, pass both decisions to `defaults`
-instead of deriving them from one cookie. Keep any consent-dependent controls out of the cached
-server markup so the first browser render can hydrate it consistently. Defaults apply when a root
-initializes. If consent changes while `PublicContentRoot` stays mounted, update the app-owned record
-and call `setConsent` from `useOptimizationActions()`. `PublicAnalyticsRoot` exposes no consent action;
-remount it with the new decision. Changing only the cookie does not update either active runtime.
-
 Each resolved item also carries optional `isEmptyVariant`. When it is `true`, `entry` retains the
 baseline for tracking context, but direct route markup must omit consumer content. An absent flag
 renders normally.
@@ -189,13 +121,12 @@ renders normally.
 ```tsx
 // app/segments/[segment]/page.tsx
 import { Hero } from '@/components/Hero'
-import { PublicContentRoot } from '@/components/PublicHandoffRoots'
 import { optimization } from '@/lib/optimization'
 import { getHeroEntry, getPublicSegment, getPublicSegments } from '@/lib/segments'
 import { createPublicPermutationHandoff } from '@contentful/optimization-nextjs/app-router/server'
 import { cacheLife, cacheTag } from 'next/cache'
 
-const { resolveEntriesForSelections } = optimization
+const { OptimizationRoot: ExplicitOptimizationRoot, resolveEntriesForSelections } = optimization
 
 async function getSegmentData(segmentSlug: string) {
   'use cache'
@@ -230,17 +161,17 @@ export default async function SegmentPage({ params }: { params: Promise<{ segmen
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'preserve-server',
+    initialPageEvent: 'emit',
   })
 
   return (
-    <PublicContentRoot
+    <ExplicitOptimizationRoot
+      buildPagePayload={() => ({ properties: { locale: segment.locale, segment: segment.slug } })}
       handoff={handoff}
-      initialPagePayload={{ properties: { locale: segment.locale, segment: segment.slug } }}
-      locale={segment.locale}
       routeKey={routeKey}
     >
       {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
-    </PublicContentRoot>
+    </ExplicitOptimizationRoot>
   )
 }
 ```
@@ -253,11 +184,6 @@ Verify that first segment before adding more:
 4. During first validation, log `handoff.cache.key` next to the handoff creation, change
    `segment.cacheVersion`, request the route again, and verify the logged key changes. Remove the
    temporary log after the route is validated.
-5. In a browser that accepted app persistence consent and already has an SDK-owned `ctfl-opt-aid`
-   profile ID cookie, record that ID in browser devtools. Load and reload the public route, then
-   verify that the cookie keeps the same ID.
-6. In a fresh browser profile without app persistence consent, load the same route and verify that
-   no `ctfl-opt-aid` cookie is written.
 
 This quick-start proof does not validate tag invalidation. `cacheTag()` and `revalidateTag()` are
 application-owned Next.js invalidation paths; validate them with your production webhook, Server
@@ -289,8 +215,7 @@ Action, or Route Handler outside the first route proof.
 Use the same ownership test for every route: the cache owner must match the Optimization state that
 produced the markup. A **baseline entry** is the Contentful entry before Optimization resolution.
 Resolving entries means applying selected optimizations to those baseline entries before rendering.
-Public and static handoffs contain selected rendering state without a prepared request replay. The
-browser root tracks the current page after hydration when event consent allows it.
+`initialPageEvent` tells the browser whether to emit or skip the first page event for the route.
 
 A campaign can have two independent meanings in these recipes. A public `permutationKey` can name
 an app-owned campaign and contributes to public cache identity. A page event's `context.campaign` is
@@ -413,10 +338,13 @@ Resolve and assemble each usable permutation in the route that renders it:
 3. Call `resolveEntriesForSelections()` with those baseline entries and the record's
    `selectedOptimizations`.
 4. Call `createPublicPermutationHandoff()` with the same public key, `cacheVersion`, locale, entry
-   IDs, `selectedOptimizations`, optional `changes`, and hydration mode used by the route.
+   IDs, `selectedOptimizations`, optional `changes`, hydration mode, and initial page-event
+   ownership used by the route.
 5. Use `cache: { scope: 'static' }` with `createHandoffFromSelections()` for one build-time static
    output. Use `createPublicPermutationHandoff()` for Cache Components, Pages Router ISR, Edge
    runtime, or CDN-cached public outputs.
+6. Use `initialPageEvent: 'emit'` unless a request or edge helper already accepted the first page
+   event for the same route.
 
 **Follow this pattern:**
 
@@ -438,6 +366,7 @@ const handoff = createPublicPermutationHandoff({
   selectedOptimizations: permutation.selectedOptimizations,
   changes: permutation.changes,
   hydration: 'preserve-server',
+  initialPageEvent: 'emit',
 })
 ```
 
@@ -509,7 +438,7 @@ export function BrowserOwnedHero({ hero }) {
       buildPagePayload={() => ({ properties: { path: '/landing' } })}
     >
       <Suspense fallback={null}>
-        <NextAppAutoPageTracker />
+        <NextAppAutoPageTracker initialPageEvent="emit" />
       </Suspense>
       <OptimizedEntry baselineEntry={hero}>
         {(resolvedHero) => <Hero entry={resolvedHero} />}
@@ -537,11 +466,14 @@ uses `static` because there is no request profile and no ISR or CDN permutation 
 ```tsx
 // app/static-segment/page.tsx
 import { Hero } from '@/components/Hero'
-import { PublicContentRoot } from '@/components/PublicHandoffRoots'
 import { optimization } from '@/lib/optimization'
 import { getBuildSelection, getHeroEntry } from '@/lib/static-segment'
 
-const { createHandoffFromSelections, resolveEntriesForSelections } = optimization
+const {
+  OptimizationRoot: ExplicitOptimizationRoot,
+  createHandoffFromSelections,
+  resolveEntriesForSelections,
+} = optimization
 
 export default async function StaticSegmentPage() {
   const selection = await getBuildSelection()
@@ -555,17 +487,17 @@ export default async function StaticSegmentPage() {
     changes: selection.changes,
     cache: { scope: 'static' },
     hydration: 'preserve-server',
+    initialPageEvent: 'emit',
   })
 
   return (
-    <PublicContentRoot
+    <ExplicitOptimizationRoot
+      buildPagePayload={() => ({ properties: { path: '/static-segment' } })}
       handoff={handoff}
-      initialPagePayload={{ properties: { path: '/static-segment' } }}
-      locale="en-US"
       routeKey="/static-segment"
     >
       {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
-    </PublicContentRoot>
+    </ExplicitOptimizationRoot>
   )
 }
 ```
@@ -600,6 +532,7 @@ const handoff = createPublicPermutationHandoff({
   selectedOptimizations: segment.selectedOptimizations,
   changes: segment.changes,
   hydration: 'preserve-server',
+  initialPageEvent: 'emit',
 })
 ```
 
@@ -708,6 +641,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ seg
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'preserve-server',
+    initialPageEvent: 'emit',
   })
   const response = await renderEdgeSegmentResponse({ handoff, hero, segment })
 
@@ -727,13 +661,10 @@ reads visitor state, use a `private-request` handoff.
 Use this when an Edge runtime route owns a `Response` and renders for the current request. The route
 must export `runtime = 'edge'` and avoid Node-only APIs. This is a reference excerpt for custom
 route handlers that already turn application HTML into a `Response`; it is not an App Router page
-recipe. The helper reads request cookies and headers, previews the page event, returns a browser
-handoff with the prepared events, and gives the route a `persist(response)` callback for the
-SDK-owned anonymous ID cookie. The browser commits matching prepared events through its SDK queue.
+recipe. The helper reads request cookies and headers, emits the page event, returns a browser
+handoff, and gives the route a `persist(response)` callback for the SDK-owned anonymous ID cookie.
 `app-consent` is a reader-owned consent cookie name. Configure `consent.server` explicitly; if it is
-omitted, Edge request consent resolves to `false`. The inherited Node pre-consent allow-list still
-permits page and identify events by default; set `allowedEventTypes: []` when your policy must block
-all events until consent.
+omitted, Edge request consent resolves to `false`.
 
 **Reference excerpt:**
 
@@ -756,8 +687,7 @@ const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
 })
 
 export async function GET(request: Request) {
-  const url = new URL(request.url)
-  const routeKey = `${url.pathname}${url.search}`
+  const routeKey = new URL(request.url).pathname
   const { handoff, persist } = await createEdgeRequestHandoff({
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
@@ -777,7 +707,7 @@ export async function GET(request: Request) {
 response private because the handoff can include request profile state.
 
 In this example, `createEdgeRequestHandoff()` builds `page.url` from the full `request.url`; the
-pathname and search in `routeKey` must match the browser route for prepared-event delivery. Because `pagePayload`
+pathname-only `routeKey` identifies the route for duplicate-event control. Because `pagePayload`
 supplies only `properties.path`, the request-backed `page.url` is the campaign source when it has a
 supported UTM parameter. If you customize that payload, the SDK chooses one whole source in order:
 top-level `campaign`, then a UTM-bearing `properties.url`, then `page.url`. An explicit empty
@@ -805,13 +735,12 @@ public-cache identity input. These three inputs do not populate one another.
 
 ```tsx
 import { Hero } from '@/components/Hero'
-import { PublicAnalyticsRoot } from '@/components/PublicHandoffRoots'
 import { optimization } from '@/lib/optimization'
 import { getAnalyticsSegment, getHeroEntry } from '@/lib/analytics-segments'
 import { createPublicPermutationHandoff } from '@contentful/optimization-nextjs/app-router/server'
 import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
 
-const { resolveEntriesForSelections } = optimization
+const { OptimizationAnalyticsRoot, resolveEntriesForSelections } = optimization
 
 export default async function AnalyticsOnlyPage() {
   const segment = await getAnalyticsSegment('campaign-a')
@@ -828,20 +757,20 @@ export default async function AnalyticsOnlyPage() {
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'analytics-only',
+    initialPageEvent: 'emit',
   })
   const trackingAttributes = getServerTrackingAttributes(hero, resolvedHero)
 
   return (
-    <PublicAnalyticsRoot
+    <OptimizationAnalyticsRoot
+      buildPagePayload={() => ({ properties: { pageCategory: 'campaign-landing' } })}
       handoff={handoff}
-      initialPagePayload={{ properties: { pageCategory: 'campaign-landing' } }}
-      locale={segment.locale}
       routeKey="/campaign-a"
     >
       <article {...trackingAttributes}>
         {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
       </article>
-    </PublicAnalyticsRoot>
+    </OptimizationAnalyticsRoot>
   )
 }
 ```

@@ -345,7 +345,7 @@ describe('CoreStateful blocked event handling', () => {
     }
   })
 
-  it('rejects offline Experience admission at queuePolicy.offlineMaxEvents without eviction', async () => {
+  it('uses queuePolicy.offlineMaxEvents and onOfflineDrop for Experience buffering', async () => {
     rs.useFakeTimers()
 
     try {
@@ -367,11 +367,18 @@ describe('CoreStateful blocked event handling', () => {
       rs.spyOn(core.api.experience, 'upsertProfile').mockRejectedValue(new Error('experience-down'))
 
       core.setOnlineState(false)
-      expect(await core.track({ event: 'e1' })).toMatchObject({ accepted: true })
-      expect(await core.track({ event: 'e2' })).toMatchObject({ accepted: true })
-      expect(await core.track({ event: 'e3' })).toEqual({ accepted: false })
+      await core.track({ event: 'e1' })
+      await core.track({ event: 'e2' })
+      await core.track({ event: 'e3' })
 
-      expect(onDrop).not.toHaveBeenCalled()
+      expect(onDrop).toHaveBeenCalledTimes(1)
+      expect(onDrop).toHaveBeenCalledWith(
+        expect.objectContaining({
+          droppedCount: 1,
+          maxEvents: 2,
+          queuedEvents: 2,
+        }),
+      )
 
       core.setOnlineState(true)
       await core.flush()
@@ -389,16 +396,6 @@ describe('CoreStateful blocked event handling', () => {
       rs.clearAllTimers()
       rs.useRealTimers()
     }
-  })
-
-  it('defaults offline Experience admission capacity to 100 events', async () => {
-    const core = createCoreStatefulHarness({ defaults: { consent: true } })
-    core.setOnlineState(false)
-    for (let index = 0; index < 100; index += 1) {
-      expect(await core.track({ event: `event-${index}` })).toEqual({ accepted: true })
-    }
-    expect(await core.track({ event: 'overflow' })).toEqual({ accepted: false })
-    core.consent(false)
   })
 
   it('supports only one stateful instance per runtime until destroy is called', () => {

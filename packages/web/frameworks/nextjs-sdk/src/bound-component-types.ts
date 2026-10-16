@@ -7,11 +7,7 @@ import type {
   OptimizedEntryManagedProps,
   OptimizedEntryProps,
 } from '@contentful/optimization-react-web'
-import type {
-  InitialExperienceEvent,
-  PageViewBuilderArgs,
-  StatefulDefaults,
-} from '@contentful/optimization-react-web/core-sdk'
+import type { StatefulDefaults } from '@contentful/optimization-react-web/core-sdk'
 import type { NextAppAutoPageTrackerProps } from '@contentful/optimization-react-web/router/next-app'
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { ReactElement, ReactNode } from 'react'
@@ -19,7 +15,7 @@ import type { ContentOptimizationHandoff, ContentOptimizationHydrationMode } fro
 
 export type NextjsBoundProviderConfig = Omit<
   OptimizationProviderConfigProps,
-  'children' | 'handoff' | 'hydration' | 'prefetchManagedEntries' | 'routeKey' | 'sdk'
+  'children' | 'cookie' | 'handoff' | 'hydration' | 'prefetchManagedEntries' | 'sdk'
 >
 
 export interface NextjsCookieValue {
@@ -46,14 +42,17 @@ export type NextjsOptimizationServerConsentResolver = (
   context: NextjsOptimizationServerConsentContext,
 ) => NextjsOptimizationServerConsent | Promise<NextjsOptimizationServerConsent>
 
-export type NextjsOptimizationCookieConfig = NonNullable<OptimizationRootProps['cookie']>
+export interface NextjsOptimizationCookieConfig {
+  readonly domain?: string
+  readonly expires?: number
+}
 
 export interface NextjsOptimizationConsentConfig {
   readonly server?: NextjsOptimizationServerConsent | NextjsOptimizationServerConsentResolver
   readonly clientDefaults?: NextjsPagesRouterClientDefaults
 }
 
-export type NextjsBoundRootConfig = Omit<NextjsBoundProviderConfig, 'defaults' | 'cookie'> & {
+export type NextjsBoundRootConfig = Omit<NextjsBoundProviderConfig, 'defaults'> & {
   readonly consent?: NextjsOptimizationConsentConfig
   readonly cookie?: NextjsOptimizationCookieConfig
 } & Pick<OptimizationRootProps, 'liveUpdates'>
@@ -74,7 +73,7 @@ export type NextjsClientOptimizationConfig =
   | NextjsClientOptimizationConfigWithoutBeforeInitialPage
   | NextjsClientOptimizationConfigWithBeforeInitialPage
 
-export interface NextjsAppRouterRequestContext extends NextjsOptimizationServerConsentContext {
+export interface NextjsAppRouterRequestContext {
   readonly requestUrl: string
   readonly routeKey: string
 }
@@ -85,16 +84,7 @@ export type NextjsAppRouterRequestHydration =
 
 export interface NextjsAppRouterRequestConfig {
   readonly hydration?: NextjsAppRouterRequestHydration
-  readonly initialEvents?:
-    | readonly InitialExperienceEvent[]
-    | ((
-        context: NextjsAppRouterRequestContext,
-      ) => readonly InitialExperienceEvent[] | Promise<readonly InitialExperienceEvent[]>)
-  readonly pagePayload?:
-    | PageViewBuilderArgs
-    | ((
-        context: NextjsAppRouterRequestContext,
-      ) => PageViewBuilderArgs | Promise<PageViewBuilderArgs>)
+  readonly trustedRequestHandoff?: true
 }
 
 export interface NextjsAppRouterServerOptimizationConfig extends NextjsOptimizationComponentsConfig {
@@ -149,7 +139,7 @@ export interface NextjsBoundOptimizedEntryComponent<TResult> {
 
 export interface BoundNextjsOptimizationProviderProps extends Pick<
   OptimizationProviderConfigProps,
-  'handoff' | 'hydration' | 'prefetchManagedEntries' | 'routeKey'
+  'handoff' | 'hydration' | 'prefetchManagedEntries'
 > {
   readonly children?: ReactNode
 }
@@ -182,12 +172,12 @@ export type NextjsAppRouterRequestOptimizationRootProps = Omit<
 
 export type NextjsAppRouterRequestOptimizationProviderProps = Omit<
   BoundNextjsOptimizationProviderProps,
-  'handoff' | 'hydration' | 'routeKey'
+  'handoff' | 'hydration'
 >
 
 export type NextjsAppRouterRequestAutoPageTrackerProps = Omit<
   NextAppAutoPageTrackerProps,
-  'handoff'
+  'initialPageEvent'
 >
 
 export interface NextjsAppRouterRequestOptimization {

@@ -28,8 +28,11 @@ export type {
 
 export { createOptimizationCacheKey }
 
+export type NextjsInitialPageEvent = 'emit' | 'skip'
+
 export interface NextjsBrowserHandoffMetadata {
   readonly hydration: OptimizationHydrationMode
+  readonly initialPageEvent: NextjsInitialPageEvent
 }
 
 export interface NextjsCreateHandoffFromSelectionsOptions extends NextjsBrowserHandoffMetadata {
@@ -83,6 +86,7 @@ export function addBrowserHandoffMetadata(
   const browserHandoff: BrowserOptimizationHandoff = {
     ...handoff,
     hydration: metadata.hydration,
+    initialPageEvent: metadata.initialPageEvent,
   }
 
   return browserHandoff
@@ -102,7 +106,7 @@ export function createHandoffFromSelections(
 export function createHandoffFromSelections(
   input: NextjsCreateHandoffFromSelectionsOptions,
 ): BrowserOptimizationHandoff {
-  const { hydration, selectedOptimizations, changes, entries, cache } = input
+  const { hydration, initialPageEvent, selectedOptimizations, changes, entries, cache } = input
   if (cache.scope === 'public-permutation') validateNextjsPublicPermutationCacheTags(cache.tags)
 
   const handoff = createCoreHandoffFromSelections({
@@ -112,7 +116,7 @@ export function createHandoffFromSelections(
     selectedOptimizations,
   })
 
-  return addBrowserHandoffMetadata(handoff, { hydration })
+  return addBrowserHandoffMetadata(handoff, { hydration, initialPageEvent })
 }
 
 export function createPublicPermutationHandoff(
@@ -134,6 +138,7 @@ export function createPublicPermutationHandoff(
     changes: input.changes,
     entries: input.entries,
     hydration: input.hydration,
+    initialPageEvent: input.initialPageEvent,
     selectedOptimizations: input.selectedOptimizations,
   })
 }

@@ -1,7 +1,6 @@
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type {
   ChangeArray,
-  ExperienceEvent,
   Profile,
   SelectedOptimization,
   SelectedOptimizationArray,
@@ -142,16 +141,6 @@ export interface OptimizationHandoff {
   readonly entries?: readonly ManagedEntryHandoff[]
   /** Cache metadata for the rendered output. */
   readonly cache: OptimizationCacheMetadata
-  /** API-issued identity available for browser continuation; its presence does not mean preview state was committed. */
-  readonly profileId?: string
-  readonly replay?: {
-    /** Pathname and search string for the browser route that receives these events. */
-    readonly routeKey: string
-    /** Prepared Experience events, including the initial page event when preparation succeeds. */
-    readonly events: readonly ExperienceEvent[]
-    /** Locale captured for delivery of the prepared events. */
-    readonly locale?: string
-  }
 }
 
 /**
@@ -369,18 +358,16 @@ export function getOptimizationCacheSafetyWarnings(
   handoff: OptimizationHandoff,
 ): readonly OptimizationCacheSafetyWarning[] {
   const warnings: OptimizationCacheSafetyWarning[] = []
-  const { cache } = handoff
+  const { cache, state } = handoff
 
-  const privatePath = getPrivateHandoffPath(handoff)
   if (
     (cache.scope === 'public-permutation' || cache.scope === 'static') &&
-    privatePath !== undefined
+    state?.profile !== undefined
   ) {
     warnings.push({
       code: 'profile-state-in-public-cache',
-      message:
-        'Profile state, identity and replay must not be included in public or static optimization caches.',
-      path: privatePath,
+      message: 'Profile state should not be included in public or static optimization caches.',
+      path: ['state', 'profile'],
     })
   }
 
@@ -408,11 +395,4 @@ export function assertOptimizationCacheSafety(handoff: OptimizationHandoff): voi
   if (warnings.length === 0) return
 
   throw new TypeError(warnings.map((warning) => warning.message).join(' '))
-}
-
-function getPrivateHandoffPath(handoff: OptimizationHandoff): string[] | undefined {
-  if (handoff.state?.profile !== undefined) return ['state', 'profile']
-  if (handoff.profileId !== undefined) return ['profileId']
-  if (handoff.replay !== undefined) return ['replay']
-  return undefined
 }

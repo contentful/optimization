@@ -1,36 +1,26 @@
 import { expect, test, type Page } from '@playwright/test'
-import { PROFILE_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
+import { CONSENT_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Hydration', () => {
   runIf('HYDRATION')
 
-  test('preserves consent and the profile cookie through browser commitment', async ({
+  test('does not issue a client Experience request after consented SSR hydration', async ({
     baseURL,
     context,
     page,
-    request,
   }) => {
-    await seedIdentifiedProfile(context, baseURL, request)
-    const profileId = (await context.cookies()).find(({ name }) => name === 'ctfl-opt-aid')?.value
-    expect(profileId).toBeTruthy()
+    await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
+    const clientExperienceRequests: string[] = []
+    await page.route('**/experience/**', async (route) => {
+      clientExperienceRequests.push(route.request().url())
+      await route.continue()
+    })
 
-    const delivery = page.waitForResponse(
-      (response) =>
-        response.url().includes('/experience/') &&
-        response.request().method() === 'POST' &&
-        response.ok(),
-    )
     await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-    await expect(page.getByTestId('consent-status')).toHaveText('Yes')
-    await expect(page.locator('[data-testid^="event-page-"]')).toHaveCount(1)
-    await delivery
-    await expect
-      .poll(
-        async () => (await context.cookies()).find(({ name }) => name === 'ctfl-opt-aid')?.value,
-      )
-      .toBe(profileId)
+
+    expect(clientExperienceRequests).toEqual([])
   })
 })
 
@@ -44,8 +34,6 @@ test.describe('SSR first-paint state', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
-      await expect(page.getByTestId('consent-status')).toBeVisible()
-      await expect(page.getByTestId('identified-status')).toBeVisible()
       await expect(page.getByTestId('consent-status')).toHaveText('No')
       await expect(page.getByTestId('identified-status')).toHaveText('No')
     })
@@ -56,8 +44,6 @@ test.describe('SSR first-paint state', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
-      await expect(page.getByTestId('consent-status')).toBeVisible()
-      await expect(page.getByTestId('identified-status')).toBeVisible()
       await expect(page.getByTestId('consent-status')).toHaveText('Yes')
       await expect(page.getByTestId('identified-status')).toHaveText('No')
     })
@@ -75,8 +61,6 @@ test.describe('SSR first-paint state', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
-      await expect(page.getByTestId('consent-status')).toBeVisible()
-      await expect(page.getByTestId('identified-status')).toBeVisible()
       await expect(page.getByTestId('consent-status')).toHaveText('Yes')
       await expect(page.getByTestId('identified-status')).toHaveText('Yes')
     })
@@ -92,15 +76,13 @@ test.describe('SSR first-paint state', () => {
       await page.waitForLoadState('domcontentloaded')
 
       const host = page.locator(`[data-ctfl-baseline-id="${BASELINE_ID}"]`).first()
-      await expect(host).toBeVisible()
       await expect(host).toHaveAttribute('data-ctfl-entry-id', VARIANT_ENTRY_ID)
       await expect(host).toHaveAttribute('data-ctfl-optimization-id', EXPERIENCE_ID)
       await expect(host).toHaveAttribute('data-ctfl-variant-index', '1')
     }
 
-    test('renders the variant for a new visitor before consent', async ({ context, page }) => {
+    test('renders the variant for a new visitor before consent', async ({ page }) => {
       await expectServerResolvedVariant(page)
-      expect((await context.cookies()).some(({ name }) => name === PROFILE_COOKIE)).toBe(false)
     })
 
     test('renders the variant for a consented visitor', async ({ baseURL, context, page }) => {

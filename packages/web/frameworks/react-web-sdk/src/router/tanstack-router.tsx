@@ -5,7 +5,6 @@ import { useCallback, useMemo, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
 import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
-import type { ContentOptimizationHandoff } from '../handoff'
 
 type TanStackLocation = RouterState<AnyRouter['routeTree']>['location']
 type TanStackMatches = RouterState<AnyRouter['routeTree']>['matches']
@@ -21,10 +20,7 @@ export interface TanStackRouterAutoPageContext {
   readonly url: TanStackLocation['href']
 }
 
-export interface TanStackRouterAutoPageTrackerProps extends AutoPagePayloadOptions<TanStackRouterAutoPageContext> {
-  /** Pass the root's handoff to share paired startup; replay matching uses pathname/search. */
-  readonly handoff?: ContentOptimizationHandoff
-}
+export interface TanStackRouterAutoPageTrackerProps extends AutoPagePayloadOptions<TanStackRouterAutoPageContext> {}
 
 function buildQueryDictionary(searchStr: string): Record<string, string> {
   return Object.fromEntries(new URLSearchParams(searchStr))
@@ -68,7 +64,6 @@ function buildRouterPayload(snapshot: RouterUrlSnapshot): AutoPagePayload {
 }
 
 export function TanStackRouterAutoPageTracker({
-  handoff,
   pagePayload,
   getPagePayload,
 }: TanStackRouterAutoPageTrackerProps): ReactElement | null {
@@ -79,15 +74,15 @@ export function TanStackRouterAutoPageTracker({
   const matches = useRouterState<AnyRouter, TanStackMatches>({
     select: (state) => state.matches,
   })
-  const { hash, href, pathname, searchStr } = location
-  const routeKey = handoff === undefined ? href : `${pathname}${searchStr}`
+  const { href: routeKey } = location
+  const { hash, pathname, searchStr } = location
 
   // Memoize on the URL primitives that describe the route. Re-renders that
   // produce a new `location` reference but the same URL must not invalidate
   // this memo, otherwise the emitter effect would re-run unnecessarily.
   const routerPayload = useMemo(
-    () => buildRouterPayload({ hash, href, pathname, searchStr }),
-    [hash, href, pathname, searchStr],
+    () => buildRouterPayload({ hash, href: routeKey, pathname, searchStr }),
+    [hash, pathname, routeKey, searchStr],
   )
 
   const buildPayload = useCallback(
@@ -106,14 +101,13 @@ export function TanStackRouterAutoPageTracker({
             routeKey,
             router,
             search: searchStr,
-            url: href,
+            url: routeKey,
           },
         },
       ),
     [
       getPagePayload,
       hash,
-      href,
       location,
       matches,
       pagePayload,
@@ -125,7 +119,7 @@ export function TanStackRouterAutoPageTracker({
     ],
   )
 
-  useAutoPageEmitter({ enabled: true, handoff, routeKey, buildPayload })
+  useAutoPageEmitter({ enabled: true, routeKey, buildPayload })
 
   return null
 }

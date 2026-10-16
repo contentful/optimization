@@ -137,12 +137,11 @@ export function bindNextjsPagesRouterOptimization(
     handoff,
     hydration,
     prefetchManagedEntries,
-    routeKey,
   }: BoundNextjsOptimizationProviderProps): ReactElement | null {
     return createElement(
       ReactWebOptimizationProvider,
       withRequestDefaults(
-        { ...providerConfig, handoff, hydration, prefetchManagedEntries, routeKey },
+        { ...providerConfig, handoff, hydration, prefetchManagedEntries },
         handoff,
       ),
       createElement(
@@ -210,7 +209,6 @@ function toClientRootConfig(
   return {
     ...clientConfig,
     defaults: consent?.clientDefaults,
-    cookie: config.cookie,
   }
 }
 

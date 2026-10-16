@@ -44,7 +44,6 @@ source of truth for exported API signatures.
 - [Common configuration](#common-configuration)
 - [Core workflows](#core-workflows)
   - [Consent and profile events](#consent-and-profile-events)
-  - [Hydrate and commit a prepared handoff](#hydrate-and-commit-a-prepared-handoff)
   - [Content resolution](#content-resolution)
   - [Entry interaction tracking](#entry-interaction-tracking)
   - [State subscriptions](#state-subscriptions)
@@ -139,6 +138,7 @@ const root = document.querySelector('ctfl-optimization-root')
 const entry = document.querySelector('ctfl-optimized-entry')
 
 root.defaults = { consent: true }
+root.api = { preflight: false }
 root.contentful = { client: contentfulClient }
 root.trackEntryInteraction = { hovers: false }
 root.prefetchManagedEntries = [{ contentType: 'page', slug: 'home' }]
@@ -244,6 +244,7 @@ Common `api` options:
 | `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`                            | Base URL for the Experience API                       |
 | `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'`                       | Base URL for the Insights API                         |
 | `enabledFeatures`   | No        | `['ip-enrichment', 'location']`                                  | Experience API features to apply to each request      |
+| `preflight`         | No        | `false`                                                          | Aggregate a new profile state without storing it      |
 | `plainText`         | No        | `true` for single-profile mutations; batch mutations use `false` | Sends eligible Experience API mutations as plain text |
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
@@ -309,27 +310,6 @@ result. `{ accepted: false }` means consent or SDK guards blocked the event.
 `{ accepted: true, data }` means the SDK accepted the event; accepted queued or offline events might
 not have data yet. Router integrations that need current-route deduplication can call
 `trackCurrentPage()`. Direct manual `page()` calls remain non-deduping event emits.
-
-### Hydrate and commit a prepared handoff
-
-For a server-rendered request paired with this browser SDK, pass the private request handoff to
-`hydrateAndTrackCurrentPage()`. It hydrates the server's evaluated state and attempts to admit a
-matching prepared event batch to the normal Experience queue. Queue admission is the browser
-commitment point; the server preview does not commit those events. A handoff replay is used only for
-its matching route. When no replay matches or admission fails, `buildPayload` supplies the ordinary
-current-page attempt. An admitted replay stays in the queue for delivery and does not fall back to
-an ordinary page on HTTP failure.
-
-```ts
-await optimization.hydrateAndTrackCurrentPage(handoff, {
-  routeKey: `${window.location.pathname}${window.location.search}`,
-  buildPayload: () => ({ properties: { route: window.location.pathname } }),
-})
-```
-
-The handoff can contain an Experience API-issued profile ID. The SDK persists it only when
-persistence consent allows it; it never generates a replacement ID. Keep the handoff private to the
-request that produced it.
 
 ### Content resolution
 

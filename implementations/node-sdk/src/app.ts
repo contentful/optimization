@@ -29,9 +29,6 @@ const limiter = rateLimit({
 })
 
 const app: Express = express()
-app.get('/health', (_req, res) => {
-  res.type('text/plain').send('ok')
-})
 app.use(limiter)
 const APP_LOCALE = 'en-US'
 

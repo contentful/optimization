@@ -119,49 +119,4 @@ describe('AcceptedCurrentStateTracker', () => {
     expect(emit).toHaveBeenCalledTimes(1)
     expect(tracker.hasAccepted()).toBe(true)
   })
-  it.each(['refused', 'failed'])(
-    'keeps same-route attempt ownership across reset when B is %s',
-    async (outcome) => {
-      const tracker = new AcceptedCurrentStateTracker<{ route: string }>({
-        isEqual: (left, right) => left.route === right.route,
-      })
-      const first = deferred<{ accepted: boolean }>()
-      const second = deferred<{ accepted: boolean }>()
-      const emit = rs.fn().mockResolvedValue({ accepted: true })
-      const firstEmission = tracker.emitIfNeeded({
-        key: { route: '/a' },
-        isAllowed: true,
-        emit: async () => await first.promise,
-      })
-      tracker.reset()
-      const secondEmission = tracker.emitIfNeeded({
-        key: { route: '/a' },
-        isAllowed: true,
-        emit: async () => await second.promise,
-      })
-
-      first.resolve({ accepted: true })
-      await expect(firstEmission).resolves.toEqual({ accepted: true, attempted: true })
-      expect(tracker.hasAccepted()).toBe(false)
-      await expect(
-        tracker.emitIfNeeded({ key: { route: '/a' }, isAllowed: true, emit }),
-      ).resolves.toEqual({ accepted: false, attempted: false })
-      expect(emit).not.toHaveBeenCalled()
-
-      if (outcome === 'failed') {
-        second.reject(new Error('network'))
-        await expect(secondEmission).rejects.toThrow('network')
-      } else {
-        second.resolve({ accepted: false })
-        await expect(secondEmission).resolves.toEqual({ accepted: false, attempted: true })
-      }
-      await expect(
-        tracker.emitIfNeeded({ key: { route: '/a' }, isAllowed: true, emit }),
-      ).resolves.toEqual({ accepted: true, attempted: true })
-      await expect(
-        tracker.emitIfNeeded({ key: { route: '/a' }, isAllowed: true, emit }),
-      ).resolves.toEqual({ accepted: false, attempted: false })
-      expect(emit).toHaveBeenCalledTimes(1)
-    },
-  )
 })

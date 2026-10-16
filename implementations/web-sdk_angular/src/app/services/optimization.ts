@@ -20,11 +20,11 @@ import type NodeContentfulOptimizationType from '@contentful/optimization-node'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import type {
   CoreStatelessRequest,
-  OptimizationHandoff,
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import { hydrateOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import { createScopedLogger } from '@contentful/optimization-web/logger'
 import {
   createWebSnapshotRuntime,
@@ -45,15 +45,14 @@ import { readConsentFromRequest } from './consent'
 import { NgContentfulClient, SERVER_BASELINES_KEY } from './contentful-client'
 
 /**
- * SSR state used by the snapshot runtime on both sides of hydration. The
- * prepared handoff is also transferred so the browser can commit its events.
+ * SSR handoff for the personalization runtime. Stamped by the server preflight,
+ * read on the browser to seed the initial snapshot runtime before the live SDK
+ * takes over. The shape matches {@link OptimizationSnapshot} so the same
+ * request-scoped payload backs `createSnapshotRuntime` on both sides of the
+ * hydration boundary.
  */
-interface ServerOptimizationSnapshot extends OptimizationSnapshot {
-  readonly handoff?: OptimizationHandoff
-}
-
-const SERVER_OPTIMIZATION_KEY: StateKey<ServerOptimizationSnapshot> =
-  makeStateKey<ServerOptimizationSnapshot>('ssr-optimization')
+const SERVER_OPTIMIZATION_KEY: StateKey<OptimizationSnapshot> =
+  makeStateKey<OptimizationSnapshot>('ssr-optimization')
 
 /**
  * Shared SDK-config mapping used by both the browser Web SDK constructor and
@@ -101,32 +100,26 @@ async function attachPreviewPanel(
 // Kept as module-scope helpers (rather than instance methods) so SonarQube
 // typescript:S7059 does not fire on in-constructor async work.
 
-function hydrateHandoffAndPromote(
+function hydrateSnapshotAndPromote(
   sdk: ContentfulOptimization,
-  snapshot: ServerOptimizationSnapshot | undefined,
-  routeKey: string,
+  snapshot: OptimizationSnapshot | undefined,
   runtimeSignal: WritableSignal<WebOptimizationRuntime>,
 ): void {
-  if (!snapshot?.handoff) {
+  if (!snapshot?.data) {
     runtimeSignal.set(sdk)
     return
   }
-  sdk
-    .hydrateAndTrackCurrentPage(
-      {
-        ...snapshot.handoff,
-        ...(snapshot.data === undefined ? {} : { state: snapshot.data }),
-      },
-      {
-        routeKey,
-        buildPayload: () => ({ properties: { url: window.location.href } }),
-      },
-    )
+  hydrateOptimizationHandoff(sdk, {
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    initialPageEvent: snapshot.consent === true ? 'skip' : 'emit',
+    state: snapshot.data,
+  })
     .then(() => {
       runtimeSignal.set(sdk)
     })
     .catch((error: unknown) => {
-      hydrationLogger.warn('Failed to initialize live SDK from SSR handoff.', error)
+      hydrationLogger.warn('Failed to hydrate live SDK from SSR snapshot.', error)
       runtimeSignal.set(sdk)
     })
 }
@@ -140,21 +133,9 @@ function attachPreviewPanelSafely(
   })
 }
 
-function getOrCreateInstance(
-  config: NgContentfulOptimizationConfig,
-  snapshot: ServerOptimizationSnapshot | undefined,
-): ContentfulOptimization {
+function getOrCreateInstance(config: NgContentfulOptimizationConfig): ContentfulOptimization {
   instance ??= new ContentfulOptimization({
     ...toSdkConstructorArgs(config),
-    ...(snapshot === undefined
-      ? {}
-      : {
-          defaults: {
-            consent: snapshot.consent,
-            persistenceConsent: snapshot.persistenceConsent,
-            ...snapshot.data,
-          },
-        }),
     autoTrackEntryInteraction: config.autoTrackEntryInteraction ?? {
       views: true,
       clicks: true,
@@ -187,7 +168,7 @@ export class NgContentfulOptimization {
     const destroyRef = inject(DestroyRef)
     const transferState = inject(TransferState)
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
-    const snapshot = transferState.get<ServerOptimizationSnapshot | undefined>(
+    const snapshot = transferState.get<OptimizationSnapshot | undefined>(
       SERVER_OPTIMIZATION_KEY,
       undefined,
     )
@@ -205,35 +186,35 @@ export class NgContentfulOptimization {
       return
     }
 
-    const sdk = getOrCreateInstance(config, snapshot)
-    const initialRouteKey = `${window.location.pathname}${window.location.search}`
+    const sdk = getOrCreateInstance(config)
 
-    // Keep the snapshot runtime visible until live state is hydrated and the
-    // prepared page has been admitted to the existing Experience queue.
-    hydrateHandoffAndPromote(sdk, snapshot, initialRouteKey, runtimeSignal)
+    // Prime the live SDK with the server-computed snapshot before promoting
+    // it to the runtime signal, so the first live render matches the SSR
+    // HTML (same selectedOptimizations, same profile, same merge tags).
+    // With no server data (consent denied or preflight skipped), the snapshot
+    // runtime and the fresh live SDK already share the same initial state, so
+    // we can swap immediately.
+    hydrateSnapshotAndPromote(sdk, snapshot, runtimeSignal)
 
     if (config.previewPanel !== undefined) {
       attachPreviewPanelSafely(sdk, config)
     }
 
-    // The paired operation owns the initial route. Router events own later
-    // navigations, including a redirect away from the server-rendered route.
-    let skipInitialRoute = snapshot?.handoff !== undefined
+    // Page events fire on every route change. The first NavigationEnd after
+    // hydration is skipped when the server preflight already emitted page()
+    // for the same route (consent was granted server-side) — without this
+    // skip, analytics double-counts the SSR landing page. Subsequent
+    // navigations always emit.
+    let skipNextPage = snapshot?.consent ?? false
     const routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
-        const routeUrl = new URL(e.urlAfterRedirects, window.location.origin)
-        const routeKey = `${routeUrl.pathname}${routeUrl.search}`
-        if (skipInitialRoute && routeKey === initialRouteKey) {
-          skipInitialRoute = false
+        if (skipNextPage) {
+          skipNextPage = false
           return
         }
-        skipInitialRoute = false
-        void sdk.trackCurrentPage({
-          routeKey,
-          buildPayload: () => ({
-            properties: { url: window.location.origin + e.urlAfterRedirects },
-          }),
+        void sdk.page({
+          properties: { url: window.location.origin + e.urlAfterRedirects },
         })
       })
 
@@ -245,10 +226,11 @@ export class NgContentfulOptimization {
   }
 }
 
-// ── Server-side preparation ────────────────────────────────────────────────
+// ── Server-side preflight ──────────────────────────────────────────────────
 //
 // The helpers below run only on the server (in the @angular/ssr render
-// pipeline) and dynamically load @contentful/optimization-node. They are exposed via
+// pipeline) and dynamic-import @contentful/optimization-node so the Node SDK
+// never reaches the browser bundle. They are exposed via
 // `provideServerOptimizationInitializer()` so `app.config.server.ts` only
 // needs a single import to wire them in.
 
@@ -297,8 +279,8 @@ function createServerEventContext(request: Request, locale: string): UniversalEv
   }
 }
 
-interface ServerPreparationOutcome {
-  readonly snapshot: ServerOptimizationSnapshot
+interface ServerPreflightOutcome {
+  readonly snapshot: OptimizationSnapshot
   readonly profileId: string | undefined
   readonly canPersistProfile: boolean
 }
@@ -308,28 +290,39 @@ async function computeSnapshot(
   request: Request,
   consentGranted: boolean,
   locale: string,
-): Promise<ServerPreparationOutcome> {
-  const anonymousId = consentGranted ? readAnonymousId(request) : undefined
+): Promise<ServerPreflightOutcome> {
+  if (!consentGranted) {
+    return {
+      snapshot: { consent: false, locale },
+      profileId: undefined,
+      canPersistProfile: false,
+    }
+  }
+
+  const anonymousId = readAnonymousId(request)
   const requestOptimization: CoreStatelessRequest = sdk.forRequest({
-    consent: consentGranted ? { events: true, persistence: true } : false,
+    consent: { events: true, persistence: true },
     locale,
     eventContext: createServerEventContext(request, locale),
     ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
   })
-  const url = new URL(request.url)
-  const { data, handoff } = await requestOptimization.prepareRequestHandoff({
-    routeKey: `${url.pathname}${url.search}`,
-  })
+  const pageResult = await requestOptimization.page()
+  if (!pageResult.accepted || !pageResult.data) {
+    return {
+      snapshot: { consent: false, locale },
+      profileId: undefined,
+      canPersistProfile: false,
+    }
+  }
 
   return {
     snapshot: {
-      consent: consentGranted,
+      consent: true,
       persistenceConsent: requestOptimization.canPersistProfile,
       locale,
-      data,
-      handoff,
+      data: pageResult.data,
     },
-    profileId: data?.profile.id ?? handoff.profileId,
+    profileId: pageResult.data.profile.id,
     canPersistProfile: requestOptimization.canPersistProfile,
   }
 }
@@ -363,7 +356,7 @@ async function runServerPreflight(): Promise<void> {
     persistAnonymousIdCookie(responseInit, outcome.profileId)
   }
 
-  transferState.set<ServerOptimizationSnapshot>(SERVER_OPTIMIZATION_KEY, outcome.snapshot)
+  transferState.set<OptimizationSnapshot>(SERVER_OPTIMIZATION_KEY, outcome.snapshot)
   transferState.set<Record<string, Entry>>(
     SERVER_BASELINES_KEY,
     Object.fromEntries(baselines.map((baseline) => [baseline.sys.id, baseline])),
@@ -371,7 +364,7 @@ async function runServerPreflight(): Promise<void> {
 }
 
 /**
- * Wires server-side request preparation into Angular's application
+ * Wires the server-side SDK preflight into Angular's application
  * initializers. Imported from `app.config.server.ts`.
  */
 export function provideServerOptimizationInitializer(): EnvironmentProviders {

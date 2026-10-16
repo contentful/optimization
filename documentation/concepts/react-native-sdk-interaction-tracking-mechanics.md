@@ -207,10 +207,9 @@ The React Native SDK layers React Native-specific behavior on top:
    session resets without an event. Foregrounding re-evaluates visibility and starts a new session
    when the entry still meets the visibility threshold.
 
-`queuePolicy.offlineMaxEvents` caps offline Experience events at 100 by default. Once full, the
-queue rejects an incoming event and keeps previously accepted events in order. A rejected call
-returns `{ accepted: false }`; `onOfflineDrop` is a deprecated compatibility option and is not
-called. Insights events share the flush policy, but the offline cap belongs to the Experience queue. See the
+`queuePolicy.offlineMaxEvents` caps offline Experience events, and `queuePolicy.onOfflineDrop` is
+called when older offline Experience events are dropped to honor that cap. Insights events share the
+flush policy, but these two offline drop controls belong to the Experience queue. See the
 [React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration) for the
 common queue configuration entry point.
 
@@ -516,8 +515,8 @@ for exhaustive prop and type details.
   even when `trackClick` is not allowed.
 - The preview panel forces live entry updates while it is open so authoring overrides can render
   immediately.
-- `queuePolicy.flush` controls shared retry, backoff, and circuit behavior. `offlineMaxEvents` caps
-  the offline Experience buffer; `onOfflineDrop` is deprecated and inactive.
+- `queuePolicy.flush` controls shared retry, backoff, and circuit behavior. `offlineMaxEvents` and
+  `onOfflineDrop` apply to the offline Experience buffer.
 
 Use `onStatesReady` when diagnostics or app-level observers must attach as soon as SDK state exists
 and before provider children can emit `screen`, `eventStream`, or `blockedEventStream` updates.

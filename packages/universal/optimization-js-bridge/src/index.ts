@@ -74,6 +74,7 @@ interface BridgeConfig {
     experienceBaseUrl?: CoreApiConfig['experienceBaseUrl']
     insightsBaseUrl?: CoreApiConfig['insightsBaseUrl']
     enabledFeatures?: CoreApiConfig['enabledFeatures']
+    preflight?: CoreApiConfig['preflight']
   }
   locale?: string
   logLevel?: CoreStatefulConfig['logLevel']
@@ -381,6 +382,7 @@ const bridge: Bridge = {
         experienceBaseUrl: config.api?.experienceBaseUrl,
         insightsBaseUrl: config.api?.insightsBaseUrl,
         enabledFeatures: config.api?.enabledFeatures,
+        preflight: config.api?.preflight,
       },
       queuePolicy: {
         ...config.queuePolicy,
@@ -395,6 +397,9 @@ const bridge: Bridge = {
           onFlushRecovered: (context) => {
             nativeGlobal.__nativeOnQueueEvent?.(JSON.stringify({ type: 'flushRecovered', context }))
           },
+        },
+        onOfflineDrop: (context) => {
+          nativeGlobal.__nativeOnQueueEvent?.(JSON.stringify({ type: 'offlineDrop', context }))
         },
       },
       onEventBlocked: (event) => {

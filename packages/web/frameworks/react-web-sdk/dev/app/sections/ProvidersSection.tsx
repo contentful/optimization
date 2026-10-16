@@ -25,19 +25,34 @@ function ContextConsumer(): ReactElement {
 }
 
 interface ProvidersSectionProps {
+  spaceId: string
+  environment: string
+  insightsBaseUrl: string
+  experienceBaseUrl: string
   sdk: OptimizationSdk
 }
 
-export function ProvidersSection({ sdk }: ProvidersSectionProps): ReactElement {
+export function ProvidersSection({
+  spaceId,
+  environment,
+  insightsBaseUrl,
+  experienceBaseUrl,
+  sdk,
+}: ProvidersSectionProps): ReactElement {
   return (
     <section className="dashboard__grid">
       <article className="dashboard__card">
         <h2>Decoupled Providers (config)</h2>
         <p>OptimizationProvider + LiveUpdatesProvider without OptimizationRoot.</p>
-        <p>
-          <a href="/?provider=config">Open the config-owned provider example</a> as the page's only
-          SDK owner.
-        </p>
+        <OptimizationProvider
+          spaceId={spaceId}
+          environment={environment}
+          api={{ insightsBaseUrl, experienceBaseUrl }}
+        >
+          <LiveUpdatesProvider globalLiveUpdates={false}>
+            <DecoupledConsumer label="Config-based" />
+          </LiveUpdatesProvider>
+        </OptimizationProvider>
       </article>
 
       <article className="dashboard__card">

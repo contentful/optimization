@@ -28,7 +28,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-/** An event is accepted only when it was sent or admitted to the queue. A full offline queue returns false. */
 public data class EventEmissionResult(
     val accepted: Boolean,
     val data: Map<String, Any>?,
