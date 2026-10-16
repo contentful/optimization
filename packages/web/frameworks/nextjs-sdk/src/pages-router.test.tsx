@@ -55,6 +55,13 @@ describe('Next.js Pages Router client components', () => {
       ...testConfig,
       consent: { clientDefaults: { consent: false, persistenceConsent: false } },
       contentful,
+      cookie: {
+        path: '/products',
+        sameSite: 'strict',
+        secure: true,
+        domain: 'example.test',
+        expires: 1,
+      },
       liveUpdates: true,
     })
     const handoff = components.createHandoffFromSelections({
@@ -63,7 +70,6 @@ describe('Next.js Pages Router client components', () => {
         { baselineEntry: createEntry('4ib0hsHWoSOnCVdDkizE8d'), entryId: '4ib0hsHWoSOnCVdDkizE8d' },
       ],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -81,6 +87,13 @@ describe('Next.js Pages Router client components', () => {
     })
 
     expect(root.props).toMatchObject({
+      cookie: {
+        path: '/products',
+        sameSite: 'strict',
+        secure: true,
+        domain: 'example.test',
+        expires: 1,
+      },
       api: testConfig.api,
       children: 'Root content',
       spaceId: testConfig.spaceId,
@@ -124,7 +137,6 @@ describe('Next.js Pages Router client components', () => {
       ...components.createHandoffFromSelections({
         cache: { scope: 'private-request' },
         hydration: 'preserve-server',
-        initialPageEvent: 'skip',
         selectedOptimizations: [],
       }),
       defaults: { consent: true },
@@ -133,7 +145,6 @@ describe('Next.js Pages Router client components', () => {
       ...components.createHandoffFromSelections({
         cache: { scope: 'private-request' },
         hydration: 'analytics-only',
-        initialPageEvent: 'skip',
         selectedOptimizations: [],
       }),
       defaults: { consent: true },
@@ -188,7 +199,6 @@ describe('Next.js Pages Router client components', () => {
         },
       ],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -226,7 +236,6 @@ describe('Next.js Pages Router client components', () => {
     const analyticsHandoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
     const root = components.OptimizationRoot({

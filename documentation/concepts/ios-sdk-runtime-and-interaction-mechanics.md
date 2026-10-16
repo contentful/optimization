@@ -328,8 +328,8 @@ event-delivery model for SwiftUI and UIKit integrations.
 Default delivery behavior:
 
 - Experience events queue in memory when the device is offline.
-- Core caps the offline Experience queue at 100 events by default. When the queue is full, it drops
-  the oldest offline events before accepting the next event.
+- Core caps the offline Experience queue at 100 events by default. When the queue is full, it rejects
+  the incoming event and retains previously accepted events in order.
 - Insights events batch in memory by profile and flush periodically or when the batch reaches the
   Core batch threshold.
 - Queued events flush when connectivity returns. On iOS/UIKit, the SDK also performs an online
@@ -343,8 +343,9 @@ interactions while an entry session remains visible.
 
 Use `OptimizationConfig(queuePolicy:)` when production behavior needs non-default delivery
 constraints. `QueuePolicy.offlineMaxEvents` changes the Experience offline cap, `QueueFlushPolicy`
-configures retry timing, backoff, jitter, failure thresholds, and circuit-open timing, and queue
-callbacks report offline drops, flush failures, circuit-open events, and recovery. Call
+configures retry timing, backoff, jitter, failure thresholds, and circuit-open timing. The
+`onOfflineDrop` compatibility callback is deprecated and inactive; other queue callbacks report
+flush failures, circuit-open events, and recovery. Call
 `client.flush()` only for deliberate app-owned checkpoints; reconnect flushing and iOS/UIKit
 background flushing already perform best-effort delivery.
 

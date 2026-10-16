@@ -27,6 +27,9 @@ Web-family packages under `packages/web/`.
 ## Validate
 
 - Follow the root `Bundle size` policy for Web runtime size validation.
+- For approved increases to exceeded budgets or requested normalization, set each authorized budget
+  to `ceil((measuredGzipBytes + 100) / 100) * 100` under the root
+  [Bundle size](../../AGENTS.md#bundle-size) measurement and approval rules.
 - Validate both `web-sdk` and `preview-panel` for preview bridge, panel bootstrapping, or CSP setup
   changes.
 - Validate affected Web reference implementations for browser behavior, preview behavior, routing,

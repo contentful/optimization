@@ -81,7 +81,6 @@ const requestOptimization = statelessOptimization.forRequest({
   consent: true,
   locale: 'en-US',
   eventContext: { locale: 'en-US' },
-  experienceOptions: { preflight: false },
   profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
 })
 
@@ -102,6 +101,9 @@ depending on Core directly.
 `CoreStateful` is the basis for SDKs that run in stateful JavaScript runtimes such as browsers,
 mobile JavaScript containers, and native bridge runtimes. It maintains consent, profile, selected
 optimization, flag, event-stream, blocked-event, and preview-panel state as read-only observables.
+
+Insights delivery uses the complete current profile signal. When no complete profile exists, the
+Insights queue warns and skips delivery; an anonymous ID alone does not supply that profile.
 
 `reset()` discards queued events and invalidates pending state updates. Withdrawing event consent
 completes that cleanup before subscribers run. `destroy()` attempts final queue delivery and releases
@@ -176,7 +178,6 @@ Common `api` options:
 | `location`          | All        | API fallback                               | Default request location for single-profile Experience mutations |
 | `ip`                | Stateful   | `undefined`                                | IP address override for Experience API analysis                  |
 | `plainText`         | Stateful   | `true` for single-profile mutations        | Sends single-profile Experience mutations as text                |
-| `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it                    |
 
 Both Core constructors accept `api.location`; platform SDKs inherit that configuration.
 Stateless request clients override it through `forRequest({ experienceOptions: { location } })`:
@@ -203,9 +204,11 @@ backend precedence and profile continuity, see
 When `plainText` is omitted, single-profile Experience mutation/event requests use `text/plain`.
 Pass `plainText: false` to send JSON. Experience batch profile updates still default to JSON.
 
-In stateless environments, pass `ip`, `locale`, `plainText`, and `preflight` as `experienceOptions`
-when creating the request-bound client instead of constructor config. Pass request-specific Insights
-API options, such as a last-chance `beacon` sender, as `insightsOptions`.
+In stateless environments, pass `ip`, `locale`, and `plainText` as `experienceOptions` when creating
+the request-bound client instead of constructor config. Request handoff preparation uses the
+Experience API's mutation-only preview option internally; it is not a Core configuration option.
+Pass request-specific Insights API options, such as a last-chance `beacon` sender, as
+`insightsOptions`.
 
 Core-backed stateful SDKs can accept an initial top-level `locale` and runtime `setLocale(locale)`
 calls. They expose that SDK Experience API and default event locale through the live `locale` getter
@@ -253,6 +256,13 @@ Core exposes reusable primitives for SDK layers:
 | Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior                                                                                                  |
 | Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers                                                                                        |
 | `api-schemas` entry point       | CDA schemas owned by Core, plus Experience API and Insights API schema pass-throughs                                                                          |
+
+The offline Experience queue holds up to 100 accepted events by default, configurable through
+`QueuePolicy.offlineMaxEvents`. When full, it rejects an incoming event or whole prepared batch
+with `{ accepted: false }` and preserves accepted events in order. An active `flush()` call joins
+the running attempt; its completion does not confirm delivery or wait for a scheduled retry.
+`onOfflineDrop` and `ExperienceQueueDropContext` remain deprecated compatibility interfaces and
+are inactive.
 
 ### Schema entry point
 

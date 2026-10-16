@@ -27,7 +27,6 @@ export async function GET(
     {
       cache: handoff.cache,
       hydration: handoff.hydration,
-      initialPageEvent: handoff.initialPageEvent,
       runtime: runtimeWitness,
       selectedOptimizations: handoff.state?.selectedOptimizations ?? [],
     },

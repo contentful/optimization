@@ -26,10 +26,13 @@ Use this implementation when you need a minimal server-rendered example for
 `@contentful/optimization-node`. It demonstrates request-scoped Experience API options, SSR-safe
 entry resolution, merge-tag rendering, profile-aware event calls, and local mock API usage.
 
-The server creates one stateless Node SDK instance at module load and passes request-specific
-options directly to stateless event methods inside each incoming request handler. Because the
-application explicitly decides when to call the Node SDK, this app passes `consent: true`, so
-emitted Node events are labelled consented.
+The server creates one stateless Node SDK instance at module load and binds request-specific options
+inside each incoming request handler. This server-only reference calls `page()` directly, so the
+Experience API commits that event during the request. The application explicitly calls the Node SDK
+only under its consent policy and passes `consent: true`, so emitted Node events are labelled
+consented. For a server-rendered page that a browser SDK continues, use `prepareRequestHandoff()` as
+shown in the [hybrid Node and Web reference implementation](../node-sdk+web-sdk/README.md); that path
+previews on the server and commits through the browser queue.
 
 > [!WARNING]
 >
