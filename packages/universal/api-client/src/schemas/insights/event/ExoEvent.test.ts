@@ -43,6 +43,41 @@ const exoProperties = {
 const { optimizationId, variantId, ...unattributedExoProperties } = exoProperties
 
 describe('ExO events', () => {
+  it('preserves parentVariantId across event unions', () => {
+    const properties = {
+      ...exoProperties,
+      entityKind: 'Fragment',
+      parentVariantId: 'root-variant',
+    }
+    const view = {
+      ...properties,
+      type: 'exo_node_view',
+      viewId: 'view-123',
+      viewDurationMs: 1000,
+    }
+    const click = { ...properties, type: 'exo_node_click' }
+    const hover = {
+      ...properties,
+      type: 'exo_node_hover',
+      hoverId: 'hover-123',
+      hoverDurationMs: 1000,
+    }
+
+    expect(ExoViewEvent.parse(view)).toEqual(view)
+    expect(ExperienceEvent.parse(view)).toEqual(view)
+    expect(BatchExperienceEvent.parse({ ...view, anonymousId: 'profile-123' })).toEqual({
+      ...view,
+      anonymousId: 'profile-123',
+    })
+    for (const event of [view, click, hover]) {
+      expect(InsightsEvent.parse(event)).toEqual(event)
+    }
+  })
+
+  it.each([42, null, {}])('rejects invalid parentVariantId %s', (parentVariantId) => {
+    expect(ExoEventProperties.safeParse({ ...exoProperties, parentVariantId }).success).toBe(false)
+  })
+
   it.each(['Experience', 'Fragment', 'InlineFragment', 'InlineComponent'])(
     'accepts the %s entity kind',
     (entityKind) => {

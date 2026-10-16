@@ -169,6 +169,11 @@ This entry point does not include Contentful CDA schemas. Import CDA schemas fro
 `@contentful/optimization-core/api-schemas` instead. That Core entry point also provides an
 aggregate schema surface for SDK layers that need both CDA and API contracts.
 
+ExO interaction events accept `parentVariantId` for the root Experience's selected variant,
+including `default` for its baseline. This is separate from the rendered entity's own `variantId`.
+SDK event builders supply these values; the schemas preserve them during request serialization
+and accept older events that omit them.
+
 ### Fetch helpers
 
 This package also exports fetch helper functions used by SDK layers:

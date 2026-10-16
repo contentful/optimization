@@ -42,6 +42,9 @@ export const ExoEventProperties = z.extend(UniversalEventProperties, {
   /** Identifier of the containing experience, when the entity is nested. */
   parentExperienceId: z.optional(z.string()),
 
+  /** Selected variant of the root experience, or `default` for its baseline. Omitted on the experience itself. */
+  parentVariantId: z.optional(z.string()),
+
   /** Identifier of the selected entity variant, when available. */
   variantId: z.optional(z.string()),
 

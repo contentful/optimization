@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
-import { BatchInsightsEventArray } from '../api-schemas'
+import { BatchInsightsEventArray, type UniversalEventProperties } from '../api-schemas'
 import ApiClientBase from '../ApiClientBase'
 import type { FetchMethod } from '../fetch'
 import { server } from '../test/setup'
@@ -27,15 +27,8 @@ function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsA
   return new InsightsApiClient(config)
 }
 
-// TODO: Find a better place for this sort of thing
-function generateBatchEventArray(
-  id: string,
-  eventType: 'component' | 'component_click' | 'component_hover' = 'component',
-): BatchInsightsEventArray {
-  const baseEvent = {
-    componentType: 'Entry' as const,
-    componentId: crypto.randomUUID(),
-    variantIndex: 0,
+function generateUniversalEventProperties(): UniversalEventProperties {
+  return {
     channel: 'web' as const,
     context: {
       campaign: {},
@@ -59,6 +52,19 @@ function generateBatchEventArray(
     originalTimestamp: new Date().toISOString(),
     sentAt: new Date().toISOString(),
     timestamp: new Date().toISOString(),
+  }
+}
+
+// TODO: Find a better place for this sort of thing
+function generateBatchEventArray(
+  id: string,
+  eventType: 'component' | 'component_click' | 'component_hover' = 'component',
+): BatchInsightsEventArray {
+  const baseEvent = {
+    ...generateUniversalEventProperties(),
+    componentType: 'Entry' as const,
+    componentId: crypto.randomUUID(),
+    variantIndex: 0,
   }
 
   const event =
@@ -191,6 +197,47 @@ describe('InsightsApiClient.sendBatchEvents', () => {
       `${INSIGHTS_BASE_URL}v2/spaces/${SPACE_ID}/environments/staging/events`,
       expect.any(Object),
     )
+  })
+
+  it('serializes Fragment parentVariantId without stripping it', async () => {
+    const properties = {
+      ...generateUniversalEventProperties(),
+      entityId: 'fragment-1',
+      entityKind: 'Fragment' as const,
+      parentExperienceId: 'root-1',
+      parentVariantId: 'root-variant',
+      variantId: 'fragment-variant',
+    }
+    const batches = [
+      {
+        profile: { id: 'exo-profile' },
+        events: [
+          {
+            ...properties,
+            type: 'exo_node_view' as const,
+            viewId: 'view-1',
+            viewDurationMs: 1000,
+          },
+          { ...properties, type: 'exo_node_click' as const },
+          {
+            ...properties,
+            type: 'exo_node_hover' as const,
+            hoverId: 'hover-1',
+            hoverDurationMs: 500,
+          },
+        ],
+      },
+    ]
+    const fetchMethod = rs.fn<FetchMethod>(async (_url, options) => {
+      await Promise.resolve()
+      if (typeof options?.body !== 'string') throw new Error('Expected a serialized request body')
+      expect(JSON.parse(options.body)).toEqual(batches)
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    })
+    const client = makeClient({ fetchOptions: { fetchMethod } })
+
+    await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
+    expect(fetchMethod).toHaveBeenCalledTimes(1)
   })
 
   it('uses beacon sender when supplied', async () => {
