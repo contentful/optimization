@@ -51,6 +51,10 @@ guide: ../../guides/integrating-the-node-sdk-in-a-node-app.md
 ## SDK-specific authoring overrides
 
 - Use a server `process.env` note rather than the recipe's browser-visible environment convention.
+- When explaining Node/Web continuity, distinguish ordinary Node `page()` delivery from paired
+  `prepareRequestHandoff()` preparation: the latter uses per-request preflight for rendering and
+  the browser admits the prepared event batch through its existing queue. Profile identity is
+  supplied by Experience API responses.
 - Do not force a React render-prop example into this guide; explain the skeleton union, content-type
   narrowing, and mutation boundary instead. Facts:
   [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution).
