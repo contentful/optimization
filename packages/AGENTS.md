@@ -76,6 +76,9 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
   policy for changing existing budgets.
 - Run `size:check` for runtime, export, dependency, bundler config, or bundle-shape changes, and
   handle failures under the root `Bundle size` policy.
+- For approved increases to exceeded budgets or requested normalization, set each authorized budget
+  to `ceil((measuredGzipBytes + 100) / 100) * 100` under the root
+  [Bundle size](../AGENTS.md#bundle-size) measurement and approval rules.
 - Validate package-local harnesses when changing flows they demonstrate.
 - For package changes consumed by implementations, run `pnpm build:pkgs` before implementation
   install or tests.

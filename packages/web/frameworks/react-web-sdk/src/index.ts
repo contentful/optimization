@@ -16,7 +16,6 @@ export type {
   AutoPagePayloadOptions,
   AutoPageRouteState,
 } from './auto-page/types'
-export type { InitialAutoPageEvent } from './auto-page/useAutoPageEmitter'
 export type {
   BeforeInitialPageClient,
   BeforeInitialPageOptions,

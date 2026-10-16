@@ -11,6 +11,9 @@ enforcement.
 - Bundle-size thresholds are read from package `package.json` under
   `buildTools.bundleSize.gzipBudgets`; the root `Bundle size` policy controls whether they may be
   changed.
+- For approved increases to exceeded budgets or requested normalization, set each authorized budget
+  to `ceil((measuredGzipBytes + 100) / 100) * 100` under the root
+  [Bundle size](../../AGENTS.md#bundle-size) measurement and approval rules.
 
 ## Commands
 

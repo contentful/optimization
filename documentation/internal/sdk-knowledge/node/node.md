@@ -106,6 +106,12 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   receives the handoff. Request handoffs must use `private-request` cache metadata; the helper throws
   a `TypeError` for `public-permutation` or `static` cache metadata before returning a handoff.
   source: node-sdk#handoff.ts#createRequestHandoffFromData; core-sdk#handoff.ts#assertOptimizationCacheSafety; core-sdk#handoff.ts#OptimizationHandoff
+- The request-bound `prepareRequestHandoff()` prepares the initial identify/track and page events,
+  then previews them through a per-request Experience API mutation with `preflight: true`. Preview
+  failure retains a replay without selected state; blocked page consent or invalid inputs produce
+  no replay. The browser must commit a prepared replay separately. The preview returns an API-issued
+  profile ID even for a first request; no SDK-created ID is reserved.
+  source: core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff; core-sdk#CoreStatelessRequest.ts#buildHandoffEvents
 
 ## Identifier ownership
 
@@ -123,8 +129,9 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `track({ event, properties? })` (`event` required) → return `EventEmissionResult`
   `{ accepted, data? }` where `data` is the accepted Experience-response `OptimizationData` payload
   (see [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload)). Being stateless,
-  the request client does not apply it to any signals; instead accepted `page()`/`identify()` update
-  this request client's `profile` getter and cached `selectedOptimizations` for the rest of the request.
+  the request client does not apply it to any signals. Experience responses update this request
+  client's `profile` getter and cached `selectedOptimizations` only if its profile revision has not
+  advanced while the call was pending; superseded responses still return their accepted data.
   source: core-sdk#CoreStatelessRequest.ts#page; core-sdk#CoreStatelessRequest.ts#identify; core-sdk#CoreStatelessRequest.ts#screen; core-sdk#CoreStatelessRequest.ts#track; core-sdk#events/EventEmissionResult.ts#EventEmissionResult; api-client#schemas/experience/ExperienceResponse.ts#OptimizationData
 - Insights methods: `trackView(payload)` returns `EventEmissionResult`; `trackClick`, `trackHover`,
   `trackFlagView` return `void`. `trackView({ componentId, viewId, viewDurationMs, experienceId?, variantIndex?, sticky? })`.
@@ -145,7 +152,7 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `allowedEventTypes: []` blocks them until request consent is `true`. Event-type wire strings:
   `identify`, `page`, `screen`, `track`, `component` (view/flag view), `component_click`,
   `component_hover`; `flag` is a consent selector only.
-  source: core-sdk#CoreStatelessRequest.ts#hasConsent; core-sdk#CoreStatelessRequest.ts#withRequestEventConsent; core-sdk#events/EventType.ts#AllowedEventType; node-sdk#ContentfulOptimization.ts#DEFAULT_NODE_ALLOWED_EVENT_TYPES
+  source: core-sdk#CoreStatelessRequest.ts#hasConsent; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent; core-sdk#events/EventType.ts#AllowedEventType; node-sdk#ContentfulOptimization.ts#DEFAULT_NODE_ALLOWED_EVENT_TYPES
 - Blocked events do NOT throw: Experience methods return `{ accepted: false }`, Insights methods
   return without sending; `onEventBlocked({ reason: 'consent', method, args })` fires for diagnostics.
   source: core-sdk#CoreStatelessRequest.ts#sendExperienceEvent; core-sdk#CoreStatelessRequest.ts#reportBlockedEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent
@@ -172,9 +179,10 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
 ## Version / runtime quirks
 
 - Stateless per request: construct the SDK once, call `forRequest()` per incoming request, then call
-  event methods / entry fetches on that request client. The request client's `profile` getter is the
-  only mutable request-local state and updates only from accepted Experience responses.
-  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent
+  event methods / entry fetches on that request client. Its cached profile and selections update
+  from ordinary Experience responses and handoff previews under the shared
+  [response publication contract](../shared/concepts.md#experience-response-payload).
+  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#publishExperienceData; kb:shared/concepts.md
 - Locale precedence: when `forRequest()` receives both a top-level `locale` and
   `experienceOptions.locale`, the top-level request `locale` wins — the constructor rewrites
   `experienceOptions.locale` (and `eventContext.locale`) to the normalized request locale.

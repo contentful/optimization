@@ -11,12 +11,11 @@ per-entry `liveUpdates` or `loadingFallback`.
 - `lib/optimization.ts` is the only place that imports
   `bindNextjsAppRouterServerOptimization()` from
   `@contentful/optimization-nextjs/app-router/server`.
-- Configure request hydration and trusted handoff once in `lib/optimization.ts`.
-- Configure the callback-bound `ClientRequestOptimizationRoot` only in
-  `lib/optimization-client.ts`, then inject it into the server binding from `lib/optimization.ts`.
-- The app-local request family exports `RequestOptimizationRoot` and `RequestOptimizedEntry` from
-  `@/lib/optimization`. The request root owns initial and later browser page sequencing; do not
-  mount or export a request page tracker beside it.
+- Configure request hydration and prepared initial events once in `lib/optimization.ts`.
+- The app-local request family exports `RequestOptimizationProvider`, `RequestOptimizationRoot`,
+  `RequestOptimizedEntry`, and `RequestPageTracker` from `@/lib/optimization`. The request template
+  mounts one tracker inside the request provider for initial replay and later navigation. Do not
+  mount a second tracker inside a request root or page.
 - Request routes, private request slots, and `EntryCard` use the applicable request aliases.
 - Static selection-handoff routes use `ExplicitOptimizationRoot` and `ExplicitOptimizedEntry` from
   `@/lib/optimization`. Analytics-only routes use the top-level `OptimizationAnalyticsRoot`.
@@ -48,8 +47,10 @@ per-entry `liveUpdates` or `loadingFallback`.
 
 ## E2E
 
-- Shared behavioral tests run via `lib/e2e-web` with `E2E_FLAGS=CSR,HYDRATION,SSR,SKIP_NO_JS`
+- Shared behavioral tests run via `lib/e2e-web` with `E2E_FLAGS=CSR,HYDRATION,SSR`
   (port 3002).
+- Keep JavaScript-disabled SSR checks active. Investigate a visible-content failure instead of
+  adding `SKIP_NO_JS` to the App Router runner.
 - App Router hydration behavior is covered by shared `lib/e2e-web` specs.
 - `test:e2e` starts the app + mocks via `serve`, then delegates to `lib/e2e-web`.
 - `test:e2e:ui` opens the shared Playwright UI with the App Router target pre-configured.

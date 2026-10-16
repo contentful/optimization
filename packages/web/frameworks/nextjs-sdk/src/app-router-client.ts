@@ -157,10 +157,11 @@ export function bindNextjsAppRouterClientOptimization(
     handoff,
     hydration,
     prefetchManagedEntries,
+    routeKey,
   }: BoundNextjsOptimizationProviderProps): ReactElement | null {
     return createElement(
       ReactWebOptimizationProvider,
-      { ...providerConfig, handoff, hydration, prefetchManagedEntries },
+      { ...providerConfig, handoff, hydration, prefetchManagedEntries, routeKey },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -210,6 +211,7 @@ function toClientRootConfig(
   return {
     ...clientConfig,
     defaults: consent?.clientDefaults,
+    cookie: config.cookie,
   }
 }
 

@@ -265,7 +265,7 @@ The props you pass break down like this:
 2. `locale` is the one locale the SDK uses for Experience and event context. Use the same locale you
    pass to Contentful.
 3. `defaults` is the browser SDK's starting state: `consent` (may personalize and send events) and
-   `persistenceConsent` (may store the profile-id cookie — the anonymous identifier the SDK assigns
+   `persistenceConsent` (may store the profile-id cookie — the anonymous identifier the Experience API issues
    each visitor to keep their variant assignments consistent across visits).
 4. `api` overrides the Experience and Insights endpoints (`experienceBaseUrl`, `insightsBaseUrl`).
    Set these only for a mock, a proxy, or non-default hosts; omit them otherwise.
@@ -662,10 +662,11 @@ change. React Web ships auto page trackers for common routers; each dedupes cons
 including React Strict Mode's double effects.
 
 Choose one page-ownership mode for each root. The steps below use the normal tracker mode. In
-`beforeInitialPage` mode, the **initial page decision** is the root's one choice to send the first
-browser `page` event or skip it because an applied handoff already owns that route. The root runs
-the callback after its live owned runtime exists, makes that direct page attempt or skip, marks the
-attempted route without emitting it again, and emits for later route changes. Replace the tracker
+`beforeInitialPage` mode, the **initial page decision** is the root's first page attempt after its
+browser work completes. A root receiving a prepared server replay commits that replay through the
+normal handoff path instead of running the callback. Without prepared replay, the root runs the
+callback after its live owned runtime exists, makes a direct page attempt, marks the attempted route
+without emitting it again, and emits for later route changes. Replace the tracker
 with the
 [before-initial-page root](#run-work-before-the-initial-page-decision).
 
@@ -749,10 +750,97 @@ In normal tracker mode, attach route-aware properties with `getPagePayload`:
 />
 ```
 
-In normal tracker mode, the `next-pages` and `next-app` trackers also accept
-`initialPageEvent="skip"` for setups where an SSR handoff root owns the first route. In a
-browser-only React SPA you emit the first page event yourself, so leave it at the default
-(`"emit"`).
+In a server-rendered React app, pass the same prepared handoff to the root and the tracker for your router, including
+`ReactRouterAutoPageTracker`, `NextPagesAutoPageTracker`, or `NextAppAutoPageTracker`. It gives the
+Web SDK the current route and handoff together. The Web SDK admits
+a matching replay as one batch; an absent or mismatched replay falls back to an ordinary page. In a
+browser-only React SPA, the tracker emits the initial page event itself.
+
+After the handoff is admitted, the mounted tracker emits fresh page events for later navigation,
+including a return to the initial route, using its current page payload settings. A distinct
+prepared handoff can initialize its own replay.
+
+The [Node guide's paired-route example](./integrating-the-node-sdk-in-a-node-app.md#share-continuity-with-the-web-sdk)
+shows where the server's `{ data, handoff }` comes from. A React content root needs a browser
+hydration mode and preview selection state in addition to the Node preparation handoff. Compose
+`createRequestHandoffFromData({ data })` over the prepared handoff so the browser receives the
+selections used for server HTML while retaining the prepared replay and API-issued profile ID. Add
+`hydration: 'preserve-server'` once on the server, then pass that same object to the server render
+and serialize it for browser hydration. The mode keeps server-rendered content visible during
+browser startup. If preview has no `data`, the composition retains any valid replay and baseline
+presentation.
+
+**Adapt this to your use case:** define one root layout that receives the handoff as a prop. It
+reads no browser globals during server rendering. Give the same prop to the root and tracker so
+replay and route identity reach the Web SDK together.
+
+```tsx
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import type { ContentOptimizationHandoff } from '@contentful/optimization-react-web/handoff'
+import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
+import { Outlet } from 'react-router-dom'
+
+export function RootLayout({ handoff }: { handoff?: ContentOptimizationHandoff }) {
+  return (
+    <OptimizationRoot spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID} handoff={handoff}>
+      <ReactRouterAutoPageTracker handoff={handoff} />
+      <Outlet />
+    </OptimizationRoot>
+  )
+}
+```
+
+**Adapt this to your use case:** in the Node request handler, continue after
+`prepareRequestHandoff()` returns. `renderExistingReactRoute` stands for your app's existing SSR
+renderer with its server router and entry components; pass the shown root into that renderer. The
+`handoffJson` value goes into the `optimization-handoff` JSON script from the Node guide's EJS
+pattern. Keep the same route and entry tree for browser hydration.
+
+```tsx
+import { createRequestHandoffFromData } from '@contentful/optimization-node'
+import type { ContentOptimizationHandoff } from '@contentful/optimization-react-web/handoff'
+import { RootLayout } from './RootLayout'
+
+const { data, handoff } = await requestOptimization.prepareRequestHandoff({
+  routeKey: req.originalUrl,
+  page: { properties: { path: req.path } },
+})
+const reactHandoff = {
+  ...handoff,
+  ...createRequestHandoffFromData({ data }),
+  hydration: 'preserve-server',
+} satisfies ContentOptimizationHandoff
+const html = await renderExistingReactRoute(req, <RootLayout handoff={reactHandoff} />, data)
+res.render('page', {
+  html,
+  handoffJson: JSON.stringify(reactHandoff).replace(/</g, '\\u003c'),
+})
+```
+
+**Adapt this to your use case:** in your browser-only hydration entry, read that serialized object
+and pass it to the same `RootLayout` when creating your existing browser router. `HomePage` is your
+app-owned route component; use the same route tree the server rendered. The browser must not also
+call Web SDK `hydrateAndTrackCurrentPage()` because the root and tracker own commitment.
+
+```tsx
+import type { ContentOptimizationHandoff } from '@contentful/optimization-react-web/handoff'
+import { hydrateRoot } from 'react-dom/client'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { RootLayout } from './RootLayout'
+import { HomePage } from './HomePage'
+
+const raw = document.getElementById('optimization-handoff')?.textContent
+const handoff = raw && raw !== 'null' ? (JSON.parse(raw) as ContentOptimizationHandoff) : undefined
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <RootLayout handoff={handoff} />,
+    children: [{ index: true, element: <HomePage /> }],
+  },
+])
+
+hydrateRoot(document.getElementById('root')!, <RouterProvider router={router} />)
+```
 
 ### Consent and privacy handoff
 
@@ -933,6 +1021,12 @@ Experience event work before that root makes its initial page decision. This is 
 the router tracker in [Page events and route tracking](#page-events-and-route-tracking), not an
 addition to it. The before-initial-page root is the sole page owner for its subtree.
 
+If this root receives a handoff with a prepared replay, it uses the handoff path for the first
+route. The callback does not run for that replay, and the SDK commits the server-prepared events as
+one browser batch. Supply initial identity and custom events to the server's
+`prepareRequestHandoff()` instead. The callback sequence below applies when there is no prepared
+replay.
+
 After the root's owned runtime is live, the callback runs once during a retained root lifetime,
 which starts when that `OptimizationRoot` mounts and ends when it unmounts. A real remount starts a
 new lifetime and runs the callback again. The SDK-provided `BeforeInitialPageClient` exposes three
@@ -1025,7 +1119,7 @@ The watchdog timeout bounds how long the root waits for returned callback work:
 
 A **direct page attempt** means the root calls the page-event API itself once before automatic route
 tracking starts. The root's **page emitter** is its built-in route-change logic, not a tracker
-component you mount. After the direct attempt finishes, its initial `skip` mark records the attempted
+component you mount. After the direct attempt finishes, its internal non-emitting mark records the attempted
 route as handled without sending another event. A later route change makes the emitter send its
 normal page event. If the page call returns `{ accepted: false }`, the SDK finished the call but did
 not admit that page event locally; the sequence still advances and does not retry the same route

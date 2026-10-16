@@ -271,6 +271,14 @@ explicitly requests it.
   impact crosses package families or is uncertain, use aggregate `pnpm size:report` for the complete
   inventory, then `pnpm size:check` after classification.
 - On failure, report the command, package or bundle, budget, actual size, and delta.
+- For an explicitly approved increase to an exceeded budget, or a request to normalize budgets,
+  set each budget in the authorized scope to `ceil((measuredGzipBytes + 100) / 100) * 100`: add
+  100 bytes to the measured gzip size, then round up to a multiple of 100 bytes. Use the
+  completed build's `size:report` measurement, including reachable local chunks/assets counted by the
+  checker; do not calculate from the previous budget or an isolated entry file. Normalization
+  applies to every requested entry, including budgets that decrease or already satisfy their
+  limit. This calculation does not authorize additional budget changes or waive the approval,
+  failure-classification, scope, and validation rules in this section.
 - Allowed remediation is limited to confirmed current-change regressions, dependency/import
   mistakes, and measurement issues. Every remediation must preserve maintainability: do not make
   code harder to read, type, test, debug, or change just to reduce bytes. Prefer fixes such as

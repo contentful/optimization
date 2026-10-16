@@ -26,8 +26,8 @@ export default async function AnalyticsOnlyLayout({
 
   return (
     <OptimizationAnalyticsRoot
-      buildPagePayload={() => pagePayload}
       handoff={handoff}
+      initialPagePayload={pagePayload}
       routeKey={routeKey}
     >
       <AppShell analyticsOnly>{children}</AppShell>
