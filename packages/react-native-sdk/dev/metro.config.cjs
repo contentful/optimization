@@ -8,8 +8,8 @@ const path = require('path')
  * @type {import('metro-config').MetroConfig}
  */
 
-// Get the workspace root (four levels up from this file)
-const workspaceRoot = path.resolve(__dirname, '../../../../')
+// Get the workspace root (three levels up from this file)
+const workspaceRoot = path.resolve(__dirname, '../../../')
 // Get the React Native package directory (one level up from dev)
 const reactNativePackageDir = path.resolve(__dirname, '..')
 
@@ -27,33 +27,18 @@ const config = {
     resolveRequest: (context, moduleName, platform) => {
       // Resolve workspace packages to their source files instead of dist
       const workspacePackages = {
-        '@contentful/optimization-core': path.resolve(
-          workspaceRoot,
-          'packages/universal/core-sdk/src/index.ts',
-        ),
-        '@contentful/optimization-core/preview-support': path.resolve(
-          workspaceRoot,
-          'packages/universal/core-sdk/src/preview-support/index.ts',
-        ),
-        '@contentful/optimization-api-client': path.resolve(
-          workspaceRoot,
-          'packages/universal/api-client/src/index.ts',
-        ),
-        '@contentful/optimization-api-schemas': path.resolve(
-          workspaceRoot,
-          'packages/universal/api-schemas/src/index.ts',
-        ),
-        '@contentful/optimization-react-native': path.resolve(
-          workspaceRoot,
-          'packages/react-native-sdk/src/index.ts',
-        ),
+        '@contentful/optimization-core': 'packages/universal/core-sdk/src',
+        '@contentful/optimization-api-client': 'packages/universal/api-client/src',
+        '@contentful/optimization-api-schemas': 'packages/universal/api-schemas/src',
+        '@contentful/optimization-react-native': 'packages/react-native-sdk/src',
       }
-
-      if (workspacePackages[moduleName]) {
-        return {
-          filePath: workspacePackages[moduleName],
-          type: 'sourceFile',
-        }
+      const packageName = Object.keys(workspacePackages).find(
+        (name) => moduleName === name || moduleName.startsWith(`${name}/`),
+      )
+      if (packageName) {
+        const subpath = moduleName.slice(packageName.length).replace(/^\//, '') || 'index'
+        const source = path.resolve(workspaceRoot, workspacePackages[packageName], subpath)
+        return context.resolveRequest(context, source, platform)
       }
 
       // Let Metro handle everything else

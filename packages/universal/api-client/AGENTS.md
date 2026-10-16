@@ -13,3 +13,6 @@ their runtime schemas, inferred types, and validation helpers exposed through `.
 - Run `typecheck` and `test:unit` for local changes.
 - Run `build` for export, packaging, or runtime changes.
 - Handle bundle-size failures under the root `Bundle size` policy.
+- For approved increases to exceeded budgets or requested normalization, set each authorized budget
+  to `ceil((measuredGzipBytes + 100) / 100) * 100` under the root
+  [Bundle size](../../../AGENTS.md#bundle-size) measurement and approval rules.

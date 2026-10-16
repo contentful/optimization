@@ -4,7 +4,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation.js'
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
-import { useAutoPageEmitter, type InitialAutoPageEvent } from '../auto-page/useAutoPageEmitter'
+import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+import type { ContentOptimizationHandoff } from '../handoff'
 
 function toSearch(searchParams: { readonly toString: () => string }): string {
   const value = searchParams.toString()
@@ -45,7 +46,7 @@ export interface NextAppAutoPageContext {
 }
 
 export interface NextAppAutoPageTrackerProps extends AutoPagePayloadOptions<NextAppAutoPageContext> {
-  readonly initialPageEvent?: InitialAutoPageEvent
+  readonly handoff?: ContentOptimizationHandoff
 }
 
 interface NextAppRouteSnapshot {
@@ -143,7 +144,7 @@ export function useNextAppAutoPageInputs({
 }
 
 export function NextAppAutoPageTracker({
-  initialPageEvent,
+  handoff,
   pagePayload,
   getPagePayload,
 }: NextAppAutoPageTrackerProps): ReactElement | null {
@@ -155,7 +156,7 @@ export function NextAppAutoPageTracker({
   useAutoPageEmitter({
     buildPayload: buildPagePayload,
     enabled: true,
-    initialPageEvent,
+    handoff,
     routeKey,
   })
 

@@ -24,6 +24,9 @@ Owns the React Native SDK and package-local development harness.
 
 - Run `typecheck`, `test:unit`, and `build`.
 - Handle bundle-size failures under the root `Bundle size` policy.
+- For approved increases to exceeded budgets or requested normalization, set each authorized budget
+  to `ceil((measuredGzipBytes + 100) / 100) * 100` under the root
+  [Bundle size](../../AGENTS.md#bundle-size) measurement and approval rules.
 - Run `dev:test` for harness behavior changes.
 - Validate `dev/` or `implementations/react-native-sdk` when SDK flows, runtime tracking, storage,
   navigation, offline behavior, or preview behavior changes.

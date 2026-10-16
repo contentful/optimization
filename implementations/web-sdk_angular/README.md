@@ -124,12 +124,14 @@ Run the full E2E setup and test suite from the monorepo root:
 
 ```sh
 pnpm setup:e2e:web-sdk_angular
-pnpm test:e2e:web-sdk_angular
+E2E_FLAGS=CSR,HYDRATION,SSR pnpm test:e2e:web-sdk_angular
 ```
 
 This implementation uses the shared Playwright suite from
 [`lib/e2e-web`](../../lib/e2e-web/README.md). The implementation sets
 `IMPLEMENTATION=web-sdk_angular` and `APP_PORT=4200` when invoking the shared suite.
+Keep the JavaScript-disabled SSR checks enabled; do not set `SKIP_NO_JS` for this implementation.
+The explicit `E2E_FLAGS` value also covers existing local `.env` files that lack the newer flags.
 
 Use Playwright UI or the report viewer when needed:
 

@@ -30,7 +30,6 @@ export type {
   BeforeInitialPageClient,
   BeforeInitialPageOptions,
   ContentfulOptimizationOrNull,
-  InitialAutoPageEvent,
   LiveUpdatesContextValue,
   LiveUpdatesProviderProps,
   ManagedEntryDescriptor,

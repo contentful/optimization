@@ -19,7 +19,7 @@ experience.js wiring and you want to move server rendering to
 ## What changes
 
 The App Router server binding provides a nested `optimization.request` component family for request
-context, server first paint, route tracking, entry resolution, and browser handoff. A separate client
+context, server preview, first paint, entry resolution, and browser handoff. A separate client
 binding supports bound Client Components. Legacy Next provider, tracker, SSR plugin, ESR helper,
 React component, and plugin behavior should be replaced by these App Router surfaces plus the shared
 migration guides.
@@ -90,10 +90,11 @@ profile cookie is `ctfl-opt-aid`; it must be browser-readable so browser takeove
 same visitor. The app still owns the consent record and the server consent resolver.
 
 Every `optimization.request` wrapper shares one SDK-owned initializer for the active request. It
-derives the request URL, route key, page payload, hydration mode, and handoff once. Mount
+derives the request URL, route key, page payload, hydration mode, and handoff once. The server
+prepares the initial events and previews their selections without committing them. Mount
 `optimization.request.NextAppAutoPageTracker` inside `optimization.request.OptimizationRoot`; the
-tracker receives first-page-event ownership from that shared handoff automatically. Do not create or
-pass app-owned handoff, route-key, page-payload, or `initialPageEvent` plumbing for the ordinary
+browser applies the shared handoff and admits matching prepared events through its SDK queue. Do
+not create or pass app-owned handoff, route-key, or page-payload plumbing for the ordinary
 request-family path.
 
 ### Replace server-rendered personalization
@@ -129,7 +130,7 @@ Verify server HTML, hydration, and browser takeover together:
 - Server rendering uses the nested `optimization.request` root, entry, and tracker components.
 - Server-rendered content uses the expected variant or baseline.
 - Browser hydration does not briefly revert to empty optimization state.
-- The request tracker receives first-page-event ownership without app-owned handoff or tracker props.
+- The browser admits the prepared first-route events without app-owned handoff or tracker props.
 - Personalized HTML and resolved outputs are not shared across visitors through caching.
 
 ## Validate the migration
@@ -142,12 +143,12 @@ Verify server HTML, hydration, and browser takeover together:
 
 ## Troubleshooting
 
-| Symptom                                               | Check                                                                                                              |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Request components report a missing request URL       | Confirm the request handler file, export, and route matcher for your Next.js version.                              |
-| The route conflicts with static generation            | Request-family personalization is dynamic; use a public-permutation, static, or browser-only path when required.   |
-| Hydration changes a managed entry                     | Prefetch the matching descriptor through the request root and keep the browser on the same component path.         |
-| Duplicate page events appear on a request-family path | Mount the request-family root and tracker together; remove app-owned handoff and `initialPageEvent` tracker props. |
+| Symptom                                               | Check                                                                                                            |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Request components report a missing request URL       | Confirm the request handler file, export, and route matcher for your Next.js version.                            |
+| The route conflicts with static generation            | Request-family personalization is dynamic; use a public-permutation, static, or browser-only path when required. |
+| Hydration changes a managed entry                     | Prefetch the matching descriptor through the request root and keep the browser on the same component path.       |
+| Duplicate page events appear on a request-family path | Mount the request-family root and tracker together; remove legacy page calls and emit/skip tracker props.        |
 
 ## Related guides
 

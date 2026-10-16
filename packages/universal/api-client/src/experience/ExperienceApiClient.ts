@@ -84,13 +84,22 @@ export interface ExperienceApiClientRequestOptions {
    * preflight requests, which can improve performance in browser environments.
    */
   plainText?: boolean
+}
 
+/**
+ * Request options for single-profile mutations.
+ *
+ * @public
+ */
+export interface ExperienceApiClientProfileMutationRequestOptions extends ExperienceApiClientRequestOptions {
   /**
-   * When `true`, instructs the API to aggregate a new profile state but not store it.
+   * When `true`, asks the API to evaluate the events as a preview without committing the resulting
+   * profile state.
    *
    * @remarks
-   * This is commonly used in ESR or SSR environments where you want to
-   * preview the result without persisting changes.
+   * A successful preview response includes an API-issued profile ID, including when no profile ID
+   * was supplied. The ID can continue the browser request; the preview itself does not commit the
+   * profile state.
    */
   preflight?: boolean
 }
@@ -103,7 +112,7 @@ export interface ExperienceApiClientRequestOptions {
 interface ProfileMutationRequestOptions {
   url: string
   body: unknown
-  options: ExperienceApiClientRequestOptions
+  options: ExperienceApiClientProfileMutationRequestOptions
 }
 
 /**
@@ -136,9 +145,7 @@ export interface UpdateProfileParams extends CreateProfileParams {
  * @public
  */
 export interface UpsertProfileParams extends CreateProfileParams {
-  /**
-   * Optional ID of the profile; when omitted, a new profile is created.
-   */
+  /** Optional API-issued profile ID. When omitted, the API creates a profile or evaluates a preview and returns its ID. */
   profileId?: string
 }
 
@@ -193,7 +200,6 @@ export default class ExperienceApiClient extends ApiClientBase {
   private locale?: ExperienceApiClientRequestOptions['locale']
   private readonly location?: ExperienceApiClientRequestOptions['location']
   private readonly plainText?: ExperienceApiClientRequestOptions['plainText']
-  private readonly preflight?: ExperienceApiClientRequestOptions['preflight']
 
   /**
    * Creates a new {@link ExperienceApiClient} instance.
@@ -203,7 +209,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   constructor(config: ExperienceApiClientConfig) {
     super('Experience', config)
 
-    const { baseUrl, enabledFeatures, ip, locale, location, plainText, preflight } = config
+    const { baseUrl, enabledFeatures, ip, locale, location, plainText } = config
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Set default for anything falsey
     this.baseUrl = baseUrl || EXPERIENCE_BASE_URL
@@ -212,7 +218,6 @@ export default class ExperienceApiClient extends ApiClientBase {
     this.locale = locale
     this.location = location
     this.plainText = plainText
-    this.preflight = preflight
   }
 
   /**
@@ -246,7 +251,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async getProfile(
     id: string,
-    options: Omit<ExperienceApiClientRequestOptions, 'location' | 'preflight' | 'plainText'> = {},
+    options: Omit<ExperienceApiClientRequestOptions, 'location' | 'plainText'> = {},
   ): Promise<OptimizationData> {
     if (!id) throw new Error('Valid profile ID required.')
 
@@ -258,7 +263,7 @@ export default class ExperienceApiClient extends ApiClientBase {
       const response = await this.fetch(
         this.constructUrl(
           `v3/spaces/${this.spaceId}/environments/${this.environment}/profiles/${id}`,
-          options,
+          { locale: options.locale },
         ),
         {
           method: 'GET',
@@ -303,14 +308,15 @@ export default class ExperienceApiClient extends ApiClientBase {
   }
 
   /**
-   * Creates a profile and returns the resulting optimization data.
+   * Creates or previews a profile and returns the resulting optimization data.
    *
    * @param params - Parameters containing the events to aggregate into the profile.
    * @param options - Optional request options.
-   * @returns The optimization data for the newly created profile.
+   * @returns The optimization data and API-issued profile ID.
    *
    * @remarks
-   * The returned profile ID can be used for subsequent update requests.
+   * The returned profile ID can be used for subsequent update requests. When `preflight` is `true`,
+   * the API returns an ID for continuation without committing the previewed profile state.
    *
    * @example
    * ```ts
@@ -321,7 +327,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async createProfile(
     { events }: CreateProfileParams,
-    options: ExperienceApiClientRequestOptions = {},
+    options: ExperienceApiClientProfileMutationRequestOptions = {},
   ): Promise<OptimizationData> {
     const requestName = 'Create Profile'
 
@@ -374,7 +380,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async updateProfile(
     { profileId, events }: UpdateProfileParams,
-    options: ExperienceApiClientRequestOptions = {},
+    options: ExperienceApiClientProfileMutationRequestOptions = {},
   ): Promise<OptimizationData> {
     if (!profileId) throw new Error('Valid profile ID required.')
 
@@ -427,7 +433,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async upsertProfile(
     { profileId, events }: UpsertProfileParams,
-    options?: ExperienceApiClientRequestOptions,
+    options?: ExperienceApiClientProfileMutationRequestOptions,
   ): Promise<OptimizationData> {
     if (!profileId) {
       return await this.createProfile({ events }, options)
@@ -479,7 +485,7 @@ export default class ExperienceApiClient extends ApiClientBase {
       const response = await this.makeProfileMutationRequest({
         url: `v3/spaces/${this.spaceId}/environments/${this.environment}/events`,
         body,
-        options: { plainText: false, ...options },
+        options: { plainText: false, ...options, preflight: false },
       })
 
       const {
@@ -505,10 +511,13 @@ export default class ExperienceApiClient extends ApiClientBase {
    *
    * @internal
    */
-  private constructUrl(path: string, options: ExperienceApiClientRequestOptions): string {
+  private constructUrl(
+    path: string,
+    options: ExperienceApiClientProfileMutationRequestOptions,
+  ): string {
     const url = new URL(path, this.baseUrl)
     const locale = options.locale ?? this.locale
-    const preflight = options.preflight ?? this.preflight
+    const { preflight } = options
 
     if (locale) {
       url.searchParams.set('locale', locale)

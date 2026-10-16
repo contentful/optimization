@@ -314,7 +314,8 @@ describe('handoff helpers', () => {
       ).toEqual([
         {
           code: 'profile-state-in-public-cache',
-          message: 'Profile state should not be included in public or static optimization caches.',
+          message:
+            'Profile state, identity and replay must not be included in public or static optimization caches.',
           path: ['state', 'profile'],
         },
       ])
@@ -340,13 +341,34 @@ describe('handoff helpers', () => {
   })
 
   describe('assertOptimizationCacheSafety', () => {
+    it.each(['static', 'public-permutation'] as const)(
+      'excludes visitor identity and replay from %s output',
+      (scope) => {
+        const cache = scope === 'static' ? { scope } : { scope, key: 'public' }
+        expect(() => {
+          assertOptimizationCacheSafety({ cache, profileId: 'visitor' })
+        }).toThrow(TypeError)
+        expect(() => {
+          assertOptimizationCacheSafety({ cache, replay: { routeKey: '/', events: [] } })
+        }).toThrow(TypeError)
+        expect(() => {
+          assertOptimizationCacheSafety({
+            cache: { scope: 'private-request' },
+            profileId: 'visitor',
+          })
+        }).not.toThrow()
+      },
+    )
+
     it('throws for cache safety warnings', () => {
       expect(() => {
         assertOptimizationCacheSafety({
           cache: { scope: 'static' },
           state: { profile },
         })
-      }).toThrow('Profile state should not be included in public or static optimization caches.')
+      }).toThrow(
+        'Profile state, identity and replay must not be included in public or static optimization caches.',
+      )
     })
 
     it('allows safe public permutations and static handoffs without profile state', () => {

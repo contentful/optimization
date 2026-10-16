@@ -26,8 +26,8 @@ export default async function SelectionHandoffLayout({
 
   return (
     <ExplicitOptimizationRoot
-      buildPagePayload={() => pagePayload}
       handoff={handoff}
+      initialPagePayload={pagePayload}
       routeKey={routeKey}
     >
       <AppShell>{children}</AppShell>

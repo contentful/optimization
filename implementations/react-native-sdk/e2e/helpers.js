@@ -150,20 +150,6 @@ async function waitForTrackedItemEventCount(
   )
 }
 
-async function getViewDuration(componentId) {
-  const testId = `event-duration-${componentId}`
-  const text = await getElementTextById(testId)
-  const match = /Duration:\s*(\d+)/.exec(text)
-  return match && match[1] ? Number(match[1]) : null
-}
-
-async function getViewId(componentId) {
-  const testId = `event-view-id-${componentId}`
-  const text = await getElementTextById(testId)
-  const match = /ViewId:\s*(.+)/.exec(text)
-  return match && match[1] && match[1] !== 'N/A' ? match[1].trim() : null
-}
-
 // Native `Alert.alert` on both Android (AlertDialog) and iOS (UIAlertController)
 // exposes buttons as text-matchable elements. `atIndex(0)` guards against
 // duplicate matchers if the same label is also present elsewhere in the panel.
@@ -177,8 +163,6 @@ async function tapAlertButton(label, timeout = ELEMENT_VISIBILITY_TIMEOUT) {
 module.exports = {
   clearProfileState,
   ELEMENT_VISIBILITY_TIMEOUT,
-  getViewDuration,
-  getViewId,
   getElementTextById,
   isVisibleById,
   sleep,

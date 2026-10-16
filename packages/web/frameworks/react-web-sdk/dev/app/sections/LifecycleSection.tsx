@@ -22,6 +22,11 @@ export function LifecycleSection({ sdk }: LifecycleSectionProps): ReactElement {
         <h2>Lifecycle</h2>
         <p>{`canOptimize: ${String(canOptimize)}`}</p>
         <p>{`destroyed: ${String(destroyed)}`}</p>
+        {destroyed ? (
+          <p>
+            <a href={window.location.href}>Reload to initialize the SDK again</a>.
+          </p>
+        ) : null}
         <div className="dashboard__actions">
           <button
             onClick={() => {

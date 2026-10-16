@@ -103,21 +103,6 @@ func waitForComponentEventCount(
     }
 }
 
-func getViewDuration(_ componentId: String, app: XCUIApplication) -> Int? {
-    let text = getElementTextById("event-duration-\(componentId)", app: app)
-    let pattern = #/Duration:\s*(\d+)/#
-    guard let match = text.firstMatch(of: pattern) else { return nil }
-    return Int(match.1)
-}
-
-func getViewId(_ componentId: String, app: XCUIApplication) -> String? {
-    let text = getElementTextById("event-view-id-\(componentId)", app: app)
-    let pattern = #/ViewId:\s*(.+)/#
-    guard let match = text.firstMatch(of: pattern) else { return nil }
-    let id = String(match.1).trimmingCharacters(in: .whitespaces)
-    return id == "N/A" ? nil : id
-}
-
 /// Scrolls a scroll view until the target element is visible.
 func scrollToElement(testId: String, scrollViewId: String, app: XCUIApplication, maxSwipes: Int = 10) {
     let scrollView = app.scrollViews[scrollViewId]

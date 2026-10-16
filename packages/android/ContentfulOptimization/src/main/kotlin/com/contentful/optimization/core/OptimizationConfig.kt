@@ -26,7 +26,6 @@ public data class OptimizationApiConfig(
     val experienceBaseUrl: String? = null,
     val insightsBaseUrl: String? = null,
     val enabledFeatures: List<String>? = null,
-    val preflight: Boolean? = null,
     /**
      * Default location for singular Experience API requests. Event context locations remain
      * independent and take precedence at the API. This is not a permanent profile-location lock.
@@ -42,7 +41,6 @@ public data class OptimizationApiConfig(
         experienceBaseUrl == null &&
             insightsBaseUrl == null &&
             enabledFeatures == null &&
-            preflight == null &&
             location == null
 
     internal fun toJSONObject(): JSONObject {
@@ -50,7 +48,6 @@ public data class OptimizationApiConfig(
         experienceBaseUrl?.let { obj.put("experienceBaseUrl", it) }
         insightsBaseUrl?.let { obj.put("insightsBaseUrl", it) }
         enabledFeatures?.let { obj.put("enabledFeatures", org.json.JSONArray(it)) }
-        preflight?.let { obj.put("preflight", it) }
         location?.let { obj.put("location", JSONObject(it.mapValues { entry -> entry.value.toAny() })) }
         return obj
     }
@@ -93,9 +90,13 @@ public data class QueueFlushPolicy(
     }
 }
 
+/** Queue capacity and flush callbacks. Offline admission defaults to 100 events. */
 public data class QueuePolicy(
     val flush: QueueFlushPolicy? = null,
+    /** Maximum offline Experience events admitted; the default is 100. */
     val offlineMaxEvents: Int? = null,
+    /** Inactive compatibility callback. Offline capacity rejects incoming events without dropping queued events. */
+    @Deprecated("Offline capacity rejects incoming events; inspect EventEmissionResult.accepted instead.")
     val onOfflineDrop: ((QueueEvent) -> Unit)? = null,
     val onFlushFailure: ((QueueEvent) -> Unit)? = null,
     val onCircuitOpen: ((QueueEvent) -> Unit)? = null,
@@ -121,6 +122,8 @@ public data class BlockedEvent(
 )
 
 public enum class QueueEventType(public val wireValue: String) {
+    /** Retained for compatibility; the bridge no longer emits this event. */
+    @Deprecated("Offline capacity rejects incoming events without emitting a queue event.")
     offlineDrop("offlineDrop"),
     flushFailure("flushFailure"),
     circuitOpen("circuitOpen"),

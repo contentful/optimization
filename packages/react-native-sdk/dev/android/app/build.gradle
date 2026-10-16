@@ -6,7 +6,21 @@ apply plugin: "com.facebook.react"
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
+def resolveReactNativePackage = { name ->
+    def packagePath = providers.exec {
+        workingDir file("../../..")
+        commandLine "node", "--print", "require.resolve('${name}/package.json', {paths: [require.resolve('react-native/package.json')]})"
+    }.standardOutput.asText.get().trim()
+    new File(packagePath).parentFile
+}
+
 react {
+    root = file("../../..")
+    reactNativeDir = resolveReactNativePackage("react-native")
+    codegenDir = resolveReactNativePackage("@react-native/codegen")
+    cliFile = new File(reactNativeDir.get().asFile, "cli.js")
+    entryFile = file("../../index.js")
+    bundleConfig = file("../../metro.config.cjs")
     /* Folders */
     //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
