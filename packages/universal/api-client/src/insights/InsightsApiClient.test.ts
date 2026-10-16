@@ -193,6 +193,59 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     )
   })
 
+  it.each(['default', 'root-variant'])(
+    'serializes Fragment parent variant %s without stripping it',
+    async (parentVariantId) => {
+      const [batch] = generateBatchEventArray('exo-profile')
+      if (!batch) throw new Error('Missing test batch')
+      const [base] = batch.events
+      if (!base) throw new Error('Missing test event')
+      const properties = {
+        channel: base.channel,
+        context: base.context,
+        messageId: base.messageId,
+        originalTimestamp: base.originalTimestamp,
+        sentAt: base.sentAt,
+        timestamp: base.timestamp,
+        entityId: 'fragment-1',
+        entityKind: 'Fragment' as const,
+        parentExperienceId: 'root-1',
+        parentVariantId,
+        variantId: 'fragment-variant',
+      }
+      const batches = [
+        {
+          profile: batch.profile,
+          events: [
+            {
+              ...properties,
+              type: 'exo_node_view' as const,
+              viewId: 'view-1',
+              viewDurationMs: 1000,
+            },
+            { ...properties, type: 'exo_node_click' as const },
+            {
+              ...properties,
+              type: 'exo_node_hover' as const,
+              hoverId: 'hover-1',
+              hoverDurationMs: 500,
+            },
+          ],
+        },
+      ]
+      const fetchMethod = rs.fn<FetchMethod>(async (_url, options) => {
+        await Promise.resolve()
+        if (typeof options?.body !== 'string') throw new Error('Expected a serialized request body')
+        expect(JSON.parse(options.body)).toEqual(batches)
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      })
+      const client = makeClient({ fetchOptions: { fetchMethod } })
+
+      await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
+      expect(fetchMethod).toHaveBeenCalledTimes(1)
+    },
+  )
+
   it('uses beacon sender when supplied', async () => {
     const batches = generateBatchEventArray('e2')
 
