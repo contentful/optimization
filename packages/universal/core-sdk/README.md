@@ -154,14 +154,37 @@ decisions, and debug state are tracked separately.
 
 Common `api` options:
 
-| Option              | Applies to | Default                                    | Description                                       |
-| ------------------- | ---------- | ------------------------------------------ | ------------------------------------------------- |
-| `experienceBaseUrl` | All        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                   |
-| `insightsBaseUrl`   | All        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                     |
-| `enabledFeatures`   | All        | `['ip-enrichment', 'location']`            | Experience API features for each request          |
-| `ip`                | Stateful   | `undefined`                                | IP address override for Experience API analysis   |
-| `plainText`         | Stateful   | `true` for single-profile mutations        | Sends single-profile Experience mutations as text |
-| `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it     |
+| Option              | Applies to | Default                                    | Description                                                      |
+| ------------------- | ---------- | ------------------------------------------ | ---------------------------------------------------------------- |
+| `experienceBaseUrl` | All        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                  |
+| `insightsBaseUrl`   | All        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                    |
+| `enabledFeatures`   | All        | `['ip-enrichment', 'location']`            | Experience API features for each request                         |
+| `location`          | All        | API fallback                               | Default request location for single-profile Experience mutations |
+| `ip`                | Stateful   | `undefined`                                | IP address override for Experience API analysis                  |
+| `plainText`         | Stateful   | `true` for single-profile mutations        | Sends single-profile Experience mutations as text                |
+| `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it                    |
+
+Both Core constructors accept `api.location`; platform SDKs inherit that configuration.
+Stateless request clients override it through `forRequest({ experienceOptions: { location } })`:
+
+```ts
+const optimization = new CoreStateless({
+  spaceId: 'your-space-id',
+  api: { location: { countryCode: 'DE' } },
+})
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  experienceOptions: { location: {} },
+})
+await requestOptimization.page()
+```
+
+The request location replaces the entire constructor default, including an explicit `{}`. Event
+`context.location` remains separate and takes precedence over matching request fields at the API.
+An empty request location supplies an empty default instead of API geolocation; it does not clear
+existing profile location. This is request evaluation input, not a permanent profile lock. For
+backend precedence and profile continuity, see
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
 
 When `plainText` is omitted, single-profile Experience mutation/event requests use `text/plain`.
 Pass `plainText: false` to send JSON. Experience batch profile updates still default to JSON.

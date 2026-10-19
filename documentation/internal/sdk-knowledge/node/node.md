@@ -26,6 +26,11 @@ per-visitor state between requests. Package source root: `packages/node/node-sdk
 
 ## Setup / initialization and binding
 
+- Normal constructor `api.location` is a process-level Experience request default. Visitor-specific
+  location belongs on the request-bound `forRequest({ experienceOptions })` path, whose override
+  does not change another request client's default; see the shared
+  [API transport scope](../shared/concepts.md#api-transport-scope).
+  source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#CoreStateless.ts#forRequest; kb:shared/concepts.md
 - `new ContentfulOptimization(config)` — extends `CoreStateless extends CoreBase`; stateless. Create
   ONE per process/module and reuse across requests. Constructing it does NOT attach to any global and
   does NOT throw on a second instance (unlike the stateful Web SDK). Node defaults applied by the

@@ -58,9 +58,10 @@ Profile synchronization applies differently across SDK runtimes:
 | **Next.js adapter**              | Hybrid runtime. The App Router server binding's request family creates and supplies one browser `handoff` for its request components. Pages Router, manual server, and edge helpers return explicit browser handoffs. Response-capable request handlers, Pages Router, edge, and lower-level response-persistence helpers write or clear `ctfl-opt-aid`. Client components continue through the Web or React Web SDK state. |
 | **React Native and mobile SDKs** | React Native uses AsyncStorage, and native mobile SDKs use platform storage instead of browser cookies. They can continue mobile profiles through the Experience API, but they do not provide a built-in `ctfl-opt-aid` cookie handoff to a Node server.                                                                                                                                                                    |
 
-The [request-level location controls](#location-inputs-and-profile-updates) apply to direct
-`ExperienceApiClient` calls. The application SDKs' `api` configuration and Node/Next.js
-`forRequest({ experienceOptions })` surfaces do not expose that option.
+The [request-level location controls](#location-inputs-and-profile-updates) are available through
+JavaScript SDK `api.location` configuration and native Swift/Kotlin `OptimizationApiConfig.location`.
+Stateless Node and Next.js request helpers also accept `experienceOptions.location` for an
+individual request.
 
 ## The synchronization model
 
@@ -216,7 +217,20 @@ Location is part of evaluated profile data and can change as the Experience API 
 Sharing a profile ID between a server and a browser continues the same profile; it does not freeze
 that profile's location at the value used by an earlier request.
 
-Direct `ExperienceApiClient` callers can supply a request location for `createProfile()`,
+JavaScript SDK constructors, React-owned providers and roots, and React Native initialization
+forward `api.location` as the default for profile-changing Experience calls. Swift and Kotlin
+forward `OptimizationApiConfig.location` through the shared native bridge. These stateful defaults
+belong to initialization configuration. Passing updated `api.location` props after mounting does
+not reconfigure the initialized SDK.
+
+Node and stateless Core callers can override that default with
+`forRequest({ experienceOptions: { location } })`. Next.js server, edge, and Pages Router request
+helpers accept the same `experienceOptions.location` override through their existing request
+options. Each override belongs to that request and leaves the constructor default available for
+later requests. Request-owned App Router components use the location in their binding's `api`
+configuration.
+
+At the transport layer, `ExperienceApiClient` uses the request location for `createProfile()`,
 `updateProfile()`, and `upsertProfile()`. The client resolves `options.location` from that call first,
 then uses its constructor's `location` when the call omits it. A per-request object replaces the
 entire constructor default, without merging their fields. The unified `ApiClient` accepts the same

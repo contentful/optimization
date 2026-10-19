@@ -139,6 +139,13 @@ const { profile, selectedOptimizations, changes } = await client.experience.upse
 Common methods include `getProfile`, `createProfile`, `updateProfile`, `upsertProfile`, and
 `upsertManyProfiles`.
 
+Applications can configure request location through their normal SDK's `api.location` option.
+Stateless Node integrations can override it per request through
+`forRequest({ experienceOptions: { location } })`; see the
+[Node SDK configuration](../../node/node-sdk/README.md#common-configuration) and
+[Web SDK configuration](../../web/web-sdk/README.md#common-configuration).
+The direct transport example below is for SDK-layer and tooling consumers.
+
 For `createProfile`, `updateProfile`, and `upsertProfile`, set `location` in the Experience client
 configuration or in per-request options:
 

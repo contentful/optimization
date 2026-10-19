@@ -246,7 +246,7 @@ updates, preview, offline delivery — is introduced by the section that needs i
 **Integration category:** Required for first integration
 
 You wrapped your app root in `OptimizationRoot` in the quick start, so this section adds only what the
-quick start left out: the `environment` and `locale` values, `api` endpoint overrides, and how a view
+quick start left out: the `environment` and `locale` values, `api` request defaults and endpoint overrides, and how a view
 below the root reaches the client. The quick start's `defaults` and `logLevel` lines stay as they
 were — the [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff) section is what
 replaces `defaults`, and you lower `logLevel` when you stop needing the console output.
@@ -268,8 +268,9 @@ tasks, event handlers, or other main-actor contexts.
    so pass it only when your Contentful environment differs.
 3. Pass `locale` when Experience API responses and event context must use the same app locale as your
    Contentful entry fetches.
-4. Pass `api` endpoint overrides only for staging, mocks, or non-default hosts; both base URLs default
-   correctly otherwise, so most apps omit `api`.
+4. Set `api` base URLs only for staging, mocks, or non-default hosts; both default correctly
+   otherwise. Optionally set `OptimizationApiConfig.location` when your app supplies a location
+   default for Experience requests.
 5. Read the initialized client from `@EnvironmentObject` inside descendant views that call SDK methods
    directly.
 
@@ -287,6 +288,7 @@ struct MyApp: App {
             OptimizationRoot(
                 config: OptimizationConfig(
                     spaceId: "<your-space-id>",
+                    api: OptimizationApiConfig(location: ["countryCode": .string("US")]),
                     // environment defaults to "master"; set it only when your Contentful environment differs.
                     locale: "en-US",
                     // Still the quick start's startup consent; the Consent section replaces it.
@@ -311,6 +313,11 @@ struct SDKLocaleLabel: View {
     }
 }
 ```
+
+The optional `location` dictionary uses the SDK's `JSONValue` values, such as `.string("US")`.
+Replace the illustrative country code with your app's approved location before initialization.
+Omit `location` (or pass `nil`) for API fallback; `location: [:]` sends an empty request default.
+See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
 
 `logLevel` defaults to `.error`; `.debug` and `.log` also enable remote JavaScript inspection in
 debug builds. `OptimizationClient` methods that emit events are `async` and called from tasks or
@@ -1071,8 +1078,9 @@ event allow-lists, non-default endpoints, or queue observability.
    elements are event type names: `identify`, `screen`, `page`, `track`, `component` (an entry view),
    and `component_click` (an entry tap). Leaving `allowedEventTypes` unset behaves like
    `["identify", "screen"]`, the native default.
-3. Configure `OptimizationApiConfig` only for approved non-default Experience API or Insights API
-   endpoints.
+3. Configure `OptimizationApiConfig` base URLs only for approved non-default Experience API or
+   Insights API endpoints. Its optional `location` sets the initialization-time request default
+   described in [Install and initialize the SwiftUI root](#install-and-initialize-the-swiftui-root).
 4. Configure `onEventBlocked` or subscribe to `blockedEventStream` when release validation needs proof
    that denied events are blocked.
 5. Configure `QueuePolicy` only when production operations need non-default queue limits, retry

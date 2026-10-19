@@ -50,7 +50,8 @@ final class OptimizationClientTests: XCTestCase {
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/",
                 enabledFeatures: ["audiences", "experiences"],
-                preflight: true
+                preflight: true,
+                location: ["countryCode": .string("DE")]
             ),
             logLevel: .debug
         )
@@ -67,6 +68,26 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(api?["enabledFeatures"] as? [String], ["audiences", "experiences"])
         XCTAssertEqual(api?["preflight"] as? Bool, true)
         XCTAssertEqual(dict["logLevel"] as? String, "debug")
+        let location = try XCTUnwrap(api?["location"] as? [String: Any])
+        XCTAssertEqual(location["countryCode"] as? String, "DE")
+    }
+
+    func testConfigToJSONDistinguishesNilAndEmptyApiLocation() throws {
+        let locations: [[String: JSONValue]?] = [nil, [:]]
+        for location in locations {
+            let config = OptimizationConfig(
+                spaceId: "test-client",
+                api: OptimizationApiConfig(location: location)
+            )
+            let data = try XCTUnwrap(config.toJSON().data(using: .utf8))
+            let dict = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            if location == nil {
+                XCTAssertNil(dict["api"])
+            } else {
+                let api = try XCTUnwrap(dict["api"] as? [String: Any])
+                XCTAssertTrue(try XCTUnwrap(api["location"] as? [String: Any]).isEmpty)
+            }
+        }
     }
 
     func testConfigToJSONSerializesQueuePolicyKnobs() throws {

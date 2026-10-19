@@ -31,6 +31,12 @@ source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPage
 
 ## Setup / initialization and binding
 
+- Browser and server binders preserve configured `api.location` as their respective SDK runtime's
+  Experience request default. Server `createRequestHandoff(context, options)` forwards
+  `experienceOptions.location` into the request-bound Experience mutation; that override does not
+  become browser configuration in the returned handoff. Shared replacement and serialization
+  behavior is recorded under [API transport scope](../shared/concepts.md#api-transport-scope).
+  source: nextjs-sdk#pages-router.ts#toClientRootConfig; nextjs-sdk#pages-router-server.ts#toServerOptimizationConfig; nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization; nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff; nextjs-sdk#server.tsx#bindNextjsOptimizationRequest; kb:shared/concepts.md
 - **Client:** `bindNextjsPagesRouterOptimization(config)` →
   `{ OptimizationRoot, OptimizationProvider, OptimizedEntry, NextPagesAutoPageTracker }`. Config
   passes through to react-web providers; binding calls are not isolated browser SDK runtimes. Browser

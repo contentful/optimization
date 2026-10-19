@@ -49,6 +49,13 @@ flow.
 For the bridge runtime contract, UMD bundle flow, prepended polyfills, native bindings, callback
 shape, and lifecycle constraints, see [Native bridge architecture](./BRIDGE_ARCHITECTURE.md).
 
+Native `OptimizationApiConfig.location` travels through the existing serialized `api` configuration
+to Core's `api.location` and the Experience API default. Swift `nil` and Kotlin `null` omit the
+field; an empty dictionary or map must remain `{}` through serialization and bridge initialization.
+Event `context.location` remains independent. Applications configure this through the native SDK,
+without calling bridge methods directly. For backend precedence and profile continuity, see
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
+
 ## Commands
 
 Run commands from the monorepo root:

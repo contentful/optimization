@@ -74,6 +74,7 @@ interface BridgeConfig {
     experienceBaseUrl?: CoreApiConfig['experienceBaseUrl']
     insightsBaseUrl?: CoreApiConfig['insightsBaseUrl']
     enabledFeatures?: CoreApiConfig['enabledFeatures']
+    location?: CoreApiConfig['location']
     preflight?: CoreApiConfig['preflight']
   }
   locale?: string
@@ -382,6 +383,7 @@ const bridge: Bridge = {
         experienceBaseUrl: config.api?.experienceBaseUrl,
         insightsBaseUrl: config.api?.insightsBaseUrl,
         enabledFeatures: config.api?.enabledFeatures,
+        location: config.api?.location,
         preflight: config.api?.preflight,
       },
       queuePolicy: {

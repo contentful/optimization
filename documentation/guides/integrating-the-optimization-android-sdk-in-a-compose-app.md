@@ -226,7 +226,7 @@ outside this guide:
   `environment` has a Kotlin-side default of `"master"`, so pass it only when your Contentful
   environment differs. The Experience API (which picks variants) and the Insights API (which receives
   event and interaction delivery) each have a base URL that defaults correctly; you set them through
-  `OptimizationApiConfig` only for mocks or non-default hosts (see
+  `OptimizationApiConfig` base URLs only for mocks or non-default hosts (see
   [Install and initialize `OptimizationRoot`](#install-and-initialize-optimizationroot)).
 
 You do not need a setup inventory up front. Everything else — consent, entry resolution, screen
@@ -269,8 +269,9 @@ scope.
    so pass it only when your Contentful environment differs.
 3. Pass `locale` when Experience API responses and event context must use the same app locale as your
    Contentful entry fetches.
-4. Pass an `api` (`OptimizationApiConfig`) override only for staging, mocks, or non-default hosts; both
-   base URLs default correctly otherwise, so most apps omit `api`.
+4. Set `OptimizationApiConfig` base URLs only for staging, mocks, or non-default hosts; both
+   default correctly otherwise. Optionally set `location` when your app supplies a location default
+   for Experience requests.
 5. Read the initialized client with `LocalOptimizationClient.current` inside descendant composables
    that call SDK methods directly.
 
@@ -283,6 +284,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.OptimizationRoot
+import com.contentful.optimization.core.JSONValue
 import com.contentful.optimization.core.OptimizationApiConfig
 import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.core.OptimizationLogLevel
@@ -297,10 +299,11 @@ fun AppRoot() {
             // environment defaults to "master"; set it only when your Contentful environment differs.
             locale = "en-US",
             logLevel = OptimizationLogLevel.warn,
-            // Both base URLs default correctly; set api only for staging, mocks, or non-default hosts.
+            // Both base URLs default correctly; override them only for non-default hosts.
             api = OptimizationApiConfig(
                 experienceBaseUrl = "https://experience.staging.example.com/",
                 insightsBaseUrl = "https://insights.staging.example.com/",
+                location = mapOf("countryCode" to JSONValue.Str("US")),
             ),
         ),
     ) {
@@ -324,6 +327,10 @@ fun PurchaseButton() {
     }
 }
 ```
+
+The optional `location` map uses the SDK's `JSONValue` values. Replace the illustrative country
+code with your app's approved value before initialization. Omit `location` (or pass `null`) for API
+fallback; `location = emptyMap()` sends an empty request default. See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
 
 `logLevel` defaults to `OptimizationLogLevel.error`; `debug` and `log` surface the bridge activity
 lines you used in the quick start. For lifecycle details, see

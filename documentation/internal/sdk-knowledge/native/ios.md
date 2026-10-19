@@ -55,6 +55,14 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
 
 ## Setup / initialization and binding
 
+- Normal `OptimizationConfig.api.location` reaches the shared Core Experience request default
+  through SwiftUI root or imperative client initialization. Swift serialization omits a `nil`
+  location, preserves an empty dictionary as `api.location: {}`, and converts nested `JSONValue`
+  objects and numbers into bridge JSON. A location-only API configuration is retained even when
+  the location is empty. This is an initialization default; shared request serialization and
+  separation from event context are recorded under
+  [API transport scope](../shared/concepts.md#api-transport-scope).
+  source: extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/JSONValue.swift; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizationRoot.swift; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift; optimization-js-bridge#index.ts#initialize; kb:shared/concepts.md
 - Two usage modes for the one client. SwiftUI: `OptimizationRoot(config:)` owns the client
   (`@StateObject`), calls `initialize(config:)` in a `.task`, injects it via `@EnvironmentObject`
   plus a `TrackingConfig` environment value, and renders a `ProgressView()` until
@@ -74,7 +82,7 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
 - `OptimizationConfig`: `spaceId` is required; `environment` is the Contentful space environment
   used by the Experience and Insights APIs and has a Swift-side default `"master"`;
   `logLevel` default `.error`; `locale`, `api`
-  (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`preflight`), `allowedEventTypes`,
+  (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`location`/`preflight`), `allowedEventTypes`,
   `queuePolicy`, `defaults: StorageDefaults`,
   `onEventBlocked` all optional. source: extern:environment default "master", logLevel default .error, spaceId required — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift#OptimizationConfig
 - `config.toJSON()` serializes to the bridge `BridgeConfig` shape, omitting nil URLs and empty

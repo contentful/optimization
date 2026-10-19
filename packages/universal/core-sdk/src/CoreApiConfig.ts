@@ -15,6 +15,12 @@ export interface CoreSharedApiConfig {
   insightsBaseUrl?: InsightsApiClientConfig['baseUrl']
   /** Experience API features enabled for outgoing requests. */
   enabledFeatures?: ExperienceApiClientConfig['enabledFeatures']
+  /**
+   * Default request location for singular Experience API calls.
+   * Request-bound location options replace this whole object; `{}` supplies an empty default.
+   * Each event's context location remains independent and takes precedence at the API.
+   */
+  location?: ExperienceApiClientConfig['location']
 }
 
 /**

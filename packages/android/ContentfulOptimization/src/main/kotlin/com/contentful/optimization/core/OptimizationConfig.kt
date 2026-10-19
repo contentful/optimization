@@ -27,12 +27,40 @@ public data class OptimizationApiConfig(
     val insightsBaseUrl: String? = null,
     val enabledFeatures: List<String>? = null,
     val preflight: Boolean? = null,
+    /**
+     * Default location for singular Experience API requests. Event context locations remain
+     * independent and take precedence at the API. This is not a permanent profile-location lock.
+     *
+     * Optional string fields are `city`, `postalCode`, `region`, `regionCode`, `country`,
+     * `countryCode` (exactly two characters), `continent`, and `timezone`. Optional `coordinates`
+     * is a [JSONValue.Obj] with numeric `latitude` and `longitude` in decimal degrees.
+     * `null` omits the default; an empty map sends an empty location object.
+     */
+    val location: Map<String, JSONValue>? = null,
 ) {
+    /** Preserves the original constructor for previously compiled consumers. */
+    public constructor(
+        experienceBaseUrl: String? = null,
+        insightsBaseUrl: String? = null,
+        enabledFeatures: List<String>? = null,
+        preflight: Boolean? = null,
+    ) : this(experienceBaseUrl, insightsBaseUrl, enabledFeatures, preflight, null)
+
+    /** Preserves the original copy signatures without discarding the configured location. */
+    public fun copy(
+        experienceBaseUrl: String? = this.experienceBaseUrl,
+        insightsBaseUrl: String? = this.insightsBaseUrl,
+        enabledFeatures: List<String>? = this.enabledFeatures,
+        preflight: Boolean? = this.preflight,
+    ): OptimizationApiConfig =
+        OptimizationApiConfig(experienceBaseUrl, insightsBaseUrl, enabledFeatures, preflight, location)
+
     internal fun isEmpty(): Boolean =
         experienceBaseUrl == null &&
             insightsBaseUrl == null &&
             enabledFeatures == null &&
-            preflight == null
+            preflight == null &&
+            location == null
 
     internal fun toJSONObject(): JSONObject {
         val obj = JSONObject()
@@ -40,6 +68,7 @@ public data class OptimizationApiConfig(
         insightsBaseUrl?.let { obj.put("insightsBaseUrl", it) }
         enabledFeatures?.let { obj.put("enabledFeatures", org.json.JSONArray(it)) }
         preflight?.let { obj.put("preflight", it) }
+        location?.let { obj.put("location", JSONObject(it.mapValues { entry -> entry.value.toAny() })) }
         return obj
     }
 }

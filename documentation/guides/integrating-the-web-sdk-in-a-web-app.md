@@ -228,8 +228,8 @@ The config you pass to `new ContentfulOptimization(...)` breaks down like this:
    config.
 2. `locale` is the one locale the SDK uses for Experience and event context. Use the same locale you
    pass to Contentful.
-3. `api` overrides the Experience and Insights endpoints (`experienceBaseUrl`, `insightsBaseUrl`).
-   Set these only for a mock, a proxy, or non-default hosts; omit them otherwise.
+3. `api` configures Experience request defaults and endpoint overrides. Set `experienceBaseUrl` and
+   `insightsBaseUrl` only for a mock, a proxy, or non-default hosts; omit those keys otherwise.
 4. `defaults` is the SDK's starting state: `consent` (may personalize and send events) and
    `persistenceConsent` (may store the profile-id cookie — the anonymous identifier the SDK assigns
    each visitor to keep their variant assignments consistent across visits). If you set `consent`
@@ -270,14 +270,21 @@ export const optimization = new ContentfulOptimization({
   environment: 'master',
   locale: APP_LOCALE,
   app: { name: 'my-web-app', version: '1.0.0' },
-  // Set these only for mocks or non-default hosts; both default correctly otherwise.
+  // Override endpoint keys only for mocks or non-default hosts.
   api: {
     experienceBaseUrl: 'https://experience.example.com/',
     insightsBaseUrl: 'https://insights.example.com/',
+    // Optional location default for this browser runtime.
+    location: { countryCode: 'US' },
   },
   logLevel: 'warn',
 })
 ```
+
+Optionally set `api.location` at initialization when your app supplies a location for Experience
+requests. Replace the illustrative country code above with your app's approved value, or omit
+`location` to use API fallback. An empty `location: {}` supplies an empty request default. Event
+payload `location` remains separate event context. See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
 
 For the locale model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).

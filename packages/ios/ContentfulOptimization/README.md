@@ -172,6 +172,27 @@ content type and slug. Pass that fetched single-locale entry to `OptimizedEntry`
 `client.resolveOptimizedEntry(...)`. The native iOS SDK does not provide managed entry fetching, so
 the lookup values and CDA request remain in your app.
 
+## Request location
+
+Set `location` on the existing `OptimizationApiConfig` used by `OptimizationRoot` or
+`OptimizationClient.initialize(config:)`:
+
+```swift
+let config = OptimizationConfig(
+    spaceId: "<your-space-id>",
+    api: OptimizationApiConfig(
+        location: ["countryCode": .string("DE"), "city": .string("Berlin")]
+    )
+)
+```
+
+The value is `[String: JSONValue]?`. Omit it or pass `nil` to retain API fallback behavior;
+`location: [:]` sends an explicit empty default instead of API geolocation. Event `context.location`
+takes precedence over matching request fields. An empty location does not clear an existing profile
+location. The configuration is initialization-scoped and does not lock location across later requests.
+See
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
+
 ## Runtime notes
 
 - Use `client.track(event:properties:)` for custom business events; `identify(...)`, `screen(...)`,

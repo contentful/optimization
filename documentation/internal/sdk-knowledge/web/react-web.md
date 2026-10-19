@@ -29,6 +29,16 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
 
 ## Setup / initialization and binding
 
+- Configured `api.location` passes through `OptimizationRoot` and the owned provider to the Web
+  SDK as a runtime-wide Experience request default; injected providers use their supplied SDK's
+  configuration. Shared behavior is recorded under
+  [API transport scope](../shared/concepts.md#api-transport-scope).
+  source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#provider/OptimizationProvider.tsx#createOwnedSdkBinding; react-web-sdk#provider/OptimizationProvider.tsx#createInjectedSdkBinding; kb:shared/concepts.md
+- The owned provider captures its initial props and constructs its SDK in a mount-only effect.
+  Passing replacement `api` or `api.location` props through the root/provider after mounting does
+  not reconfigure the live SDK's default; this follows the
+  [Web initialization contract](./web.md#setup--initialization-and-binding).
+  source: react-web-sdk#root/OptimizationRoot.tsx#DefaultOptimizationRoot; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; kb:web/web.md
 - Configure by passing props directly to `OptimizationRoot`; mount it exactly once around the subtree
   that uses the SDK. It composes `OptimizationProvider` + `LiveUpdatesProvider`, creates the Web SDK
   instance after React commits, and destroys it on unmount.
@@ -48,8 +58,8 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
   - `locale`, `logLevel?` — `core-sdk` `CoreConfig`.
     source: core-sdk#CoreBase.ts#CoreConfig
   - `defaults` (`consent`, `persistenceConsent`), `api?`, `allowedEventTypes?`, `onEventBlocked?`,
-    `queuePolicy?` — `core-sdk` `CoreStatefulConfig`. `api` = `experienceBaseUrl`,
-    `insightsBaseUrl` — `core-sdk` `CoreSharedApiConfig`.
+    `queuePolicy?` — `core-sdk` `CoreStatefulConfig`; read the exact `api` surface from
+    `CoreSharedApiConfig`.
     source: core-sdk#CoreStateful.ts#CoreStatefulConfig; core-sdk#StatefulDefaults.ts#StatefulDefaults; core-sdk#CoreApiConfig.ts#CoreSharedApiConfig
   - `app` (`name`, `version`), `cookie?` (`domain`, `expires` days) — `web-sdk`
     `OptimizationWebConfig`; `web-sdk` `CookieAttributes`.

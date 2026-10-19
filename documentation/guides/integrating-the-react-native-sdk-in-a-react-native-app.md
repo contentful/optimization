@@ -226,7 +226,7 @@ the section that needs it.
 **Integration category:** Required for first integration
 
 You mounted `OptimizationRoot` in the quick start; this section covers its full configuration
-surface — `onStatesReady`, `api` host overrides, `logLevel`, and reading the SDK instance with
+surface — `onStatesReady`, `api` request defaults and host overrides, `logLevel`, and reading the SDK instance with
 `useOptimization()`. `OptimizationRoot` is the normal React Native entry point: it creates the SDK
 instance, waits for AsyncStorage-backed state setup, runs `onStatesReady` when provided, then renders
 provider children. It also composes live-update and interaction-tracking context for descendant
@@ -237,8 +237,9 @@ components.
    default Contentful environment; when you omit it the SDK uses `master`.
 3. Pass `locale` when Experience API responses and event context must use the same app locale as
    your Contentful entry fetches.
-4. Pass `api` endpoint overrides only for staging, mocks, or non-default production hosts. Both base
-   URLs default correctly otherwise, so most apps omit `api` entirely.
+4. Set `api.experienceBaseUrl` and `api.insightsBaseUrl` only for staging, mocks, or non-default
+   production hosts. Both base URLs default correctly otherwise. Set `api.location` only when your
+   app supplies a location default for Experience requests.
 5. Provide `onStatesReady` when app-level code must subscribe to SDK state before child effects run
    (see [Analytics forwarding](#analytics-forwarding)).
 
@@ -259,6 +260,8 @@ export function AppRoot({ children }: { children: ReactNode }) {
         // Set these only for staging, mocks, or non-default hosts; both default correctly otherwise.
         experienceBaseUrl: 'https://experience.staging.example.com/',
         insightsBaseUrl: 'https://insights.staging.example.com/',
+        // Optional location default for this initialized runtime.
+        location: { countryCode: 'US' },
       }}
       logLevel="warn"
     >
@@ -267,6 +270,13 @@ export function AppRoot({ children }: { children: ReactNode }) {
   )
 }
 ```
+
+Replace the illustrative country code with the location your app is allowed to supply. Configure
+`api.location` when initializing the root; omit `location` for API fallback or pass `location: {}`
+for an empty request default. An owned `OptimizationProvider` accepts the same configuration;
+explicit runtime owners pass `api.location` to `ContentfulOptimization.initialize(...)` before
+injecting the instance. Preserve any other `api` settings when adding the field.
+Event payload `location` remains separate event context. See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
 
 Use `useOptimization()` under the provider when a component needs the SDK instance. The hook throws
 outside `OptimizationRoot` or `OptimizationProvider`, and the provider-owned path withholds children

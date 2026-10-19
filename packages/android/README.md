@@ -41,6 +41,7 @@ UI.
 - [Configuration](#configuration)
   - [Common options](#common-options)
   - [Locale handling](#locale-handling)
+  - [Request location](#request-location)
   - [Consent and persistence](#consent-and-persistence)
 - [Runtime notes](#runtime-notes)
 - [Related](#related)
@@ -254,6 +255,30 @@ For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).
 For the single-locale CDA entry contract, see
 [Entry optimization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+
+### Request location
+
+Set `location` on the existing `OptimizationApiConfig` passed through `OptimizationConfig` to
+`OptimizationRoot` or `OptimizationManager.initialize(...)`:
+
+```kotlin
+val config = OptimizationConfig(
+    spaceId = "your-space-id",
+    api = OptimizationApiConfig(
+        location = mapOf(
+            "countryCode" to JSONValue.Str("DE"),
+            "city" to JSONValue.Str("Berlin"),
+        ),
+    ),
+)
+```
+
+The value is `Map<String, JSONValue>?`. Omit it or pass `null` to retain API fallback behavior;
+`location = emptyMap()` sends an explicit empty default instead of API geolocation. Event
+`context.location` takes precedence over matching request fields. An empty location does not clear
+an existing profile location. The configuration is initialization-scoped and does not lock location
+across later requests. See
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
 
 ### Consent and persistence
 

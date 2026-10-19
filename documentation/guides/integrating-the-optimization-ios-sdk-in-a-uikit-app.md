@@ -344,11 +344,18 @@ let appLocale = "en-US"
 
 let config = OptimizationConfig(
     spaceId: "your-space-id",
+    api: OptimizationApiConfig(location: ["countryCode": .string("US")]),
     // environment defaults to "master"; pass it only when your setup differs.
     // Keep SDK event and Experience locale aligned with rendered CDA entries.
     locale: appLocale
 )
 ```
+
+Optionally set `OptimizationApiConfig.location` before initializing the client when your app
+supplies a location default for Experience requests. The dictionary uses the SDK's `JSONValue`
+values; replace the `"US"` string inside `.string(...)` with your app's approved country code,
+keeping the `.string` wrapper. Omit `location` (or pass
+`nil`) for API fallback; `location: [:]` sends an empty request default. See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
 
 For package-level installation notes, see the
 [Optimization iOS SDK README](../../packages/ios/ContentfulOptimization/README.md).

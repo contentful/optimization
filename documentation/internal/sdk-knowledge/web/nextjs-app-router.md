@@ -27,6 +27,14 @@ dependencies; each carries a symbol-anchored source pointer.
 
 ## Setup / initialization and binding
 
+- Bound server and client `api.location` configuration passes to their normal SDK runtimes as an
+  Experience request default; the server binder also carries it into derived browser configuration.
+  Manual server request/handoff calls and edge request handlers forward request-bound
+  `experienceOptions.location`, with the shared
+  [replacement semantics](../shared/concepts.md#api-transport-scope). The automatic request component
+  family uses the bound default when it evaluates its page event. A trusted forwarded handoff's
+  `getProfile()` refetch does not use request location and does not evaluate another mutation.
+  source: nextjs-sdk#app-router-server.tsx#toServerOptimizationConfig; nextjs-sdk#app-router-server.tsx#toClientRootConfig; nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization; nextjs-sdk#server.tsx#bindNextjsOptimizationRequest; nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime; nextjs-sdk#edge.ts#configureNextjsEdgeOptimization; nextjs-sdk#app-router-request-handoff.ts#toForwardedProfileOptions; kb:shared/concepts.md
 - The server and client binders create app-level component/helper sets. The server binder owns both
   the React-cached handoff store used by top-level components and the cached initializer used by its
   nested request family. Browser defaults are supplied through `consent.clientDefaults`;
