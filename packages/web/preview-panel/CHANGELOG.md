@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.3](https://github.com/contentful/optimization/compare/optimization-web-preview-panel-v2.0.2...optimization-web-preview-panel-v2.0.3) (2026-10-19)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.1.0
+    - @contentful/optimization-web bumped to 2.1.0
+
 ## [2.0.2](https://github.com/contentful/optimization/compare/optimization-web-preview-panel-v2.0.1...optimization-web-preview-panel-v2.0.2) (2026-10-16)
 
 ### Reverts
