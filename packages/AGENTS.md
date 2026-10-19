@@ -77,17 +77,9 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
 - Run `size:check` for runtime, export, dependency, bundler config, or bundle-shape changes, and
   handle failures under the root `Bundle size` policy.
 - Validate package-local harnesses when changing flows they demonstrate.
-- For package changes consumed by implementations, run `pnpm build:pkgs` before implementation
-  install or tests.
-- Identify and validate affected downstream SDKs or reference implementations for shared behavior,
-  public contracts, preview behavior, event flow, or platform integration changes. If you skip one,
-  report the exact reason and risk.
-- Schedule package validation by the workspace dependency graph. Do not manually run SDK `build`,
-  `clean`, `build:pkgs`, implementation install, `size:report`, or `size:check` commands in parallel
-  across packages when one package can consume another package's generated output.
-- Run upstream SDK build, package, and size commands to completion before starting downstream SDK
-  build, package, or size commands. When the affected graph is broad or uncertain, prefer the
-  aggregate workspace command so pnpm owns the dependency scheduling.
+- Follow the root [built-consumer validation gate](../AGENTS.md#built-consumer-validation-gate)
+  before validating downstream SDKs or implementations. Report skipped consumers and their remaining
+  risk.
 - Common package order is: `@contentful/optimization-api-client`, then
   `@contentful/optimization-core`, then the deprecated
   `@contentful/optimization-api-schemas` compatibility facade, then leaf packages

@@ -19,9 +19,9 @@ export const BatchExperienceRequestData = z.object({
   events: BatchExperienceEventArray.check(z.minLength(1)),
 
   /**
-   * Optional configuration for this experience request.
+   * Optional feature configuration. Batch locations belong in each event's `context.location`.
    */
-  options: z.optional(ExperienceRequestOptions),
+  options: z.optional(z.omit(ExperienceRequestOptions, { location: true })),
 })
 
 /**

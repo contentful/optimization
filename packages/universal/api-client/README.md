@@ -84,18 +84,19 @@ state, consent handling, event builders, entry resolution, tracking, or platform
 
 Common Experience API options:
 
-| Option            | Required? | Default                               | Description                                     |
-| ----------------- | --------- | ------------------------------------- | ----------------------------------------------- |
-| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                 |
-| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Experience API features for mutation requests   |
-| `ip`              | No        | `undefined`                           | IP address override for Experience API analysis |
-| `locale`          | No        | API default                           | Locale query parameter for localized responses  |
-| `plainText`       | No        | Endpoint-specific                     | Sends single-profile mutation endpoints as text |
-| `preflight`       | No        | `false`                               | Aggregates a profile state without storing it   |
+| Option            | Required? | Default                               | Description                                           |
+| ----------------- | --------- | ------------------------------------- | ----------------------------------------------------- |
+| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                       |
+| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Experience API features for mutation requests         |
+| `ip`              | No        | `undefined`                           | IP address override for Experience API analysis       |
+| `locale`          | No        | API default                           | Locale query parameter for localized responses        |
+| `location`        | No        | API fallback                          | Request location default for single-profile mutations |
+| `plainText`       | No        | Endpoint-specific                     | Sends single-profile mutation endpoints as text       |
+| `preflight`       | No        | `false`                               | Aggregates a profile state without storing it         |
 
 Experience mutation request options except `baseUrl` can also be provided per mutation request.
 `getProfile` is a read request and only uses `locale` from per-call options; mutation-only options
-such as `enabledFeatures`, `ip`, `plainText`, and `preflight` do not apply. Single-profile mutation
+such as `enabledFeatures`, `ip`, `location`, `plainText`, and `preflight` do not apply. Single-profile mutation
 requests default to `plainText: true` and send `text/plain` unless overridden. Batch profile updates
 with `upsertManyProfiles` are the JSON-default exception and use `plainText: false` by default.
 `locale` is sent as the Experience API `locale` query parameter and can localize profile fields such
@@ -137,6 +138,51 @@ const { profile, selectedOptimizations, changes } = await client.experience.upse
 
 Common methods include `getProfile`, `createProfile`, `updateProfile`, `upsertProfile`, and
 `upsertManyProfiles`.
+
+For `createProfile`, `updateProfile`, and `upsertProfile`, set `location` in the Experience client
+configuration or in per-request options:
+
+```ts
+import { ExperienceApiClient } from '@contentful/optimization-api-client'
+
+const experience = new ExperienceApiClient({
+  spaceId: 'your-space-id',
+  environment: 'master',
+  location: { countryCode: 'DE', country: 'Germany' },
+})
+
+await experience.createProfile({ events: [pageEvent] })
+await experience.upsertProfile(
+  { profileId: 'f0837d7dc6344c36a3a0a06c4cde754b', events: [pageEvent] },
+  {
+    location: {
+      countryCode: 'FR',
+      country: 'France',
+      city: 'Paris',
+      coordinates: { latitude: 48.8566, longitude: 2.3522 },
+    },
+  },
+)
+```
+
+With the unified `ApiClient`, place the constructor default under `experience.location`.
+A per-request location replaces the entire constructor default; the client does not merge them.
+The backend merges each event's `context.location` over the resolved request location, so event
+fields override matching request fields. If neither source supplies a location, existing backend
+fallback behavior applies, including Cloudflare request geolocation when enabled.
+
+Pass `location: {}` to override the constructor default and supply an empty request-location default
+instead of Cloudflare geolocation. This does not erase an existing profile location. The backend
+selects profile location from the latest timestamped event with a non-empty location in the batch,
+falling back to the existing profile location when none is available. Request location affects
+evaluation and profile updates; it is not a permanent location lock. The `ip` option controls IP
+enrichment through `X-Force-IP` and does not control profile geolocation.
+
+`upsertManyProfiles` does not send request-level location, including a constructor default.
+For batch updates, supply location through each event's `context.location`.
+
+For how these inputs affect profile continuity across later server and browser requests, see
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
 
 ### Insights API
 

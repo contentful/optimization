@@ -274,6 +274,20 @@ The API Client scopes Experience API requests under
 space and environment; an omitted environment resolves to `master`.
 source: api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT; api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#insights/InsightsApiClient.ts#InsightsApiClient
 
+Singular Experience API mutations (`createProfile`, `updateProfile`, and both `upsertProfile`
+branches) resolve request location with `options.location ?? constructorLocation` and serialize a
+defined result under body `options.location`. A per-call object replaces the constructor default
+without merging fields; `{}` is serialized and overrides a nonempty constructor default. When
+neither source supplies a location, the body omits that field. The client validates the resulting
+location through `GeoLocation` and preserves each event's separate `context.location`; it does not
+merge request location into event payloads.
+source: api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#experience/ExperienceApiClient.ts#ExperienceApiClientRequestOptions; api-client#schemas/experience/ExperienceRequest.ts#ExperienceRequestOptions
+
+Request location does not contribute to `getProfile` URLs, headers, or batch mutation bodies.
+`upsertManyProfiles` builds body options from feature flags and keeps event-level `context.location`;
+the batch request schema strips request-level `options.location` when parsing a supplied body.
+source: api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#schemas/experience/BatchExperienceRequest.ts#BatchExperienceRequestData
+
 ## Optimization handoff
 
 `OptimizationHandoff` is the framework-neutral handoff shape for server, static, and edge rendered
