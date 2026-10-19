@@ -38,23 +38,6 @@ public data class OptimizationApiConfig(
      */
     val location: Map<String, JSONValue>? = null,
 ) {
-    /** Preserves the original constructor for previously compiled consumers. */
-    public constructor(
-        experienceBaseUrl: String? = null,
-        insightsBaseUrl: String? = null,
-        enabledFeatures: List<String>? = null,
-        preflight: Boolean? = null,
-    ) : this(experienceBaseUrl, insightsBaseUrl, enabledFeatures, preflight, null)
-
-    /** Preserves the original copy signatures without discarding the configured location. */
-    public fun copy(
-        experienceBaseUrl: String? = this.experienceBaseUrl,
-        insightsBaseUrl: String? = this.insightsBaseUrl,
-        enabledFeatures: List<String>? = this.enabledFeatures,
-        preflight: Boolean? = this.preflight,
-    ): OptimizationApiConfig =
-        OptimizationApiConfig(experienceBaseUrl, insightsBaseUrl, enabledFeatures, preflight, location)
-
     internal fun isEmpty(): Boolean =
         experienceBaseUrl == null &&
             insightsBaseUrl == null &&

@@ -230,7 +230,8 @@ export default class ExperienceApiClient extends ApiClientBase {
    * Retrieves a profile by ID.
    *
    * @param id - The profile ID to retrieve.
-   * @param options - Optional request options. `preflight` and `plainText` are not allowed here.
+   * @param options - Optional request options. `location`, `preflight`, and `plainText`
+   * are not allowed here.
    * @returns The current optimization data for the profile.
    *
    * @throws Error
@@ -245,7 +246,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async getProfile(
     id: string,
-    options: Omit<ExperienceApiClientRequestOptions, 'preflight' | 'plainText'> = {},
+    options: Omit<ExperienceApiClientRequestOptions, 'location' | 'preflight' | 'plainText'> = {},
   ): Promise<OptimizationData> {
     if (!id) throw new Error('Valid profile ID required.')
 

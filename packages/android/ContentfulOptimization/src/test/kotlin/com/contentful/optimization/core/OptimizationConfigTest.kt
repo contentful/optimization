@@ -110,8 +110,6 @@ class OptimizationConfigTest {
         assertEquals("debug", json.getString("logLevel"))
         val location = api.getJSONObject("location")
         assertEquals("DE", location.getString("countryCode"))
-        val apiConfig = requireNotNull(config.api)
-        assertEquals(apiConfig.location, apiConfig.copy(preflight = false).location)
     }
 
     @Test
