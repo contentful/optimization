@@ -58,6 +58,41 @@ hydration mode, and managed-entry prefetch for a subtree. Use the bound `Optimiz
 roots because it adds initial page-event wiring through `routeKey`, `buildPagePayload`, or
 `initialPagePayload`. Do not pass those page-event props to `OptimizationProvider`.
 
+## Request location
+
+Set `api.location` in the normal App Router, Pages Router, server, or Edge SDK configuration.
+Client bindings pass it to their owned React Web runtime during initialization:
+
+```ts
+const optimization = bindNextjsAppRouterServerOptimization({
+  spaceId: 'space-id',
+  api: { location: { countryCode: 'DE', city: 'Berlin' } },
+})
+```
+
+For request-specific locations, use `experienceOptions.location` on the existing manual request
+helpers: App Router `createRequestHandoff()`, Pages Router `createRequestHandoff(context, options)`,
+Edge `createEdgeRequestHandoff()`, or `/server` request helpers such as
+`bindNextjsOptimizationRequest()`. For example, in the manual App Router flow:
+
+```ts
+const handoff = await optimization.createRequestHandoff({
+  cache: { scope: 'private-request' },
+  hydration: 'preserve-server',
+  pagePayload: { properties: { route: '/products' } },
+  request: incomingRequest,
+  experienceOptions: { location: { countryCode: 'FR', city: 'Paris' } },
+})
+```
+
+The request value replaces the whole configured default. Use `experienceOptions: { location: {} }`
+for an explicit empty default instead of API geolocation. Event `context.location` takes precedence
+over matching request fields. Location applies to Experience mutations; a trusted handoff's profile
+GET refetch does not apply it. A server location is not a permanent profile lock for later browser
+requests; configure browser `api.location` separately when that runtime needs the same default.
+An empty location does not clear an existing profile location. See
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
+
 ## App Router setup
 
 Use the explicit `/app-router/server` and `/app-router/client` entrypoints so each module has one

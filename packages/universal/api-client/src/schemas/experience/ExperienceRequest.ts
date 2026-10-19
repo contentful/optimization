@@ -1,12 +1,13 @@
 import * as z from 'zod/mini'
 import { ExperienceEventArray } from './event'
+import { GeoLocation } from './event/properties/GeoLocation'
 
 /**
  * Zod schema describing optional configuration for an experience request.
  *
  * @remarks
- * These options can be used to enable or filter specific features when
- * evaluating experiences.
+ * These options configure feature flags and the request location default when
+ * evaluating experiences through singular profile requests.
  *
  * @public
  */
@@ -15,6 +16,11 @@ export const ExperienceRequestOptions = z.object({
    * Features or capabilities to enable for this request.
    */
   features: z.optional(z.array(z.string())),
+
+  /**
+   * Location default for singular profile requests. Event `context.location` fields override it.
+   */
+  location: z.optional(GeoLocation),
 })
 
 /**

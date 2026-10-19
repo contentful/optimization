@@ -8,6 +8,7 @@ import {
   type BatchExperienceEventArray,
   type BatchExperienceResponseData,
   type ExperienceRequestOptions as ExperienceRequestBodyOptions,
+  type GeoLocation,
   type OptimizationData,
 } from '../api-schemas'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
@@ -60,6 +61,20 @@ export interface ExperienceApiClientRequestOptions {
    * When omitted, the API can use a server-side default.
    */
   locale?: string
+
+  /**
+   * Request location for `createProfile()`, `updateProfile()`, and `upsertProfile()`.
+   *
+   * @remarks
+   * A per-request value replaces the constructor default as a whole object.
+   * The API merges each event's `context.location` over this request location.
+   * An explicit `{}` overrides the constructor default and supplies an empty
+   * request-location default instead of Cloudflare geolocation. When omitted
+   * from both sources, existing API fallback behavior applies.
+   * This affects evaluation and profile updates; it is not a permanent location lock.
+   * For `upsertManyProfiles()`, use each event's `context.location` instead.
+   */
+  location?: GeoLocation
 
   /**
    * When `true`, sends performance-critical endpoints in plain text.
@@ -176,6 +191,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   private readonly enabledFeatures?: ExperienceApiClientRequestOptions['enabledFeatures']
   private readonly ip?: ExperienceApiClientRequestOptions['ip']
   private locale?: ExperienceApiClientRequestOptions['locale']
+  private readonly location?: ExperienceApiClientRequestOptions['location']
   private readonly plainText?: ExperienceApiClientRequestOptions['plainText']
   private readonly preflight?: ExperienceApiClientRequestOptions['preflight']
 
@@ -187,13 +203,14 @@ export default class ExperienceApiClient extends ApiClientBase {
   constructor(config: ExperienceApiClientConfig) {
     super('Experience', config)
 
-    const { baseUrl, enabledFeatures, ip, locale, plainText, preflight } = config
+    const { baseUrl, enabledFeatures, ip, locale, location, plainText, preflight } = config
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Set default for anything falsey
     this.baseUrl = baseUrl || EXPERIENCE_BASE_URL
     this.enabledFeatures = enabledFeatures
     this.ip = ip
     this.locale = locale
+    this.location = location
     this.plainText = plainText
     this.preflight = preflight
   }
@@ -213,7 +230,8 @@ export default class ExperienceApiClient extends ApiClientBase {
    * Retrieves a profile by ID.
    *
    * @param id - The profile ID to retrieve.
-   * @param options - Optional request options. `preflight` and `plainText` are not allowed here.
+   * @param options - Optional request options. `location`, `preflight`, and `plainText`
+   * are not allowed here.
    * @returns The current optimization data for the profile.
    *
    * @throws Error
@@ -228,7 +246,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async getProfile(
     id: string,
-    options: Omit<ExperienceApiClientRequestOptions, 'preflight' | 'plainText'> = {},
+    options: Omit<ExperienceApiClientRequestOptions, 'location' | 'preflight' | 'plainText'> = {},
   ): Promise<OptimizationData> {
     if (!id) throw new Error('Valid profile ID required.')
 
@@ -565,9 +583,16 @@ export default class ExperienceApiClient extends ApiClientBase {
     events: ExperienceEventArray,
     options: ExperienceApiClientRequestOptions,
   ): ExperienceRequestData {
+    const bodyOptions = this.constructBodyOptions(options)
+    const location = options.location ?? this.location
+
+    if (location !== undefined) {
+      bodyOptions.location = location
+    }
+
     return ExperienceRequestData.parse({
       events: parseWithFriendlyError(ExperienceEventArray, events),
-      options: this.constructBodyOptions(options),
+      options: bodyOptions,
     })
   }
 }

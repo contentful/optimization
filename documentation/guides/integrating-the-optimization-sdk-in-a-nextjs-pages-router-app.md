@@ -268,6 +268,25 @@ Pages Router integrations have an explicit client/server split:
 Use the server entrypoint only from server files. Use the browser-facing module for `_app.tsx` and
 components.
 
+Both `bindNextjsPagesRouterOptimization(...)` and
+`bindNextjsPagesRouterServerOptimization(...)` accept `api.location` in their initial configuration
+when your app supplies a location default for Experience requests. Configure each runtime that
+needs it; a server request override does not configure the live browser SDK.
+
+**Adapt this to your use case:** add the field to each relevant binding from the quick start,
+merging it into any existing `api` settings. Replace the illustrative country code with your app's
+approved location.
+
+```diff
+ bindNextjsPagesRouterServerOptimization({
+   // your existing server config
++  api: { location: { countryCode: 'US' } },
+ })
+```
+
+Omit `location` for API fallback or pass `location: {}` for an empty request default. Event payload
+`location` remains separate event context. See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
+
 ### Fetching Contentful entries
 
 **Integration category:** Required for first integration
@@ -412,6 +431,23 @@ the slug.
 the response when appropriate, and returns a serializable browser `handoff`.
 Configure `consent.server` explicitly. If it is omitted, Pages Router request consent resolves to
 `false`.
+
+For a request-specific location, add `experienceOptions.location` to the existing
+`createRequestHandoff(context, options)` call in your server helper. It replaces the entire binding
+default for this request without changing the shared configuration; `location: {}` supplies an
+empty request default.
+
+**Adapt this to your use case:** extend the helper from the quick start with your app's approved
+request location. Preserve its cache, hydration, and page payload settings.
+
+```diff
+ handoff: await createRequestHandoff(context, {
+   cache: { scope: 'private-request' },
++  experienceOptions: { location: { countryCode: 'FR', city: 'Paris' } },
+   hydration: 'preserve-server',
+   pagePayload: { properties: { path: routeKey } },
+ }),
+```
 
 The returned handoff also carries browser defaults derived from the resolved server consent. When
 `_app.tsx` passes that handoff to the bound root, those handoff defaults override matching

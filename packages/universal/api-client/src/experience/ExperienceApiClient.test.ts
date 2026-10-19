@@ -2,11 +2,14 @@ import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import {
+  BatchExperienceRequestData,
   BatchExperienceResponse,
   ExperienceEventArray,
+  ExperienceRequestOptions,
   ExperienceResponse,
   type BatchExperienceEvent,
   type ExperienceEvent,
+  type GeoLocation,
 } from '../api-schemas'
 import { server } from '../test/setup'
 import ExperienceApiClient, {
@@ -116,6 +119,116 @@ describe('ExperienceApiClient', () => {
 
   afterEach(() => {
     rs.restoreAllMocks()
+  })
+
+  describe.each(['create', 'update', 'upsert create', 'upsert update'] as const)(
+    '%s profile location',
+    (operation) => {
+      const defaultLocation: GeoLocation = {
+        countryCode: 'DE',
+        country: 'Germany',
+        region: 'Berlin',
+      }
+      const requestLocation: GeoLocation = {
+        countryCode: 'FR',
+        country: 'France',
+        city: 'Paris',
+        coordinates: { latitude: 48.8566, longitude: 2.3522 },
+      }
+
+      it.each([
+        {
+          name: 'constructor default',
+          config: defaultLocation,
+          request: undefined,
+          expected: defaultLocation,
+        },
+        {
+          name: 'request replacement',
+          config: defaultLocation,
+          request: requestLocation,
+          expected: requestLocation,
+        },
+        {
+          name: 'request without default',
+          config: undefined,
+          request: requestLocation,
+          expected: requestLocation,
+        },
+        { name: 'explicit empty location', config: defaultLocation, request: {}, expected: {} },
+        { name: 'no location', config: undefined, request: undefined, expected: undefined },
+      ])('sends $name and preserves event context', async ({ config, request, expected }) => {
+        const bodies: unknown[] = []
+        const path = operation === 'create' || operation === 'upsert create' ? '' : '/profile-id'
+        server.use(
+          http.post(
+            `${EXPERIENCE_BASE_URL}v3/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/profiles${path}`,
+            async ({ request: outgoingRequest }) => {
+              bodies.push(await outgoingRequest.json())
+              return HttpResponse.json({ data: { id: 'profile-id' } })
+            },
+          ),
+        )
+
+        const client = makeClient({ location: config })
+        const event = makeTrackEvent()
+        event.context.location = { city: 'Lyon', countryCode: 'FR' }
+        const events = [event]
+        const options = { location: request }
+
+        switch (operation) {
+          case 'create':
+            await client.createProfile({ events }, options)
+            break
+          case 'update':
+            await client.updateProfile({ profileId: 'profile-id', events }, options)
+            break
+          case 'upsert create':
+            await client.upsertProfile({ events }, options)
+            break
+          case 'upsert update':
+            await client.upsertProfile({ profileId: 'profile-id', events }, options)
+            break
+        }
+
+        expect(bodies).toEqual([
+          {
+            events,
+            options: {
+              features: ['ip-enrichment', 'location'],
+              ...(expected === undefined ? {} : { location: expected }),
+            },
+          },
+        ])
+        expect(event.context.location).toEqual({ city: 'Lyon', countryCode: 'FR' })
+      })
+    },
+  )
+
+  describe('location validation', () => {
+    it.each([
+      { countryCode: 'DEU' },
+      { city: 123 },
+      { coordinates: { latitude: '48.8566', longitude: 2.3522 } },
+      { coordinates: { latitude: 48.8566 } },
+      null,
+    ])('rejects invalid body location %j', (location) => {
+      expect(ExperienceRequestOptions.safeParse({ location }).success).toBe(false)
+    })
+
+    it.each(['constructor', 'request'] as const)(
+      'validates the %s location before sending',
+      async (source) => {
+        const location = { countryCode: 'invalid' }
+        const client = makeClient(source === 'constructor' ? { location } : {})
+        await expect(
+          client.createProfile(
+            { events: [makeTrackEvent()] },
+            source === 'request' ? { location } : {},
+          ),
+        ).rejects.toThrow()
+      },
+    )
   })
 
   describe('getProfile', () => {
@@ -451,6 +564,40 @@ describe('ExperienceApiClient', () => {
   })
 
   describe('upsertManyProfiles', () => {
+    it('ignores request and constructor locations while preserving event locations and features', async () => {
+      const bodies: unknown[] = []
+      server.use(
+        http.post(
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/events`,
+          async ({ request }) => {
+            bodies.push(await request.json())
+            return HttpResponse.json({ data: { profiles: [] } })
+          },
+        ),
+      )
+
+      const client = makeClient({ location: { countryCode: 'DE' } })
+      const event = makeBatchTrackEvent('profile-id')
+      event.context.location = { countryCode: 'FR', city: 'Paris' }
+      const events = [event]
+
+      await client.upsertManyProfiles({ events })
+      await client.upsertManyProfiles(
+        { events },
+        { location: { countryCode: 'FR' }, enabledFeatures: ['location'] },
+      )
+      expect(bodies).toEqual([
+        { events, options: { features: ['ip-enrichment', 'location'] } },
+        { events, options: { features: ['location'] } },
+      ])
+      expect(
+        BatchExperienceRequestData.parse({
+          events,
+          options: { location: { countryCode: 'FR' }, features: ['location'] },
+        }),
+      ).toEqual({ events, options: { features: ['location'] } })
+    })
+
     it('upsertManyProfiles posts to /events and defaults to application/json (plainText=false)', async () => {
       let content: string | null = null
       let anonymousId: string | undefined

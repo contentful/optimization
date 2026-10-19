@@ -254,7 +254,7 @@ still exactly one SDK instance per process.
 
 1. Install `@contentful/optimization-node` and `contentful` when the SDK will fetch entries.
 2. Read the Contentful space ID and environment from your runtime configuration.
-3. Configure default locale and API endpoint overrides only when your app needs them.
+3. Configure default locale and API options only when your app needs them.
 4. Export the singleton so route handlers can create request-bound SDK clients.
 
 **Copy this:**
@@ -1058,7 +1058,7 @@ per-request API options.
    types.
 3. Use `onEventBlocked` for diagnostics when consent blocks a request-bound event call.
 4. Use request-scoped `experienceOptions` and `insightsOptions` for advanced API behavior such as
-   `preflight`, IP override, or a custom Insights `beacon` sender.
+   `preflight`, a request location, IP override, or a custom Insights `beacon` sender.
 
 **Follow this pattern:**
 
@@ -1068,6 +1068,8 @@ const optimization = new ContentfulOptimization({
   allowedEventTypes: [],
   spaceId: 'your-space-id',
   environment: 'master',
+  // Optional process-wide default; visitor-specific location belongs on forRequest().
+  api: { location: { countryCode: 'US' } },
   // Use this callback for rollout diagnostics, not user-facing error handling.
   onEventBlocked: (event) => {
     console.warn('Contentful Optimization event blocked', event.method, event.reason)
@@ -1078,13 +1080,19 @@ const requestOptimization = optimization.forRequest({
   consent: { events: false, persistence: false },
   eventContext: getRequestContext(req, appLocale),
   // Advanced Experience API options stay request-scoped in stateless runtimes.
-  experienceOptions: { preflight: true },
+  experienceOptions: { preflight: true, location: { countryCode: 'FR', city: 'Paris' } },
   locale: appLocale,
   profile: getProfileFromRequest(req),
 })
 
 const pageResult = await requestOptimization.page()
 ```
+
+Set `api.location` only when one location default is appropriate for the shared instance. Use
+`experienceOptions.location` for a visitor-specific request, as above; replace the illustrative
+country and city with the location your app is allowed to supply. The location object replaces the
+whole default without merging fields and leaves the shared default unchanged. To supply an empty
+request default, pass `experienceOptions: { location: {} }`. For how omitted and empty defaults differ, precedence, and profile updates, see [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates).
 
 If both `locale` and `experienceOptions.locale` are supplied to `forRequest()`, the request-scoped
 top-level `locale` wins.

@@ -27,6 +27,15 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
 
 ## Setup / initialization and binding
 
+- Normal constructor `api.location` supplies the live browser SDK's Experience request default;
+  it passes through the Web configuration merge to Core. Shared serialization and event-context
+  separation are recorded under [API transport scope](../shared/concepts.md#api-transport-scope).
+  source: web-sdk#ContentfulOptimization.ts#ContentfulOptimization; web-sdk#ContentfulOptimization.ts#mergeConfig; kb:shared/concepts.md
+- The Web SDK constructs its Experience client during initialization. Replacing `api.location` in
+  the configuration object after construction does not reconfigure that client's default; the
+  constructor stores the supplied location object separately from the configuration. This is an
+  initialization setting rather than a reactive configuration update.
+  source: web-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#CoreBase.ts#CoreBase; api-client#experience/ExperienceApiClient.ts#ExperienceApiClient
 - `new ContentfulOptimization(config)` — stateful; create ONE per browser runtime and reuse. In a
   browser it attaches to `window.contentfulOptimization` and **throws
   `ContentfulOptimization is already initialized`** if one already exists. `destroy()` for teardown

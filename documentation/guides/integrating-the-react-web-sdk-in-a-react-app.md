@@ -267,8 +267,8 @@ The props you pass break down like this:
 3. `defaults` is the browser SDK's starting state: `consent` (may personalize and send events) and
    `persistenceConsent` (may store the profile-id cookie — the anonymous identifier the SDK assigns
    each visitor to keep their variant assignments consistent across visits).
-4. `api` overrides the Experience and Insights endpoints (`experienceBaseUrl`, `insightsBaseUrl`).
-   Set these only for a mock, a proxy, or non-default hosts; omit them otherwise.
+4. `api` configures Experience request defaults and endpoint overrides. Set `experienceBaseUrl` and
+   `insightsBaseUrl` only for a mock, a proxy, or non-default hosts; omit those keys otherwise.
 5. `app` is your app's name and version, sent as metadata.
 6. `contentful` opts into managed entry fetching by handing the SDK your Contentful client
    (`contentful: { client, defaultQuery?, cache? }`); leave it unset to fetch entries yourself. See
@@ -310,10 +310,12 @@ export function AppRoot({ children }: { children: ReactNode }) {
       environment={import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
       locale="en-US"
       app={{ name: 'my-react-app', version: '1.0.0' }}
-      // Set these only for mocks or non-default hosts; both default correctly otherwise.
+      // Override endpoint keys only for mocks or non-default hosts.
       api={{
         experienceBaseUrl: import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL,
         insightsBaseUrl: import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL,
+        // Optional location default for this browser runtime.
+        location: { countryCode: 'US' },
       }}
       logLevel="warn"
     >
@@ -322,6 +324,13 @@ export function AppRoot({ children }: { children: ReactNode }) {
   )
 }
 ```
+
+Optionally set `api.location` in the root's initial configuration to supply a location default for
+Experience requests. Replace the illustrative country code with your app's approved value; omit
+`location` for API fallback or use `location: {}` for an empty request default. An owned
+`OptimizationProvider` accepts the same `api` configuration. With an injected `sdk`, configure
+`api.location` on that SDK before passing it to the provider. Event payload `location` remains
+separate event context. See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
 
 Mount `OptimizationRoot` exactly once. Mounting a second owned instance in the same browser runtime
 throws `ContentfulOptimization is already initialized`. Do not nest `OptimizationProvider` inside

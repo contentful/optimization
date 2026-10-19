@@ -127,21 +127,45 @@ between requests. For cross-SDK consent guidance, see
 
 Common `api` options:
 
-| Option              | Required? | Default                                    | Description                                      |
-| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------ |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                  |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                    |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request |
+| Option              | Required? | Default                                    | Description                                                  |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                              |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request             |
+| `location`          | No        | API fallback                               | Default location for single-profile Experience API mutations |
 
 Request-scoped Experience options belong in `experienceOptions` when creating the request-bound
 client:
 
-| Option      | Description                                                   |
-| ----------- | ------------------------------------------------------------- |
-| `ip`        | IP address override used by the Experience API                |
-| `locale`    | Locale query parameter for localized Experience API responses |
-| `plainText` | Sends performance-critical Experience API endpoints as text   |
-| `preflight` | Aggregates a new profile state without storing it             |
+| Option      | Description                                                    |
+| ----------- | -------------------------------------------------------------- |
+| `ip`        | IP address override used by the Experience API                 |
+| `location`  | Request location replacing the complete `api.location` default |
+| `locale`    | Locale query parameter for localized Experience API responses  |
+| `plainText` | Sends performance-critical Experience API endpoints as text    |
+| `preflight` | Aggregates a new profile state without storing it              |
+
+Configure a shared default with `api.location`, then override it per incoming request with
+`experienceOptions.location`:
+
+```ts
+const optimization = new ContentfulOptimization({
+  spaceId: 'your-space-id',
+  api: { location: { countryCode: 'DE', city: 'Berlin' } },
+})
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  experienceOptions: { location: { countryCode: 'FR', city: 'Paris' } },
+})
+await requestOptimization.page()
+```
+
+The request value replaces the whole default object; it does not merge fields. Pass
+`experienceOptions: { location: {} }` to replace the configured default with an explicit empty
+location instead of API geolocation. Event `context.location` takes precedence over matching
+request fields. An empty location does not clear an existing profile location, and request location
+does not lock location across later requests. See
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
 
 Request-scoped Insights options belong in `insightsOptions`:
 

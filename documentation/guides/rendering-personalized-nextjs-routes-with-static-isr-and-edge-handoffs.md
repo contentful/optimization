@@ -678,6 +678,8 @@ const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
   spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
   environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: 'en-US',
+  // Optional default for Experience requests made by this Edge runtime.
+  api: { location: { countryCode: 'US' } },
   consent: {
     server: ({ cookies }) =>
       cookies.get('app-consent')?.value === 'accepted'
@@ -690,6 +692,7 @@ export async function GET(request: Request) {
   const routeKey = new URL(request.url).pathname
   const { handoff, persist } = await createEdgeRequestHandoff({
     cache: { scope: 'private-request' },
+    experienceOptions: { location: { countryCode: 'FR', city: 'Paris' } },
     hydration: 'preserve-server',
     pagePayload: { properties: { path: routeKey } },
     request,
@@ -702,6 +705,14 @@ export async function GET(request: Request) {
   return response
 }
 ```
+
+The optional `api.location` sets a shared Experience request default; `experienceOptions.location`
+overrides it for one handoff request. Replace the illustrative values with your app's approved
+location inputs, or omit both options for API fallback. The request location replaces the entire
+default object without merging fields or changing later requests; `location: {}` supplies an empty
+request default. Event payload `location` remains separate event context. See
+[Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates)
+for how omitted and empty defaults differ, precedence, and profile updates.
 
 `renderPersonalizedResponse()` is your existing custom renderer that returns a `Response`. Keep the
 response private because the handoff can include request profile state.

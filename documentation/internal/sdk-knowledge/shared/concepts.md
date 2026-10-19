@@ -274,6 +274,32 @@ The API Client scopes Experience API requests under
 space and environment; an omitted environment resolves to `master`.
 source: api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT; api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#insights/InsightsApiClient.ts#InsightsApiClient
 
+Stateful and stateless Core forward normal SDK `api.location` configuration to the Experience API
+client as its constructor default. An empty object is a defined default and survives configuration
+filtering. This default applies to singular Experience mutations, including stateful queue flushes;
+it does not supply Insights configuration or alter the separate event context built for an event.
+source: core-sdk#CoreApiConfig.ts#CoreSharedApiConfig; core-sdk#CoreStateful.ts#createStatefulExperienceApiConfig; core-sdk#CoreStateful.ts#createStatefulInsightsApiConfig; core-sdk#CoreStateless.ts#createStatelessExperienceApiConfig; core-sdk#CoreStateless.ts#createStatelessInsightsApiConfig; core-sdk#queues/ExperienceQueue.ts#upsertProfile
+
+Stateless `forRequest({ experienceOptions })` retains the bound request's `location` when adding
+its locale and forwards it to each accepted Experience mutation. The request override is confined
+to that bound client; it does not rewrite the process-level constructor default. Whole-object
+replacement and empty-object behavior follow the API-client contract below.
+source: core-sdk#CoreStateless.ts#CoreStatelessRequestOptions; core-sdk#CoreStateless.ts#forRequest; core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent
+
+Singular Experience API mutations (`createProfile`, `updateProfile`, and both `upsertProfile`
+branches) resolve request location with `options.location ?? constructorLocation` and serialize a
+defined result under body `options.location`. A per-call object replaces the constructor default
+without merging fields; `{}` is serialized and overrides a nonempty constructor default. When
+neither source supplies a location, the body omits that field. The client validates the resulting
+location through `GeoLocation` and preserves each event's separate `context.location`; it does not
+merge request location into event payloads.
+source: api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#experience/ExperienceApiClient.ts#ExperienceApiClientRequestOptions; api-client#schemas/experience/ExperienceRequest.ts#ExperienceRequestOptions
+
+Request location does not contribute to `getProfile` URLs, headers, or batch mutation bodies.
+`upsertManyProfiles` builds body options from feature flags and keeps event-level `context.location`;
+the batch request schema strips request-level `options.location` when parsing a supplied body.
+source: api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#schemas/experience/BatchExperienceRequest.ts#BatchExperienceRequestData
+
 ## Optimization handoff
 
 `OptimizationHandoff` is the framework-neutral handoff shape for server, static, and edge rendered

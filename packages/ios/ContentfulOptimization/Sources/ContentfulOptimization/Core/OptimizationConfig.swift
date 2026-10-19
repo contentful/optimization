@@ -56,17 +56,29 @@ public struct OptimizationApiConfig {
     public let insightsBaseUrl: String?
     public let enabledFeatures: [String]?
     public let preflight: Bool?
+    /// Default location for Experience API requests, used for evaluation and profile updates.
+    ///
+    /// Supply optional string fields `countryCode` (two characters), `country`, `city`,
+    /// `region`, `regionCode`, `postalCode`, `continent`, and `timezone`. The optional
+    /// `coordinates` object contains numeric `latitude` and `longitude` fields.
+    /// The shared runtime validates this shape. An empty dictionary supplies an explicit
+    /// empty default instead of API geolocation; `nil` preserves API fallback behavior.
+    /// Event context location takes precedence at the API. This is not a permanent
+    /// profile location lock and does not change consent or persistence behavior.
+    public let location: [String: JSONValue]?
 
     public init(
         experienceBaseUrl: String? = nil,
         insightsBaseUrl: String? = nil,
         enabledFeatures: [String]? = nil,
-        preflight: Bool? = nil
+        preflight: Bool? = nil,
+        location: [String: JSONValue]? = nil
     ) {
         self.experienceBaseUrl = experienceBaseUrl
         self.insightsBaseUrl = insightsBaseUrl
         self.enabledFeatures = enabledFeatures
         self.preflight = preflight
+        self.location = location
     }
 
     var isEmpty: Bool {
@@ -74,6 +86,7 @@ public struct OptimizationApiConfig {
             && insightsBaseUrl == nil
             && enabledFeatures == nil
             && preflight == nil
+            && location == nil
     }
 
     func toDictionary() -> [String: Any] {
@@ -89,6 +102,9 @@ public struct OptimizationApiConfig {
         }
         if let preflight {
             dict["preflight"] = preflight
+        }
+        if let location {
+            dict["location"] = location.mapValues { $0.toFoundation() }
         }
         return dict
     }

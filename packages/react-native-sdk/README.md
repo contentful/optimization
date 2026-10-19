@@ -133,12 +133,27 @@ Only `spaceId` is required.
 
 Common `api` options:
 
-| Option              | Required? | Default                                    | Description                                      |
-| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------ |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                  |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                    |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request |
-| `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it |
+| Option              | Required? | Default                                    | Description                                                  |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                              |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request             |
+| `location`          | No        | API fallback                               | Default location for single-profile Experience API mutations |
+| `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it             |
+
+Pass `api.location` to the normal root or provider configuration, or to
+`ContentfulOptimization.initialize()` for app-owned SDK initialization:
+
+```tsx
+<OptimizationRoot spaceId="your-space-id" api={{ location: { countryCode: 'DE', city: 'Berlin' } }}>
+  <YourApp />
+</OptimizationRoot>
+```
+
+Location is initialization-scoped. Event `context.location` takes precedence over matching request
+fields. An empty `api.location: {}` supplies an explicit empty default instead of API geolocation;
+it does not clear an existing profile location or lock location across later requests. See
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`

@@ -503,6 +503,27 @@ The binding config separates policy from mechanism:
   content-type/slug lookups, but it does not own your Contentful Delivery API (CDA) credentials or
   query policy.
 
+Optionally add `api.location` to the initial server binding when your app supplies a location
+default for Experience requests. The request component family uses this default for its page
+evaluation, and the binding also configures its browser runtime with it. A separately bound client
+family accepts the same `api` option. Replace the illustrative country code with your app's
+approved value, omit `location` for API fallback, or set `location: {}` for an empty request default.
+
+**Adapt this to your use case:** add the optional field to your existing server binding; keep its
+Contentful client and consent policy.
+
+```diff
+ // lib/optimization.ts
+ export const optimization = bindNextjsAppRouterServerOptimization({
+   // your existing server config
++  api: { location: { countryCode: 'US' } },
+ })
+```
+
+Merge `location` into an existing `api` object if you already configure API endpoints. This is an
+initialization default for the live browser SDK. Event payload `location` remains separate event
+context. For how omitted and empty defaults differ, precedence, and profile updates, see [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates).
+
 ### Choose who owns entry fetching
 
 **Integration category:** Required for first integration
@@ -1525,6 +1546,16 @@ escape hatches are:
 Manual flows still pass `handoff` to a React root. Do not invent a second state shape for browser
 hydration. Keep `createRequestHandoff()` out of the normal private-request route; the nested request
 family owns that work.
+
+For request-specific location in these manual flows, put
+`experienceOptions: { location: { countryCode: 'FR', city: 'Paris' } }` in the existing options for
+`optimization.createRequestHandoff(...)`, `bindNextjsOptimizationRequest(...)`, or
+`createNextjsRequestHandoff(...)`. The override replaces the whole `api.location` default for that
+request, leaves the binding default unchanged, and accepts `location: {}` for an empty request
+default. The automatic `optimization.request` component family uses the binding default; it does
+not accept an `experienceOptions` prop. Edge handlers accept the same request option on
+`createEdgeRequestHandoff(...)`; see the
+[Edge request recipe](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md#edge-request-personalized-handoff).
 
 The response-capable handler is also an advanced opt-in. Configure
 `createNextjsOptimizationContextHandler(...)` with a server SDK and consent resolver, then set

@@ -52,6 +52,14 @@ imperative `.core` client.
 
 ## Setup / initialization and binding
 
+- Normal `OptimizationConfig.api.location` reaches the shared Core Experience request default
+  through Compose root or imperative/Views initialization. Kotlin serialization omits a `null`
+  location, preserves an empty map as `api.location: {}`, and converts nested `JSONValue` objects
+  and numbers into bridge JSON. A location-only API configuration is retained even when the
+  location is empty. This is an initialization default; shared request serialization and
+  separation from event context are recorded under
+  [API transport scope](../shared/concepts.md#api-transport-scope).
+  source: extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationConfig.kt; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/JSONValue.kt; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizationRoot.kt; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizationManager.kt; optimization-js-bridge#index.ts#initialize; kb:shared/concepts.md
 - Two usage modes for one client. **Compose**: `OptimizationRoot(config, …)` owns the client
   (`remember { OptimizationClient(...) }`), calls `initialize(config)` in a `LaunchedEffect`, provides
   it via `LocalOptimizationClient` plus a `LocalTrackingConfig`, and renders a
@@ -79,7 +87,7 @@ imperative `.core` client.
 - `OptimizationConfig`: `spaceId` is required; `environment` is the Contentful space environment
   used by the Experience and Insights APIs and has a Kotlin-side default `"master"`;
   `logLevel` default `OptimizationLogLevel.error`; `locale`, `api`
-  (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`preflight`), `allowedEventTypes`,
+  (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`location`/`preflight`), `allowedEventTypes`,
   `queuePolicy`, `defaults: StorageDefaults`, `onEventBlocked` all optional/nullable.
   source: extern:environment default "master", logLevel default error, spaceId required — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationConfig.kt#OptimizationConfig
 - `config.toJSON(anonymousId)` serializes to the bridge `BridgeConfig` shape, omitting null URLs and

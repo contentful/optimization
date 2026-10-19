@@ -215,6 +215,7 @@ describe('bridge contract', () => {
     bridge.initialize({
       spaceId: 'test-client',
       environment: 'main',
+      api: { location: { countryCode: 'DE' } },
       defaults: {
         anonymousId: 'bridge-anonymous-id',
         consent: true,
@@ -237,5 +238,7 @@ describe('bridge contract', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/profiles$/)
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    expect(body.options.location).toEqual({ countryCode: 'DE' })
   })
 })

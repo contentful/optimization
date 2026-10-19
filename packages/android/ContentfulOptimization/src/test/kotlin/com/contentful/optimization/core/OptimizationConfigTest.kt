@@ -91,6 +91,7 @@ class OptimizationConfigTest {
                 insightsBaseUrl = "http://localhost:8000/insights/",
                 enabledFeatures = listOf("audiences", "experiences"),
                 preflight = true,
+                location = mapOf("countryCode" to JSONValue.Str("DE")),
             ),
             logLevel = OptimizationLogLevel.debug,
         )
@@ -107,6 +108,18 @@ class OptimizationConfigTest {
         assertEquals("experiences", enabledFeatures.getString(1))
         assertEquals(true, api.getBoolean("preflight"))
         assertEquals("debug", json.getString("logLevel"))
+        val location = api.getJSONObject("location")
+        assertEquals("DE", location.getString("countryCode"))
+    }
+
+    @Test
+    fun `omits null request location but retains an empty location`() {
+        val omitted = OptimizationApiConfig(preflight = true)
+        val empty = OptimizationApiConfig(location = emptyMap())
+        val json = JSONObject(OptimizationConfig(spaceId = "test-space", api = empty).toJSON())
+
+        assertFalse(omitted.toJSONObject().has("location"))
+        assertEquals(0, json.getJSONObject("api").getJSONObject("location").length())
     }
 
     @Test

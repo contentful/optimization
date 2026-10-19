@@ -370,16 +370,20 @@ callers wait for readiness before making direct calls that depend on it.
    2. Pass `environment` only when it is not the Kotlin-side default `"master"`.
    3. Pass `locale` when Experience API requests and event context must use the same language as the
       Contentful entries you render.
-   4. Set `api = OptimizationApiConfig(...)` (`experienceBaseUrl`/`insightsBaseUrl`) only for mock,
-      staging, or other non-default endpoints — both default correctly otherwise.
+   4. Set the `OptimizationApiConfig` base URLs (`experienceBaseUrl`/`insightsBaseUrl`) only for
+      mock, staging, or other non-default endpoints — both default correctly otherwise.
    5. Keep `logLevel` at its default `OptimizationLogLevel.error` in production unless your
       operational policy allows more verbose logging.
 
    **Adapt this to your use case:**
 
    ```kotlin
+   import com.contentful.optimization.core.JSONValue
+   import com.contentful.optimization.core.OptimizationApiConfig
+
    val optimizationConfig = OptimizationConfig(
        spaceId = "your-space-id",
+       api = OptimizationApiConfig(location = mapOf("countryCode" to JSONValue.Str("US"))),
        // environment defaults to "master"; pass it only when your setup differs.
        // Keep the SDK event and Experience locale aligned with the CDA entries you render.
        locale = "en-US",
@@ -390,6 +394,12 @@ callers wait for readiness before making direct calls that depend on it.
        },
    )
    ```
+
+   Optionally set `OptimizationApiConfig.location` before initialization when your app supplies a
+   location default for Experience requests. The map uses the SDK's `JSONValue` values; replace
+   the `"US"` string inside `JSONValue.Str(...)` with your app's approved country code, keeping the
+   `JSONValue.Str` wrapper. Omit `location` (or pass `null`) for API fallback;
+   `location = emptyMap()` sends an empty request default. See [Location inputs and profile updates](../concepts/profile-synchronization-between-client-and-server.md#location-inputs-and-profile-updates) for how omitted and empty defaults differ, precedence, and profile updates.
 
 3. Initialize `OptimizationManager` once for the process, from `Application.onCreate`, and register
    the `Application` subclass in the manifest (see the quick start). `initialize` is idempotent — the

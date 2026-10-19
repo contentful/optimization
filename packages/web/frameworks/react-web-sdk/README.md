@@ -160,6 +160,22 @@ configuration or default state such as consent policy:
 </OptimizationRoot>
 ```
 
+Pass `api.location` through the normal `OptimizationRoot` or owned `OptimizationProvider`
+configuration:
+
+```tsx
+<OptimizationRoot spaceId="your-space-id" api={{ location: { countryCode: 'DE', city: 'Berlin' } }}>
+  <YourApp />
+</OptimizationRoot>
+```
+
+For an injected SDK, configure `api.location` when constructing that SDK. Location is
+initialization-scoped, not a reactive prop. Event `context.location` takes precedence over matching
+request fields. An empty `api.location: {}` supplies an explicit empty default instead of API
+geolocation; it does not clear an existing profile location or lock location across later requests.
+See
+[Location inputs and profile updates](https://contentful.github.io/optimization/documents/Documentation.Concepts.Profile_synchronization_between_client_and_server.html#location-inputs-and-profile-updates).
+
 For every Web SDK option that passes through this package, use the
 [Web SDK README](../../web-sdk/README.md#common-configuration) and generated
 [reference documentation](https://contentful.github.io/optimization).

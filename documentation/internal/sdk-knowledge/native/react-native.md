@@ -29,6 +29,11 @@ source root: `packages/react-native-sdk/src`; shared core: `packages/universal/c
 
 ## Setup / initialization and binding
 
+- Normal initializer, root, and owned-provider `api.location` configuration reaches Core as the
+  live SDK's Experience request default; an injected provider uses its supplied SDK's
+  configuration. Shared behavior is recorded under
+  [API transport scope](../shared/concepts.md#api-transport-scope).
+  source: react-native-sdk#ContentfulOptimization.ts#initialize; react-native-sdk#components/OptimizationRoot.tsx#OptimizationRoot; react-native-sdk#components/OptimizationProvider.tsx#OptimizationProvider; kb:shared/concepts.md
 - Two entry points: the `OptimizationRoot`/`OptimizationProvider` component path (React creates the
   instance) and the `ContentfulOptimization.initialize(config)` initializer (caller creates the
   active singleton and injects it via `OptimizationProvider sdk={sdk}`). `initialize` is `async`
@@ -37,7 +42,7 @@ source root: `packages/react-native-sdk/src`; shared core: `packages/universal/c
 - Config type is `CoreStatefulConfig` (aliased as `OptimizationConfig`); `spaceId` is required, and
   its API keys are `spaceId`, `environment?`, and `fetchOptions?` (from `api-client` `ApiConfig`);
   `locale?`, `logLevel?`, `contentful?`, `eventBuilder?` (from `CoreConfig`); `api?`
-  (`experienceBaseUrl`, `insightsBaseUrl`, `enabledFeatures`, `ip`, `plainText`, `preflight`),
+  (`experienceBaseUrl`, `insightsBaseUrl`, `enabledFeatures`, `ip`, `location`, `plainText`, `preflight`),
   `allowedEventTypes?`, `defaults?` (`consent`, `persistenceConsent`, `profile`, `changes`,
   `selectedOptimizations`), `getAnonymousId?`, `onEventBlocked?`, `queuePolicy?` (`flush`,
   `offlineMaxEvents`, `onOfflineDrop`) — all from `CoreStatefulConfig`.

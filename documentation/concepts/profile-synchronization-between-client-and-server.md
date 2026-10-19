@@ -25,6 +25,7 @@ state, and which application boundaries still belong to your implementation.
 - [Runtime responsibilities](#runtime-responsibilities)
 - [Server-rendered profile data](#server-rendered-profile-data)
 - [Profile identity and profile data](#profile-identity-and-profile-data)
+  - [Location inputs and profile updates](#location-inputs-and-profile-updates)
 - [Experience API response flow](#experience-api-response-flow)
 - [Server-side mechanics](#server-side-mechanics)
   - [Profile upsert behavior](#profile-upsert-behavior)
@@ -56,6 +57,11 @@ Profile synchronization applies differently across SDK runtimes:
 | **React Web SDK**                | React wrapper around the Web SDK. Providers and hooks share the same browser state, localStorage, cookie, and persistence-consent mechanics as the Web SDK.                                                                                                                                                                                                                                                                 |
 | **Next.js adapter**              | Hybrid runtime. The App Router server binding's request family creates and supplies one browser `handoff` for its request components. Pages Router, manual server, and edge helpers return explicit browser handoffs. Response-capable request handlers, Pages Router, edge, and lower-level response-persistence helpers write or clear `ctfl-opt-aid`. Client components continue through the Web or React Web SDK state. |
 | **React Native and mobile SDKs** | React Native uses AsyncStorage, and native mobile SDKs use platform storage instead of browser cookies. They can continue mobile profiles through the Experience API, but they do not provide a built-in `ctfl-opt-aid` cookie handoff to a Node server.                                                                                                                                                                    |
+
+The [request-level location controls](#location-inputs-and-profile-updates) are available through
+JavaScript SDK `api.location` configuration and native Swift/Kotlin `OptimizationApiConfig.location`.
+Stateless Node and Next.js request helpers also accept `experienceOptions.location` for an
+individual request.
 
 ## The synchronization model
 
@@ -204,6 +210,61 @@ statistics. Treat it as profile data, not as a general client-visible session to
 browser and server application, the durable shared value is normally the profile ID.
 
 Merge tags resolve from the active `profile`. They do not read values from `changes`.
+
+### Location inputs and profile updates
+
+Location is part of evaluated profile data and can change as the Experience API processes events.
+Sharing a profile ID between a server and a browser continues the same profile; it does not freeze
+that profile's location at the value used by an earlier request.
+
+JavaScript SDK constructors, React-owned providers and roots, and React Native initialization
+forward `api.location` as the default for profile-changing Experience calls. Swift and Kotlin
+forward `OptimizationApiConfig.location` through the shared native bridge. These stateful defaults
+belong to initialization configuration. Passing updated `api.location` props after mounting does
+not reconfigure the initialized SDK.
+
+Node and stateless Core callers can override that default with
+`forRequest({ experienceOptions: { location } })`. Next.js server, edge, and Pages Router request
+helpers accept the same `experienceOptions.location` override through their existing request
+options. Each override belongs to that request and leaves the constructor default available for
+later requests. Request-owned App Router components use the location in their binding's `api`
+configuration.
+
+At the transport layer, `ExperienceApiClient` uses the request location for `createProfile()`,
+`updateProfile()`, and `upsertProfile()`. The client resolves `options.location` from that call first,
+then uses its constructor's `location` when the call omits it. A per-request object replaces the
+entire constructor default, without merging their fields. The unified `ApiClient` accepts the same
+constructor default under `experience.location`.
+
+The backend then merges each event's `context.location` over the resolved request location. Event
+fields override matching request fields, and request fields remain when an event omits them. This
+merge happens in the backend; the client keeps request and event locations separate in the payload.
+For example, a constructor default with `countryCode: 'DE'` and `region: 'Berlin'`, overridden by a
+request with `countryCode: 'FR'`, supplies only the French country code. An event with
+`context.location: { city: 'Paris' }` then has the French country code and Paris as its location;
+Berlin is not inherited from the replaced constructor default.
+
+When neither the call nor the constructor supplies a location, existing backend fallback behavior
+applies, including Cloudflare request geolocation when enabled. An explicit `location: {}` overrides
+the constructor default and supplies an empty request-location default instead of Cloudflare data.
+Event-level location fields still apply. An empty request location does not erase an existing
+profile location.
+
+Within the submitted event array, the backend selects profile location from the latest timestamped
+event with a non-empty location after merging. If none has a location, it retains the existing
+profile location. Supplying request location affects evaluation and profile updates; it is not a
+permanent location lock. A later server or browser request can update the same profile's location
+from its own event locations and request defaults or backend fallback.
+
+Batch updates through `upsertManyProfiles()` use each event's `context.location`. The client does
+not send request-level location for that method, and the batch backend starts with an empty
+request-location default.
+
+The `ip` option sends `X-Force-IP` for IP enrichment; it does not control profile geolocation.
+The `locale` option can translate returned location fields such as city and country names; it does
+not select the geographic location. See
+[Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md)
+for the distinction between Experience API locale and Contentful content locale.
 
 ## Experience API response flow
 
@@ -555,6 +616,7 @@ Use this checklist when implementing a hybrid Node and browser profile flow:
 
 ## Related documentation
 
+- [API Client configuration and usage](../../packages/universal/api-client/README.md)
 - [Integrate the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
 - [Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
 - [Integrate the React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)

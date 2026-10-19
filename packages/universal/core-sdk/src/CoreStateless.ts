@@ -21,7 +21,7 @@ import { normalizeExplicitLocale } from './locale'
  */
 export interface CoreStatelessRequestOptions extends Pick<
   ExperienceApiClientRequestOptions,
-  'ip' | 'locale' | 'plainText' | 'preflight'
+  'ip' | 'locale' | 'location' | 'plainText' | 'preflight'
 > {}
 
 /**
@@ -90,6 +90,7 @@ const createStatelessExperienceApiConfig = (
     baseUrl: api?.experienceBaseUrl,
     enabledFeatures: api?.enabledFeatures,
     locale,
+    location: api?.location,
   }
 
   return hasDefinedValues(experienceConfig) ? experienceConfig : undefined

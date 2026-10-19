@@ -43,12 +43,9 @@ Applies to reference implementations and shared implementation contracts under `
 
 ## Shared failure modes
 
-- If consumed package changes are not reflected in an implementation, run `pnpm build:pkgs` once,
-  then `pnpm implementation:<implementation> implementation:install`. Skip this refresh when the
-  installed dependencies are already current.
-- Missing SDK APIs or stale SDK types in an implementation are artifact or install-state failures
-  until proven otherwise; compare built package declarations with installed declarations before
-  adding implementation-local shims.
+- Follow the root [built-consumer validation gate](../AGENTS.md#built-consumer-validation-gate)
+  before implementation checks or source-failure diagnosis. It owns build, install, artifact
+  verification, and stale-state recovery requirements.
 - For Web Playwright, prefer the setup-free root runner
   `pnpm test:e2e:<implementation> <file-or-filter>`. The file or filter is optional; omit it only
   when the full suite is warranted.

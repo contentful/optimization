@@ -81,6 +81,7 @@ const createStatefulExperienceApiConfig = (
     enabledFeatures: api?.enabledFeatures,
     ip: api?.ip,
     locale,
+    location: api?.location,
     plainText: api?.plainText,
     preflight: api?.preflight,
   }
