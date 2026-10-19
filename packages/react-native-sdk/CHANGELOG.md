@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/contentful/optimization/compare/optimization-react-native-v2.0.2...optimization-react-native-v2.1.0) (2026-10-19)
+
+### Features
+
+- **runtime:** support request-level location across SDKs [NT-4321] ([#552](https://github.com/contentful/optimization/issues/552)) ([9ea0ef4](https://github.com/contentful/optimization/commit/9ea0ef4d8d2d50fd8c6217834a7b2a32113bed83))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.1.0
+
 ## [2.0.2](https://github.com/contentful/optimization/compare/optimization-react-native-v2.0.1...optimization-react-native-v2.0.2) (2026-10-16)
 
 ### Bug Fixes

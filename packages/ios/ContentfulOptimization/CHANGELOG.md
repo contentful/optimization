@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.1.0](https://github.com/contentful/optimization/compare/optimization-swift-v2.0.2...optimization-swift-v2.1.0) (2026-10-19)
+
+### Features
+
+- **runtime:** support request-level location across SDKs [NT-4321] ([#552](https://github.com/contentful/optimization/issues/552)) ([9ea0ef4](https://github.com/contentful/optimization/commit/9ea0ef4d8d2d50fd8c6217834a7b2a32113bed83))
+
+### Bug Fixes
+
+- **swift:** refresh shared native runtime ([9ea0ef4](https://github.com/contentful/optimization/commit/9ea0ef4d8d2d50fd8c6217834a7b2a32113bed83))
+
 ## [2.0.2](https://github.com/contentful/optimization/compare/optimization-swift-v2.0.1...optimization-swift-v2.0.2) (2026-10-16)
 
 ### Bug Fixes
