@@ -46,7 +46,7 @@ describe('ExO events', () => {
   it('preserves parentVariantId across event unions', () => {
     const properties = {
       ...exoProperties,
-      entityKind: 'Fragment',
+      entityKind: 'ExperienceFragment',
       parentVariantId: 'root-variant',
     }
     const view = {
@@ -78,12 +78,9 @@ describe('ExO events', () => {
     expect(ExoEventProperties.safeParse({ ...exoProperties, parentVariantId }).success).toBe(false)
   })
 
-  it.each(['Experience', 'Fragment', 'InlineFragment', 'InlineComponent'])(
-    'accepts the %s entity kind',
-    (entityKind) => {
-      expect(ExoEntityKind.safeParse(entityKind).success).toBe(true)
-    },
-  )
+  it.each(['Experience', 'ExperienceFragment'])('accepts the %s entity kind', (entityKind) => {
+    expect(ExoEntityKind.safeParse(entityKind).success).toBe(true)
+  })
 
   it('parses an exo_node_view event through the Experience and Insights event unions', () => {
     const event = {
