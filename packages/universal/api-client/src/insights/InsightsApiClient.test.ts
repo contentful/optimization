@@ -199,11 +199,11 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     )
   })
 
-  it('serializes Fragment parentVariantId without stripping it', async () => {
+  it('serializes ExperienceFragment parentVariantId without stripping it', async () => {
     const properties = {
       ...generateUniversalEventProperties(),
       entityId: 'fragment-1',
-      entityKind: 'Fragment' as const,
+      entityKind: 'ExperienceFragment' as const,
       parentExperienceId: 'root-1',
       parentVariantId: 'root-variant',
       variantId: 'fragment-variant',

@@ -6,7 +6,7 @@ import { UniversalEventProperties } from './UniversalEventProperties'
  *
  * @public
  */
-export const ExoEntityKind = z.enum(['Experience', 'Fragment', 'InlineFragment', 'InlineComponent'])
+export const ExoEntityKind = z.enum(['Experience', 'ExperienceFragment'])
 
 /**
  * TypeScript type inferred from {@link ExoEntityKind}.
