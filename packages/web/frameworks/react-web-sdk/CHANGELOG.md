@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/contentful/optimization/compare/optimization-react-web-v2.1.0...optimization-react-web-v2.1.1) (2026-10-21)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-web bumped to 2.1.1
+
 ## [2.1.0](https://github.com/contentful/optimization/compare/optimization-react-web-v2.0.2...optimization-react-web-v2.1.0) (2026-10-19)
 
 ### Features

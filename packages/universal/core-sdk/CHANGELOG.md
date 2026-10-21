@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/contentful/optimization/compare/optimization-core-v2.1.0...optimization-core-v2.1.1) (2026-10-21)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-api-client bumped to 2.2.1
+
 ## [2.1.0](https://github.com/contentful/optimization/compare/optimization-core-v2.0.2...optimization-core-v2.1.0) (2026-10-19)
 
 ### Features
