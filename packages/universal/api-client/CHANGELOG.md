@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.1](https://github.com/contentful/optimization/compare/optimization-api-client-v2.2.0...optimization-api-client-v2.2.1) (2026-10-21)
+
+### Bug Fixes
+
+- **api-client:** [EXA-2582] align ExO entity kinds with the backend contract ([#556](https://github.com/contentful/optimization/issues/556)) ([5d2f4ec](https://github.com/contentful/optimization/commit/5d2f4eccd6c0b0e87e08af372dab440e86f2b2a2))
+
 ## [2.2.0](https://github.com/contentful/optimization/compare/optimization-api-client-v2.1.0...optimization-api-client-v2.2.0) (2026-10-19)
 
 ### Features
