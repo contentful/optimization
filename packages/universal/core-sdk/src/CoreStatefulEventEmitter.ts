@@ -86,6 +86,7 @@ abstract class CoreStatefulEventEmitter
   ): EventOptimizationContext | undefined
 
   protected abstract getRuntimeResetToken(): object | undefined
+  protected abstract registerRuntimeEffect(dispose: () => void): void
 
   override getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
     const value = super.getFlag(name, changes)
@@ -371,18 +372,20 @@ abstract class CoreStatefulEventEmitter
     let wasReadyToTrack = this.hasConsent('trackFlagView') && profileSignal.value?.id !== undefined
     let previousProfileId = profileSignal.value?.id
 
-    signalFns.effect(() => {
-      if (this.getRuntimeResetToken() === undefined) return
-      const profileId = profileSignal.value?.id
-      const isReadyToTrack = this.hasConsent('trackFlagView') && profileId !== undefined
+    this.registerRuntimeEffect(
+      signalFns.effect(() => {
+        if (this.getRuntimeResetToken() === undefined) return
+        const profileId = profileSignal.value?.id
+        const isReadyToTrack = this.hasConsent('trackFlagView') && profileId !== undefined
 
-      if (isReadyToTrack && (!wasReadyToTrack || profileId !== previousProfileId)) {
-        this.trackActiveFlagSubscriptionViews()
-      }
+        if (isReadyToTrack && (!wasReadyToTrack || profileId !== previousProfileId)) {
+          this.trackActiveFlagSubscriptionViews()
+        }
 
-      wasReadyToTrack = isReadyToTrack
-      previousProfileId = profileId
-    })
+        wasReadyToTrack = isReadyToTrack
+        previousProfileId = profileId
+      }),
+    )
   }
 
   private attemptFlagViewTracking(

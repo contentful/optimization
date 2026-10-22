@@ -211,6 +211,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   private destroyed = false
   private destroying = false
   private resetToken: object = {}
+  private readonly coreEffects: Array<() => void> = []
   protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
@@ -294,6 +295,9 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         this.getRuntimeResetToken(),
       )
       batch(() => {
+        blockedEventSignal.value = undefined
+        eventSignal.value = undefined
+        experienceRequestStateSignal.value = { status: 'idle' }
         consentSignal.value = defaultConsent
         persistenceConsentSignal.value = defaultPersistenceConsent ?? defaultConsent
         changesSignal.value = defaultChanges
@@ -303,6 +307,8 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
       this.initializeEffects()
     } catch (error) {
+      this.destroyed = true
+      this.disposeRuntimeEffects()
       releaseStatefulRuntimeSingleton(this.singletonOwner)
       throw error
     }
@@ -311,37 +317,55 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   private initializeEffects(): void {
     this.initializeFlagViewConsentEffect()
 
-    effect(() => {
-      coreLogger.debug(
-        `Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.debug(
+          `Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
+        )
+      }),
+    )
 
-    effect(() => {
-      coreLogger.debug(
-        `Variants have been ${selectedOptimizationsSignal.value?.length ? 'populated' : 'cleared'}`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.debug(
+          `Variants have been ${selectedOptimizationsSignal.value?.length ? 'populated' : 'cleared'}`,
+        )
+      }),
+    )
 
-    effect(() => {
-      coreLogger.info(
-        `Core ${consentSignal.value ? 'will' : 'will not'} emit gated events due to consent (${consentSignal.value})`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.info(
+          `Core ${consentSignal.value ? 'will' : 'will not'} emit gated events due to consent (${consentSignal.value})`,
+        )
+      }),
+    )
 
-    effect(() => {
-      coreLogger.info(
-        `Core ${persistenceConsentSignal.value ? 'will' : 'will not'} persist profile continuity due to persistence consent (${persistenceConsentSignal.value})`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.info(
+          `Core ${persistenceConsentSignal.value ? 'will' : 'will not'} persist profile continuity due to persistence consent (${persistenceConsentSignal.value})`,
+        )
+      }),
+    )
 
-    effect(() => {
-      if (!onlineSignal.value || this.destroyed) return
+    this.registerRuntimeEffect(
+      effect(() => {
+        if (!onlineSignal.value || this.destroyed) return
 
-      this.insightsQueue.clearScheduledRetry()
-      this.experienceQueue.clearScheduledRetry()
-      void this.flushQueues({ force: true })
-    })
+        this.insightsQueue.clearScheduledRetry()
+        this.experienceQueue.clearScheduledRetry()
+        void this.flushQueues({ force: true })
+      }),
+    )
+  }
+
+  protected registerRuntimeEffect(dispose: () => void): void {
+    this.coreEffects.push(dispose)
+  }
+
+  private disposeRuntimeEffects(): void {
+    for (const dispose of this.coreEffects.splice(0)) dispose()
   }
 
   protected async flushQueues(
@@ -463,6 +487,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
       logger.warn('Failed to flush Experience queue during destroy()', String(error))
     })
     this.destroyed = true
+    this.disposeRuntimeEffects()
     this.insightsQueue.clearPeriodicFlushTimer()
     this.insightsQueue.clearScheduledRetry()
 
