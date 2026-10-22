@@ -1,6 +1,7 @@
 import type { Traits } from '@contentful/optimization-api-client/api-schemas'
 import {
   AcceptedCurrentStateTracker,
+  batch,
   type ConsentInput,
   CoreStateful,
   type CoreStatefulConfig,
@@ -579,8 +580,14 @@ const bridge: Bridge = {
   },
 
   consent(accept) {
-    if (!instance) return
-    instance.consent(accept)
+    const currentInstance = instance
+    if (!currentInstance) return
+    batch(() => {
+      currentInstance.consent(accept)
+      if ((typeof accept === 'boolean' ? accept : accept.events) === false) {
+        currentScreenTracker.reset()
+      }
+    })
   },
 
   setLocale(locale: string): string | null {
