@@ -13,11 +13,16 @@ import {
 export async function applyOptimizationDataToSignals(
   data: OptimizationData,
   stateInterceptors: LifecycleInterceptors['state'],
+  isCurrent: () => boolean = () => true,
 ): Promise<void> {
+  if (!isCurrent()) return
+
   const intercepted = mergeOptimizationSelectionState(
     data,
     await stateInterceptors.run(data, mergeOptimizationSelectionState),
   )
+  if (!isCurrent()) return
+
   const { changes, profile, selectedOptimizations } = intercepted
 
   // success must be written inside this batch because experienceRequestState transitions

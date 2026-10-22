@@ -17,6 +17,7 @@ export {
 export function installCoreBridgeCapabilities(
   host: object,
   stateInterceptors: LifecycleInterceptors['state'],
+  getResetToken?: () => object | undefined,
 ): void {
   const capabilities: CoreBridgeCapabilities = {
     getPreviewPanelBridge: () => ({
@@ -29,7 +30,12 @@ export function installCoreBridgeCapabilities(
       stateInterceptors,
     }),
     hydrateOptimizationData: async (data) => {
-      await applyOptimizationDataToSignals(data, stateInterceptors)
+      const token = getResetToken?.()
+      await applyOptimizationDataToSignals(
+        data,
+        stateInterceptors,
+        () => getResetToken === undefined || (token !== undefined && token === getResetToken()),
+      )
     },
   }
 

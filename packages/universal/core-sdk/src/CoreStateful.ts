@@ -209,6 +209,8 @@ let statefulInstanceCounter = 0
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
+  private destroying = false
+  private resetToken: object = {}
   protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
@@ -276,17 +278,21 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
         insightsApi: this.api.insights,
+        getResetToken: () => this.getRuntimeResetToken(),
       })
       this.experienceQueue = new ExperienceQueue({
         experienceApi: this.api.experience,
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
         getAnonymousId: getAnonymousId ?? (() => undefined),
+        getResetToken: () => this.getRuntimeResetToken(),
         offlineMaxEvents: resolvedQueuePolicy.offlineMaxEvents,
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
-      installCoreBridgeCapabilities(this, this.interceptors.state)
+      installCoreBridgeCapabilities(this, this.interceptors.state, () =>
+        this.getRuntimeResetToken(),
+      )
       batch(() => {
         consentSignal.value = defaultConsent
         persistenceConsentSignal.value = defaultPersistenceConsent ?? defaultConsent
@@ -330,7 +336,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
 
     effect(() => {
-      if (!onlineSignal.value) return
+      if (!onlineSignal.value || this.destroyed) return
 
       this.insightsQueue.clearScheduledRetry()
       this.experienceQueue.clearScheduledRetry()
@@ -341,11 +347,23 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   protected async flushQueues(
     options: { force?: boolean } & InsightsApiClientRequestOptions = {},
   ): Promise<void> {
+    const token = this.getRuntimeResetToken()
+    if (token === undefined) return
     await this.insightsQueue.flush(options)
-    await this.experienceQueue.flush(options)
+    if (this.isRuntimeCurrent(token)) await this.experienceQueue.flush(options)
   }
 
-  private clearQueuedEvents(): void {
+  protected getRuntimeResetToken(): object | undefined {
+    return this.destroyed ? undefined : this.resetToken
+  }
+
+  protected isRuntimeCurrent(token: object | undefined): boolean {
+    return token !== undefined && token === this.getRuntimeResetToken()
+  }
+
+  private clearQueuedEvents(clearAcceptedFlagViews = false): void {
+    this.resetToken = {}
+    this.clearFlagViewTracking(clearAcceptedFlagViews)
     this.insightsQueue.clearQueuedEvents()
     this.experienceQueue.clearQueuedEvents()
   }
@@ -434,24 +452,28 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   destroy(): void {
-    if (this.destroyed) return
+    if (this.destroyed || this.destroying) return
+    this.destroying = true
 
-    this.destroyed = true
     this.optimizationContexts.clear()
     void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
       logger.warn('Failed to flush insights queue during destroy()', String(error))
     })
-    void this.experienceQueue.flush({ force: true }).catch((error: unknown) => {
+    void this.experienceQueue.flushOnDestroy().catch((error: unknown) => {
       logger.warn('Failed to flush Experience queue during destroy()', String(error))
     })
+    this.destroyed = true
     this.insightsQueue.clearPeriodicFlushTimer()
+    this.insightsQueue.clearScheduledRetry()
 
     releaseStatefulRuntimeSingleton(this.singletonOwner)
   }
 
   reset(): void {
+    if (this.destroyed) return
     this.optimizationContexts.clear()
     batch(() => {
+      this.clearQueuedEvents(true)
       blockedEventSignal.value = undefined
       eventSignal.value = undefined
       changesSignal.value = undefined
@@ -466,6 +488,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   consent(accept: ConsentInput): void {
+    if (this.destroyed) return
     const isBoolean = typeof accept === 'boolean'
     const eventConsent = isBoolean ? accept : accept.events
     const persistenceConsent = isBoolean ? accept : accept.persistence
