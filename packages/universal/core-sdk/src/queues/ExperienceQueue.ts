@@ -10,13 +10,13 @@ import type { LifecycleInterceptors } from '../CoreBase'
 import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
 import {
-  event as eventSignal,
   experienceRequestState as experienceRequestStateSignal,
   online as onlineSignal,
   profile as profileSignal,
   type ExperienceRequestFailureReason,
 } from '../signals'
 import { applyOptimizationDataToSignals } from '../state/applyOptimizationDataToSignals'
+import { publishEventStream } from './publishEventStream'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
@@ -116,13 +116,14 @@ export class ExperienceQueue {
     const intercepted = await this.eventInterceptors.run(event)
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
 
-    eventSignal.value =
+    publishEventStream(
       optimizationContext === undefined
         ? validEvent
         : ({
             ...validEvent,
             optimization: optimizationContext,
-          } satisfies OptimizationEventStreamEvent)
+          } satisfies OptimizationEventStreamEvent),
+    )
 
     if (onlineSignal.value) return await this.upsertProfile([validEvent])
 

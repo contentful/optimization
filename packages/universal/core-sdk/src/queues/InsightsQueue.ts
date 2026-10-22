@@ -11,7 +11,8 @@ import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
 import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
-import { event as eventSignal, online as onlineSignal, profile as profileSignal } from '../signals'
+import { online as onlineSignal, profile as profileSignal } from '../signals'
+import { publishEventStream } from './publishEventStream'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
@@ -104,13 +105,14 @@ export class InsightsQueue {
 
     const queuedProfileEvents = this.queuedInsightsByProfile.get(profile.id)
 
-    eventSignal.value =
+    publishEventStream(
       optimizationContext === undefined
         ? validEvent
         : ({
             ...validEvent,
             optimization: optimizationContext,
-          } satisfies OptimizationEventStreamEvent)
+          } satisfies OptimizationEventStreamEvent),
+    )
 
     if (queuedProfileEvents) {
       queuedProfileEvents.profile = profile
