@@ -521,9 +521,11 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     batch(() => {
       if (eventConsent !== undefined) consentSignal.value = eventConsent
       if (persistenceConsent !== undefined) persistenceConsentSignal.value = persistenceConsent
+      if (eventConsent === false) {
+        this.clearQueuedEvents()
+        experienceRequestStateSignal.value = { status: 'idle' }
+      }
     })
-
-    if (eventConsent === false) this.clearQueuedEvents()
   }
 
   /**

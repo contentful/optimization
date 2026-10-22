@@ -12,10 +12,12 @@
 
 import {
   AcceptedCurrentStateTracker,
+  batch,
   CoreStateful,
   effect,
   resolveStatefulDefaults,
   signals,
+  type ConsentInput,
   type CoreStatefulConfig,
   type EventEmissionResult,
   type PageViewBuilderArgs,
@@ -511,12 +513,27 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    * @public
    */
   reset(): void {
+    if (this.getRuntimeResetToken() === undefined) return
     this.currentPageTracker.reset()
     this.entryInteractionRuntime?.reset()
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
     clearProfilelessHandoffDurableContinuity()
     super.reset()
+  }
+
+  override consent(accept: ConsentInput): void {
+    if (this.getRuntimeResetToken() === undefined) return
+    const events = typeof accept === 'boolean' ? accept : accept.events
+    const persistence = typeof accept === 'boolean' ? accept : accept.persistence
+
+    batch(() => {
+      // Persist explicit decisions before subscribers can dispose browser effects.
+      if (events !== undefined) LocalStore.consent = events
+      if (persistence !== undefined) LocalStore.persistenceConsent = persistence
+      super.consent(accept)
+      if (events === false) this.currentPageTracker.reset()
+    })
   }
 
   /**
