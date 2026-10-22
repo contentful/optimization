@@ -1,7 +1,7 @@
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { AnalyticsOptimizationHandoff } from '@contentful/optimization-web/analytics'
 import { InterceptorManager, signals } from '@contentful/optimization-web/core-sdk'
-import { describe, expect, it, rs } from '@rstest/core'
+import { beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { act, StrictMode, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useOptimization } from '../hooks/useOptimization'
@@ -110,6 +110,10 @@ async function renderClientAsync(element: ReactElement): Promise<{
 }
 
 describe('OptimizationAnalyticsRoot', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('hydrates analytics handoff and tracks the initial route without content context', async () => {
     const trackCurrentPage = rs
       .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
