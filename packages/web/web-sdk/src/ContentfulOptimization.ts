@@ -347,7 +347,11 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
       const canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent === true
       const { cookieValue, legacyCookieValue } = readInitialCookieValues(canLoadPersistedContinuity)
 
-      const entryInteractionRuntime = new EntryInteractionRuntime(this, autoTrackEntryInteraction)
+      const entryInteractionRuntime = new EntryInteractionRuntime(
+        this,
+        autoTrackEntryInteraction,
+        () => this.getRuntimeResetToken(),
+      )
       const { tracking } = entryInteractionRuntime
       this.entryInteractionRuntime = entryInteractionRuntime
       this.tracking = tracking
@@ -532,7 +536,10 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
       if (events !== undefined) LocalStore.consent = events
       if (persistence !== undefined) LocalStore.persistenceConsent = persistence
       super.consent(accept)
-      if (events === false) this.currentPageTracker.reset()
+      if (events === false) {
+        this.currentPageTracker.reset()
+        this.entryInteractionRuntime?.restartCurrentInteractions()
+      }
     })
   }
 

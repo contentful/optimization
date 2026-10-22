@@ -31,6 +31,7 @@ interface CreateTimedEntryDetectorOptions<
 > {
   core: TCore
   interaction: EntryInteraction
+  getResetToken?: () => object | undefined
   createObserver: (
     callback: (element: Element, info: TInfo) => Promise<void>,
     options: TStartOptions | undefined,
@@ -40,7 +41,7 @@ interface CreateTimedEntryDetectorOptions<
     core: TCore,
     payload: NonNullable<ReturnType<typeof resolveTrackingPayload>>,
     info: TInfo,
-    element: Element,
+    context: { element: Element; isCurrent: () => boolean },
   ) => Promise<void>
 }
 
@@ -53,6 +54,7 @@ export function createTimedEntryDetector<
 >({
   core,
   interaction,
+  getResetToken,
   createObserver,
   resolveAttributeOptions,
   track,
@@ -63,17 +65,24 @@ export function createTimedEntryDetector<
   TInfo,
   TObserver
 >): EntryInteractionDetector<TStartOptions | undefined, TElementOptions> {
-  const createCallback =
-    (runtimeCore: TCore) =>
-    async (element: Element, info: TInfo): Promise<void> => {
+  const fallbackToken = {}
+  const getRuntimeToken = getResetToken ?? (() => fallbackToken)
+  let observerSession: object | undefined = undefined
+  let observer: TObserver | undefined = undefined
+  let autoTrackingEnabled = true
+
+  const createCallback = (runtimeCore: TCore, session: object, token: object | undefined) => {
+    const isCurrent = (): boolean =>
+      observerSession === session && token !== undefined && getRuntimeToken() === token
+
+    return async (element: Element, info: TInfo): Promise<void> => {
+      if (!isCurrent()) return
       const payload = resolveTrackingPayload(info.data, element)
       if (!payload) return
 
-      await track(runtimeCore, payload, info, element)
+      await track(runtimeCore, payload, info, { element, isCurrent })
     }
-
-  let observer: TObserver | undefined = undefined
-  let autoTrackingEnabled = true
+  }
 
   const autoTrackedElements = new Set<Element>()
   const attributeOverrides = new Map<Element, AttributeOverride<TElementOptions>>()
@@ -141,11 +150,16 @@ export function createTimedEntryDetector<
 
   return {
     start: (options): void => {
-      observer = createObserver(createCallback(core), options)
+      const session = {}
+      observerSession = session
+      observer?.disconnect()
+      observer = createObserver(createCallback(core, session, getRuntimeToken()), options)
       reconcileAllElements()
     },
     stop: (): void => {
       observer?.disconnect()
+      // Already queued callbacks may drain after a manual stop. A new observer or
+      // runtime reset replaces their session/token and invalidates that drain.
       observer = undefined
       autoTrackedElements.clear()
       attributeOverrides.clear()

@@ -24,11 +24,13 @@ export type EntryViewTrackingCore = Pick<CoreStateful, 'trackView'>
 
 export function createEntryViewDetector(
   core: EntryViewTrackingCore,
+  getResetToken?: () => object | undefined,
 ): EntryInteractionDetector<
   EntryViewInteractionStartOptions | undefined,
   EntryViewInteractionElementOptions
 > {
-  const acceptedStickyElements = new WeakSet<Element>()
+  let acceptedStickyElements = new WeakSet<Element>()
+  let stickyRuntimeToken = getResetToken?.()
 
   return createTimedEntryDetector<
     EntryViewTrackingCore,
@@ -38,10 +40,22 @@ export function createEntryViewDetector(
     ElementViewObserver
   >({
     core,
+    getResetToken,
     interaction: 'views',
     createObserver: (callback, options) => new ElementViewObserver(callback, options),
     resolveAttributeOptions: (): undefined => undefined,
-    track: async (runtimeCore, payload, info: ElementViewCallbackInfo, element): Promise<void> => {
+    track: async (
+      runtimeCore,
+      payload,
+      info: ElementViewCallbackInfo,
+      { element, isCurrent },
+    ): Promise<void> => {
+      const currentRuntimeToken = getResetToken?.()
+      if (stickyRuntimeToken !== currentRuntimeToken) {
+        acceptedStickyElements = new WeakSet<Element>()
+        stickyRuntimeToken = currentRuntimeToken
+      }
+
       const shouldSendSticky = shouldSendStickyEntryView(
         payload.sticky,
         acceptedStickyElements.has(element),
@@ -55,6 +69,7 @@ export function createEntryViewDetector(
       })
 
       if (
+        isCurrent() &&
         shouldSendSticky &&
         shouldRememberStickyEntryViewResult(shouldSendSticky, result.accepted)
       ) {

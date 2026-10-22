@@ -338,6 +338,28 @@ describe('EntryInteractionRuntime', () => {
     expect(viewDetector.start).toHaveBeenNthCalledWith(2, { rootMargin: '10px' })
   })
 
+  it('restarts allowed interactions without clearing manual element overrides or view options', () => {
+    const { runtime, viewDetector, hoverDetector } = createRuntime({ views: false })
+    const element = document.createElement('div')
+    const options = { data: { entryId: 'entry-manual' } }
+    const viewOptions = { rootMargin: '5px' }
+
+    runtime.tracking.enable('views', viewOptions)
+    runtime.tracking.disable('views')
+    runtime.tracking.enableElement('views', element, options)
+    runtime.syncAutoTrackedEntryInteractions()
+    viewDetector.start.mockClear()
+    viewDetector.enableElement.mockClear()
+    hoverDetector.start.mockClear()
+
+    runtime.restartCurrentInteractions()
+
+    expect(viewDetector.start).toHaveBeenCalledWith(viewOptions)
+    expect(viewDetector.setAuto).toHaveBeenLastCalledWith(false)
+    expect(viewDetector.enableElement).toHaveBeenCalledWith(element, options)
+    expect(hoverDetector.start).toHaveBeenCalledTimes(1)
+  })
+
   it('reset stops all interaction trackers and clears element overrides', () => {
     const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime({ clicks: false })
     const element = document.createElement('div')
