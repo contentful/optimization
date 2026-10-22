@@ -31,6 +31,29 @@ afterEach(() => {
 })
 
 describe('InsightsQueue flush snapshots', () => {
+  it('joins an active attempt without starting a second request or promising a retry', async () => {
+    let complete!: (success: boolean) => void
+    const send = rs.fn(
+      async () =>
+        await new Promise<boolean>((resolve) => {
+          complete = resolve
+        }),
+    )
+    const queue = createQueue(send)
+    await queue.send(builder.buildClick({ componentId: 'queued' }))
+    const first = queue.flush()
+    let joined = false
+    const second = queue.flush({ force: true }).then(() => {
+      joined = true
+    })
+    await Promise.resolve()
+    expect(joined).toBe(false)
+    expect(send).toHaveBeenCalledTimes(1)
+    complete(false)
+    await Promise.all([first, second])
+    expect(joined).toBe(true)
+    expect(send).toHaveBeenCalledTimes(1)
+  })
   it('keeps events added to either the same or a different profile while a request is pending', async () => {
     let completeFirst!: (success: boolean) => void
     const requests: string[][] = []

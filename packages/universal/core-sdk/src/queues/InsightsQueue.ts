@@ -48,6 +48,7 @@ export class InsightsQueue {
   private readonly flushRuntime: QueueFlushRuntime
   private readonly insightsApi: InsightsQueueOptions['insightsApi']
   private readonly queuedInsightsByProfile = new Map<Profile['id'], QueuedProfileEvents>()
+  private activeFlush: Promise<void> | undefined
   private insightsPeriodicFlushTimer: ReturnType<typeof setInterval> | undefined
 
   constructor(options: InsightsQueueOptions) {
@@ -126,6 +127,10 @@ export class InsightsQueue {
   }
 
   async flush(options: InsightsQueueFlushOptions = {}): Promise<void> {
+    if (this.activeFlush !== undefined) {
+      await this.activeFlush
+      return
+    }
     const { force = false, beacon } = options
 
     if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
@@ -140,6 +145,19 @@ export class InsightsQueue {
       return
     }
 
+    const attempt = this.flushAttempt(batches, beacon)
+    this.activeFlush = attempt
+    try {
+      await attempt
+    } finally {
+      if (this.activeFlush === attempt) this.activeFlush = undefined
+    }
+  }
+
+  private async flushAttempt(
+    batches: BatchInsightsEventArray,
+    beacon: InsightsQueueFlushOptions['beacon'],
+  ): Promise<void> {
     this.flushRuntime.markFlushStarted()
 
     try {

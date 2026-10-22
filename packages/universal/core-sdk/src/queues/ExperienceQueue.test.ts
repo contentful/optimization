@@ -2,6 +2,7 @@ import type {
   ExperienceEventArray,
   OptimizationData,
 } from '@contentful/optimization-api-client/api-schemas'
+import EventBuilder from '../events/EventBuilder'
 import { InterceptorManager } from '../lib/interceptor'
 import { resolveQueueFlushPolicy } from '../lib/queue'
 import {
@@ -65,6 +66,30 @@ const observeRequestState = (): {
 }
 
 describe('ExperienceQueue.experienceRequestState transitions', () => {
+  it('joins a queued flush until its transport settles', async () => {
+    let complete!: (data: OptimizationData) => void
+    const { queue, upsertProfile } = buildQueue({
+      upsertProfile: async () =>
+        await new Promise<OptimizationData>((resolve) => {
+          complete = resolve
+        }),
+    })
+    const builder = new EventBuilder({ channel: 'web', library: { name: 'test', version: '1' } })
+    onlineSignal.value = false
+    await queue.send(builder.buildPageView())
+    const first = queue.flush({ force: true })
+    let joined = false
+    const second = queue.flush({ force: true }).then(() => {
+      joined = true
+    })
+    await Promise.resolve()
+    expect(joined).toBe(false)
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+    complete(SAMPLE_DATA)
+    await Promise.all([first, second])
+    expect(joined).toBe(true)
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
   beforeEach(() => {
     experienceRequestState.value = { status: 'idle' }
     onlineSignal.value = true

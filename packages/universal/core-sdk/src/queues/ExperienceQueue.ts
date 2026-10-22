@@ -70,6 +70,7 @@ export class ExperienceQueue {
   private readonly onOfflineDrop?: ExperienceQueueOptions['onOfflineDrop']
   private readonly queuedExperienceEvents = new Set<ExperienceEventPayload>()
   private readonly stateInterceptors: ExperienceQueueOptions['stateInterceptors']
+  private activeFlush: Promise<void> | undefined
 
   constructor(options: ExperienceQueueOptions) {
     const {
@@ -132,6 +133,10 @@ export class ExperienceQueue {
   }
 
   async flush(options: { force?: boolean } = {}): Promise<void> {
+    if (this.activeFlush !== undefined) {
+      await this.activeFlush
+      return
+    }
     const { force = false } = options
 
     if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
@@ -144,6 +149,20 @@ export class ExperienceQueue {
     coreLogger.debug('Flushing offline Experience event queue')
 
     const queuedEvents = Array.from(this.queuedExperienceEvents)
+    // Install joining before pending-state subscribers can observe this attempt.
+    const { promise: attempt, resolve: complete, reject: fail } = Promise.withResolvers<undefined>()
+    this.activeFlush = attempt
+    void this.flushAttempt(queuedEvents).then(() => {
+      complete(undefined)
+    }, fail)
+    try {
+      await attempt
+    } finally {
+      if (this.activeFlush === attempt) this.activeFlush = undefined
+    }
+  }
+
+  private async flushAttempt(queuedEvents: ExperienceEventArray): Promise<void> {
     this.flushRuntime.markFlushStarted()
 
     try {
