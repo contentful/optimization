@@ -146,7 +146,7 @@ export class InsightsQueue {
       const sendSuccess = await this.trySendBatches(batches, beacon ? { beacon } : undefined)
 
       if (sendSuccess) {
-        this.queuedInsightsByProfile.clear()
+        this.removeSentEvents(batches)
         this.flushRuntime.handleFlushSuccess()
       } else {
         this.flushRuntime.handleFlushFailure({
@@ -164,10 +164,20 @@ export class InsightsQueue {
     const batches: BatchInsightsEventArray = []
 
     this.queuedInsightsByProfile.forEach(({ profile, events }) => {
-      batches.push({ profile, events })
+      batches.push({ profile, events: [...events] })
     })
 
     return batches
+  }
+
+  private removeSentEvents(batches: BatchInsightsEventArray): void {
+    for (const { profile, events } of batches) {
+      const queued = this.queuedInsightsByProfile.get(profile.id)
+      if (!queued) continue
+
+      queued.events.splice(0, events.length)
+      if (queued.events.length === 0) this.queuedInsightsByProfile.delete(profile.id)
+    }
   }
 
   private async trySendBatches(
