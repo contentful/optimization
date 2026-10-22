@@ -9,7 +9,7 @@ import {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
-import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
+import type { EventOptimizationContext } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
 import { online as onlineSignal, profile as profileSignal } from '../signals'
 import { publishEventStream } from './publishEventStream'
@@ -50,7 +50,6 @@ export class InsightsQueue {
   private readonly flushRuntime: QueueFlushRuntime
   private readonly insightsApi: InsightsQueueOptions['insightsApi']
   private readonly queuedInsightsByProfile = new Map<Profile['id'], QueuedProfileEvents>()
-  private activeFlush: Promise<void> | undefined
   private resetToken: object = {}
   private readonly getResetToken: () => object | undefined
   private insightsPeriodicFlushTimer: ReturnType<typeof setInterval> | undefined
@@ -80,7 +79,6 @@ export class InsightsQueue {
 
   clearQueuedEvents(): void {
     this.resetToken = {}
-    this.activeFlush = undefined
     this.queuedInsightsByProfile.clear()
     this.flushRuntime.reset()
     this.reconcilePeriodicFlushTimer()
@@ -114,14 +112,7 @@ export class InsightsQueue {
 
     const queuedProfileEvents = this.queuedInsightsByProfile.get(profile.id)
 
-    publishEventStream(
-      optimizationContext === undefined
-        ? validEvent
-        : ({
-            ...validEvent,
-            optimization: optimizationContext,
-          } satisfies OptimizationEventStreamEvent),
-    )
+    publishEventStream(validEvent, optimizationContext)
 
     if (!this.isCurrent(token)) return
     if (queuedProfileEvents) {
@@ -141,31 +132,18 @@ export class InsightsQueue {
   async flush(options: InsightsQueueFlushOptions = {}): Promise<void> {
     const { resetToken: token } = this
     if (!this.isCurrent(token)) return
-    if (this.activeFlush !== undefined) {
-      await this.activeFlush
-      return
-    }
     const { force = false, beacon } = options
 
-    if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
-
-    coreLogger.debug('Flushing insights event queue')
-
-    const batches = this.createBatches()
-
-    if (!batches.length) {
+    if (!this.flushRuntime.hasActiveFlush && this.queuedInsightsByProfile.size === 0) {
       this.flushRuntime.clearScheduledRetry()
       this.reconcilePeriodicFlushTimer()
       return
     }
 
-    const attempt = this.flushAttempt(batches, beacon, token)
-    this.activeFlush = attempt
-    try {
-      await attempt
-    } finally {
-      if (this.activeFlush === attempt) this.activeFlush = undefined
-    }
+    await this.flushRuntime.runFlush({ force, isOnline: !!onlineSignal.value }, async () => {
+      coreLogger.debug('Flushing insights event queue')
+      await this.flushAttempt(this.createBatches(), beacon, token)
+    })
   }
 
   private async flushAttempt(
@@ -173,8 +151,6 @@ export class InsightsQueue {
     beacon: InsightsQueueFlushOptions['beacon'],
     token: object,
   ): Promise<void> {
-    this.flushRuntime.markFlushStarted()
-
     try {
       const sendSuccess = await this.trySendBatches(batches, beacon ? { beacon } : undefined)
       if (!this.isCurrent(token)) return
@@ -189,10 +165,7 @@ export class InsightsQueue {
         })
       }
     } finally {
-      if (this.isCurrent(token)) {
-        this.flushRuntime.markFlushFinished()
-        this.reconcilePeriodicFlushTimer()
-      }
+      if (this.isCurrent(token)) this.reconcilePeriodicFlushTimer()
     }
   }
 

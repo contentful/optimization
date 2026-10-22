@@ -32,7 +32,7 @@ interface QueueFlushRuntimeOptions {
 export class QueueFlushRuntime {
   private circuitOpenUntil = 0
   private flushFailureCount = 0
-  private flushInFlight = false
+  private activeFlush: Promise<void> | undefined
   private nextFlushAllowedAt = 0
   private readonly onCallbackError?: QueueFlushRuntimeOptions['onCallbackError']
   private readonly onRetry: QueueFlushRuntimeOptions['onRetry']
@@ -55,7 +55,7 @@ export class QueueFlushRuntime {
 
     this.circuitOpenUntil = 0
     this.flushFailureCount = 0
-    this.flushInFlight = false
+    this.activeFlush = undefined
     this.nextFlushAllowedAt = 0
   }
 
@@ -77,10 +77,9 @@ export class QueueFlushRuntime {
    * @param options.isOnline - Whether connectivity gates permit flushing.
    * @returns `true` when flush is skipped.
    */
-  shouldSkip(options: { force: boolean; isOnline: boolean }): boolean {
+  private shouldSkip(options: { force: boolean; isOnline: boolean }): boolean {
     const { force, isOnline } = options
 
-    if (this.flushInFlight) return true
     if (force) return false
     if (!isOnline) return true
 
@@ -92,18 +91,33 @@ export class QueueFlushRuntime {
     return false
   }
 
-  /**
-   * Mark a flush attempt as in flight.
-   */
-  markFlushStarted(): void {
-    this.flushInFlight = true
+  /** Whether a flush attempt must be joined before checking queued payloads. */
+  get hasActiveFlush(): boolean {
+    return this.activeFlush !== undefined
   }
 
-  /**
-   * Mark a flush attempt as finished.
-   */
-  markFlushFinished(): void {
-    this.flushInFlight = false
+  /** Join the active flush, or reserve an attempt before synchronous observers can run. */
+  async runFlush(
+    gates: { force: boolean; isOnline: boolean },
+    attempt: () => Promise<void>,
+  ): Promise<void> {
+    if (this.activeFlush !== undefined) {
+      await this.activeFlush
+      return
+    }
+    if (this.shouldSkip(gates)) return
+
+    const { promise, resolve, reject } = Promise.withResolvers<undefined>()
+    this.activeFlush = promise
+    try {
+      await attempt()
+      resolve(undefined)
+    } catch (error) {
+      reject(error)
+    } finally {
+      if (this.activeFlush === promise) this.activeFlush = undefined
+    }
+    await promise
   }
 
   /**

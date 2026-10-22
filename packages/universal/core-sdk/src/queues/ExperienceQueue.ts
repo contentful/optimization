@@ -7,7 +7,7 @@ import {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
-import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
+import type { EventOptimizationContext } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
 import {
   experienceRequestState as experienceRequestStateSignal,
@@ -71,7 +71,6 @@ export class ExperienceQueue {
   private readonly onOfflineDrop?: ExperienceQueueOptions['onOfflineDrop']
   private readonly queuedExperienceEvents = new Set<ExperienceEventPayload>()
   private readonly stateInterceptors: ExperienceQueueOptions['stateInterceptors']
-  private activeFlush: Promise<void> | undefined
   private resetToken: object = {}
   private readonly getResetToken: () => object | undefined
   private destroying = false
@@ -112,7 +111,6 @@ export class ExperienceQueue {
 
   clearQueuedEvents(): void {
     this.resetToken = {}
-    this.activeFlush = undefined
     this.queuedExperienceEvents.clear()
     this.flushRuntime.reset()
   }
@@ -127,14 +125,7 @@ export class ExperienceQueue {
     if (!this.isLive(token)) return undefined
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
 
-    publishEventStream(
-      optimizationContext === undefined
-        ? validEvent
-        : ({
-            ...validEvent,
-            optimization: optimizationContext,
-          } satisfies OptimizationEventStreamEvent),
-    )
+    publishEventStream(validEvent, optimizationContext)
 
     if (!this.isLive(token)) return undefined
     if (onlineSignal.value) return await this.upsertProfile([validEvent])
@@ -147,38 +138,20 @@ export class ExperienceQueue {
 
   async flush(options: { force?: boolean } = {}): Promise<void> {
     if (!this.destroying && this.getResetToken() === undefined) return
-    if (this.activeFlush !== undefined) {
-      await this.activeFlush
-      return
-    }
     const { force = false } = options
 
-    if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
-
-    if (this.queuedExperienceEvents.size === 0) {
+    if (!this.flushRuntime.hasActiveFlush && this.queuedExperienceEvents.size === 0) {
       this.flushRuntime.clearScheduledRetry()
       return
     }
 
-    coreLogger.debug('Flushing offline Experience event queue')
-
-    const queuedEvents = Array.from(this.queuedExperienceEvents)
-    // Install joining before pending-state subscribers can observe this attempt.
-    const { promise: attempt, resolve: complete, reject: fail } = Promise.withResolvers<undefined>()
-    this.activeFlush = attempt
-    void this.flushAttempt(queuedEvents, this.resetToken).then(() => {
-      complete(undefined)
-    }, fail)
-    try {
-      await attempt
-    } finally {
-      if (this.activeFlush === attempt) this.activeFlush = undefined
-    }
+    await this.flushRuntime.runFlush({ force, isOnline: !!onlineSignal.value }, async () => {
+      coreLogger.debug('Flushing offline Experience event queue')
+      await this.flushAttempt(Array.from(this.queuedExperienceEvents), this.resetToken)
+    })
   }
 
   private async flushAttempt(queuedEvents: ExperienceEventArray, token: object): Promise<void> {
-    this.flushRuntime.markFlushStarted()
-
     try {
       const sendSuccess = await this.tryUpsertQueuedEvents(queuedEvents)
       if (!this.isDeliveryCurrent(token)) return
@@ -195,16 +168,13 @@ export class ExperienceQueue {
         })
       }
     } finally {
-      if (this.isDeliveryCurrent(token)) {
-        this.flushRuntime.markFlushFinished()
-        if (this.destroying) this.clearQueuedEvents()
-      }
+      if (this.isDeliveryCurrent(token) && this.destroying) this.clearQueuedEvents()
     }
   }
 
   async flushOnDestroy(): Promise<void> {
     if (this.destroying) {
-      if (this.activeFlush) await this.activeFlush
+      await this.flush({ force: true })
       return
     }
     this.teardownProfileId = this.getAnonymousId() ?? profileSignal.value?.id

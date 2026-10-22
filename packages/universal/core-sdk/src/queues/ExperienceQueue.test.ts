@@ -90,6 +90,38 @@ describe('ExperienceQueue.experienceRequestState transitions', () => {
     expect(joined).toBe(true)
     expect(upsertProfile).toHaveBeenCalledTimes(1)
   })
+  it('joins a flush requested by a pending-state subscriber before delivery starts', async () => {
+    const response = Promise.withResolvers<OptimizationData>()
+    const { queue, upsertProfile } = buildQueue({
+      upsertProfile: async () => await response.promise,
+    })
+    const builder = new EventBuilder({ channel: 'web', library: { name: 'test', version: '1' } })
+    onlineSignal.value = false
+    await queue.send(builder.buildPageView())
+    let joined = false
+    let second: Promise<void> | undefined
+    const unsubscribe = experienceRequestState.subscribe(({ status }) => {
+      if (status !== 'pending') return
+      second = queue.flush({ force: true }).then(() => {
+        joined = true
+      })
+    })
+
+    try {
+      const first = queue.flush({ force: true })
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+      await Promise.resolve()
+      expect(joined).toBe(false)
+      response.resolve(SAMPLE_DATA)
+      await first
+      await second
+      expect(joined).toBe(true)
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+    } finally {
+      unsubscribe()
+    }
+  })
+
   beforeEach(() => {
     experienceRequestState.value = { status: 'idle' }
     onlineSignal.value = true
