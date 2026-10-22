@@ -552,14 +552,14 @@ subsequent Experience response updates the same stateful profile and rewrites th
 
 Different lifecycle methods have different synchronization effects:
 
-| Operation                                      | Effect                                                                                                                                                       |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `optimization.reset()` in Web                  | Clears profile, selected optimizations, changes, event streams, anonymous ID localStorage, and cookie.                                                       |
-| `LocalStore.reset()` default                   | Clears profile-related browser caches and anonymous ID, but preserves consent and debug values.                                                              |
-| `optimization.consent({ persistence: false })` | Clears SDK-managed durable profile-continuity storage and cookies, but leaves active in-memory profile state available until reset or teardown.              |
-| `optimization.consent(false)`                  | Sets event and persistence consent to `false`, purges SDK queues, clears SDK-managed durable profile-continuity storage, and re-applies the allow-list gate. |
-| `optimization.destroy()`                       | Flushes queues and releases runtime listeners. It does not clear persisted user state.                                                                       |
-| Server consent revocation                      | Must clear the application-owned consent state and any persisted profile ID such as `ctfl-opt-aid`.                                                          |
+| Operation                                      | Effect                                                                                                                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `optimization.reset()` in Web                  | Clears profile, selected optimizations, changes, event streams, queued events, anonymous ID localStorage, and cookie; invalidates pending state publication.             |
+| `LocalStore.reset()` default                   | Clears profile-related browser caches and anonymous ID, but preserves consent and debug values.                                                                          |
+| `optimization.consent({ persistence: false })` | Clears SDK-managed durable profile-continuity storage and cookies, but leaves active in-memory profile state available until reset or teardown.                          |
+| `optimization.consent(false)`                  | Sets event and persistence consent to `false`, purges SDK queues, clears SDK-managed durable profile-continuity storage, and re-applies the allow-list gate.             |
+| `optimization.destroy()`                       | Starts best-effort queue flushes, disposes internal effects and runtime listeners, and prevents late response state publication. It does not clear persisted user state. |
+| Server consent revocation                      | Must clear the application-owned consent state and any persisted profile ID such as `ctfl-opt-aid`.                                                                      |
 
 `consent(false)` leaves the active in-memory SDK profile, selected optimizations, and changes
 available until the application calls `reset()` or tears down the runtime. Future event calls emit

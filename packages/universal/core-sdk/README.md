@@ -103,6 +103,12 @@ depending on Core directly.
 mobile JavaScript containers, and native bridge runtimes. It maintains consent, profile, selected
 optimization, flag, event-stream, blocked-event, and preview-panel state as read-only observables.
 
+`reset()` discards queued events and invalidates pending state updates. Withdrawing event consent
+completes that cleanup before subscribers run. `destroy()` attempts final queue delivery and releases
+internal subscriptions before another instance can initialize; application subscriptions remain
+caller-owned. See [Core state management](../../../documentation/concepts/core-state-management.md)
+for lifecycle and observable behavior.
+
 > [!IMPORTANT]
 >
 > `CoreStateful` uses module-global state by design. Initialize exactly one stateful instance per

@@ -39,7 +39,9 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
 - `new ContentfulOptimization(config)` — stateful; create ONE per browser runtime and reuse. In a
   browser it attaches to `window.contentfulOptimization` and **throws
   `ContentfulOptimization is already initialized`** if one already exists. `destroy()` for teardown
-  only.
+  only. Destruction disposes browser persistence effects and listeners owned by that instance;
+  caller-created observable subscriptions are caller-owned. Explicit consent decisions are written
+  to browser storage on a best-effort basis before subscribers can tear down the runtime.
   source: web-sdk#ContentfulOptimization.ts#ContentfulOptimization; web-sdk#ContentfulOptimization.ts#destroy
 - Config keys (verified):
   - `spaceId` and `environment` (optional, default `'master'`, Contentful space environment used by
@@ -190,8 +192,9 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   duration is milliseconds measured from initial threshold entry, including the qualifying dwell.
   Falling below the view threshold, pointer leave/cancel, or the applicable lifecycle ending closes
   the session. The qualifying dwell is continuous: an interaction that ends before the threshold
-  emits no event. Active sessions emit no periodic duration events.
-  source: web-sdk#entry-tracking/events/view/ElementViewObserver.ts#ElementViewObserver; web-sdk#entry-tracking/events/hover/ElementHoverObserver.ts#ElementHoverObserver
+  emits no event. Active sessions emit no periodic duration events. Delayed callbacks from tracking
+  that was stopped by reset or destruction cannot emit into a replacement tracking lifecycle.
+  source: web-sdk#entry-tracking/events/view/ElementViewObserver.ts#ElementViewObserver; web-sdk#entry-tracking/events/hover/ElementHoverObserver.ts#ElementHoverObserver; web-sdk#entry-tracking/events/createTimedEntryDetector.ts#createTimedEntryDetector; web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#ContentfulOptimization.ts#ContentfulOptimization
 - `visibilitychange` to hidden, `pagehide`, and `beforeunload` end active qualified view and hover
   sessions. A still-visible element starts a fresh view session when the page returns; hover requires
   a fresh pointer entry. The SDK awaits active interaction endings before its forced lifecycle queue
@@ -233,7 +236,8 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 - `reset()` clears profile state, selected optimizations, route dedupe, `ctfl-opt-aid` cookie +
   LocalStore continuity (also stops entry-interaction tracking, clears changes/eventStream/
   blockedEventStream/experienceRequestState — non-exhaustive but nothing extra harms the reader).
-  Does NOT touch consent/persistence signals or app/CMP records.
+  It also clears pending delivery queues and invalidates in-flight state publication. It does not
+  touch consent/persistence signals or app/CMP records.
   source: web-sdk#ContentfulOptimization.ts#reset; core-sdk#CoreStateful.ts#reset; web-sdk#storage/LocalStore.ts#LocalStore
 - `setLocale(nextLocale)` updates subsequent Experience/event locale only; does not refetch or clear
   caches.

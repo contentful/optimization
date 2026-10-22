@@ -239,8 +239,7 @@ stateless runtimes do not expose `sdk.states`; request clients return data and u
 
 The `Observable` contract has three members:
 
-- **`current`** - Returns a snapshot of the current value. Reading it does not establish a reactive
-  subscription.
+- **`current`** - Returns a snapshot of the current value. Use `subscribe` to receive future values.
 - **`subscribe(next)`** - Registers a callback that is called immediately with the current value and
   again whenever the underlying source changes. Returns a `Subscription` with an `unsubscribe`
   method.
@@ -249,12 +248,15 @@ The `Observable` contract has three members:
   initialization that must wait for data to arrive.
 
 Most values delivered through `current`, `subscribe`, and `subscribeOnce` are deep-cloned before
-reaching your code. Mutating a received `profile`, `selectedOptimizations`, `changes`, locale,
+reaching your code. Subscription snapshot functions and callbacks run without reactive dependency
+tracking, so reading another SDK state inside a callback does not subscribe it to that other state.
+Mutating a received `profile`, `selectedOptimizations`, `changes`, locale,
 consent, blocked-event, or flag value does not affect internal signal state.
 
 `states.eventStream` is the exception. It returns a non-cloned reference to the SDK event object.
 This avoids cloning large Contentful entry graphs that can be attached to optimized entry
-interaction events. Core does not freeze that object for you, so treat event-stream payloads as
+interaction events. Subscriber errors during event-stream publication are logged without interrupting
+event delivery or queue admission. Core does not freeze that object for you, so treat event-stream payloads as
 read-only and clone them before adding diagnostics or forwarding annotations.
 
 ### Why observables, not direct signal access
@@ -408,7 +410,9 @@ allowed in-memory state for the active runtime.
 `reset()` clears volatile Core state in one batch: `blockedEvent`, `event`, `changes`, `profile`,
 `selectedOptimizations`, and `experienceRequestState` back to `{ status: 'idle' }`. It also clears
 registered optimization contexts created by `resolveOptimizedEntry()`, so later interaction calls
-cannot reuse stale entry-resolution metadata.
+cannot reuse stale entry-resolution metadata. Reset also clears pending delivery queues and accepted
+flag-view deduplication. Work started before reset cannot publish late event or response state into
+the reset runtime.
 
 Runtime adapters add their own reset behavior:
 
@@ -423,18 +427,27 @@ Runtime adapters add their own reset behavior:
 `reset()` does not change consent values. Use it for sign-out, account switching, test teardown, or
 discarding the active optimization profile while preserving the application's consent decision.
 
-`destroy()` is teardown, not a privacy reset. Core marks the instance destroyed, clears registered
-optimization contexts, starts forced queue flushes, logs flush failures, clears the Insights
-periodic timer, and releases the singleton lock. `destroy()` returns `void`; it does not await queue
+`destroy()` is teardown, not a privacy reset. Core clears registered optimization contexts and
+starts final forced queue flushes before marking the instance destroyed. It logs flush failures, clears the Insights
+periodic timer, disposes internal reactive effects, and releases the singleton lock. `destroy()` returns `void`; it does not await queue
 flush completion. Web, React Native, iOS, and Android adapters also remove listeners, bridge
 subscriptions, or native resources that they own. Destroying an SDK instance does not clear durable
-user state by itself.
+user state by itself. Caller-created observable subscriptions keep their own lifecycle; use their
+`unsubscribe()` handles when they are no longer needed. Final Experience delivery captures the
+tearing-down runtime's profile identity and cannot update state after teardown. A replacement runtime
+starts with empty event-attempt and blocked-event diagnostics and idle Experience-request state.
 
 Calling `consent(false)` with a boolean sets both event consent and persistence consent to `false`.
-Core clears queued Experience and Insights events when event consent becomes `false`. Platform
+Core clears queued Experience and Insights events and invalidates pending event work before consent
+subscribers observe event consent becoming `false`. Accepted flag-view deduplication is preserved
+until reset. Platform
 storage paths can also clear durable profile continuity because persistence consent becomes `false`:
 Web clears LocalStore continuity and anonymous ID cookies, React Native clears AsyncStorage
 continuity, and iOS/Android clear native profile-continuity storage from bridge state updates.
+
+Web attempts to persist explicit consent decisions before notifying subscribers. React Native
+enqueues the explicit decision in its AsyncStorage write queue before notification; the synchronous
+`consent()` call does not wait for durable storage to finish.
 
 Calling `consent({ events: false })` clears queued events without changing persistence consent.
 Calling `consent({ persistence: false })` keeps event consent unchanged but clears or prevents

@@ -221,6 +221,10 @@ render. Reassigning `defaults.consent` after mount has no effect; call `consent(
 the SDK instance for runtime consent changes, or change the provider's React `key` to force full
 re-initialization.
 
+Withdrawing event consent purges queued events and invalidates pending event work before consent
+subscribers are notified. Explicit consent writes are enqueued to AsyncStorage before notification;
+they do not wait for disk persistence to finish.
+
 AsyncStorage persists consent and, when persistence consent permits it, profile-continuity state
 across app launches. It is not consulted for every live state read after initialization. For
 cross-SDK consent guidance, see
