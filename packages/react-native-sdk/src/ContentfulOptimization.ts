@@ -1,5 +1,6 @@
 import {
   AcceptedCurrentStateTracker,
+  batch,
   type ConsentInput,
   CoreStateful,
   type CoreStatefulConfig,
@@ -254,12 +255,18 @@ class ContentfulOptimization extends CoreStateful {
   }
 
   override consent(accept: ConsentInput): void {
-    super.consent(accept)
+    if (this.getRuntimeResetToken() === undefined) return
+    const events = typeof accept === 'boolean' ? accept : accept.events
 
-    void persistCurrentStateForPolicy()
+    batch(() => {
+      super.consent(accept)
+      if (events === false) this.currentScreenTracker.reset()
+      void persistCurrentStateForPolicy()
+    })
   }
 
   override reset(): void {
+    if (this.getRuntimeResetToken() === undefined) return
     this.currentScreenTracker.reset()
     void AsyncStorageStore.clearProfileContinuity()
     super.reset()
