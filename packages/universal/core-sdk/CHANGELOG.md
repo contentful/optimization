@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.2](https://github.com/contentful/optimization/compare/optimization-core-v2.1.1...optimization-core-v2.1.2) (2026-10-23)
+
+### Bug Fixes
+
+- **runtime:** isolate lifecycle state and queued event delivery ([#558](https://github.com/contentful/optimization/issues/558)) ([1ef0d12](https://github.com/contentful/optimization/commit/1ef0d12e4754a23121cdab3881302ee554f52045))
+
 ## [2.1.1](https://github.com/contentful/optimization/compare/optimization-core-v2.1.0...optimization-core-v2.1.1) (2026-10-21)
 
 ### Dependencies
