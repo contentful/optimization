@@ -32,7 +32,7 @@ does not cover ISR, route-level `revalidate`, or Cache Components.
 
 ## Prerequisites
 
-- Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
+- Node.js >= 22.23.4 (26.12.1 recommended to match `.nvmrc`)
 - pnpm
 
 ## Setup

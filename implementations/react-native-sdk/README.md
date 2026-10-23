@@ -39,7 +39,7 @@ for the entry contract.
 
 ## Prerequisites
 
-- Node.js 24.15.0, matching the repository's `.nvmrc`
+- Node.js 26.12.1, matching the repository's `.nvmrc`
 - pnpm
 - JDK 17, Android SDK platform/build tools 37, `adb`, and at least one configured Android emulator for Android Detox flows. The
   one-shot runner and Detox can launch a configured emulator; it does not need to be running before

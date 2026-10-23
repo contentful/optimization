@@ -123,7 +123,7 @@ resolution. See
 
 ## Prerequisites
 
-- Node.js 24.15.0, matching `.nvmrc`.
+- Node.js 26.12.1, matching `.nvmrc`.
 - pnpm.
 
 ## Setup

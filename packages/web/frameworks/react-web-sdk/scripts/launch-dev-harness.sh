@@ -24,7 +24,7 @@
 #   SKIP_INSTALL=true ./scripts/launch-dev-harness.sh        # Skip install step
 #
 # Prerequisites:
-#   - Node.js >= 20.19.0 (see .nvmrc for recommended version)
+#   - Node.js >= 22.23.4 (see .nvmrc for recommended version)
 #   - pnpm 10.x
 #
 # Logs:
@@ -192,7 +192,7 @@ check_prerequisites() {
     log_step "Checking prerequisites"
 
     if ! command -v node &> /dev/null; then
-        log_error "Node.js is not installed. Please install Node.js >= 20.19.0"
+        log_error "Node.js is not installed. Please install Node.js >= 22.23.4"
         exit 1
     fi
     log_info "Node.js $(node --version) found"
