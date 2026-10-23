@@ -39,7 +39,7 @@ RN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT_DIR="$(cd "$RN_DIR/../.." && pwd)"
 
 # Configuration
-NODE_VERSION="24.11.1"
+NODE_VERSION="24.22.1"
 PNPM_VERSION="10.22.0"
 JAVA_VERSION="17"
 ANDROID_BUILD_TOOLS_VERSION="36.0.0"
