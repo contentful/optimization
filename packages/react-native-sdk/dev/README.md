@@ -126,7 +126,7 @@ pnpm dev:android
 
 ### Required
 
-- **Node.js** >= 20.19.0 (`24.15.0` recommended to match `.nvmrc`)
+- **Node.js** >= 22.23.4 (`26.12.1` recommended to match `.nvmrc`)
 - **pnpm** (workspace package manager)
 - **Watchman** (recommended for file watching)
   ```sh
