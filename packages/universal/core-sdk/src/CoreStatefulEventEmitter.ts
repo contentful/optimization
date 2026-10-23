@@ -85,6 +85,9 @@ abstract class CoreStatefulEventEmitter
     optimizationContextId: string | undefined,
   ): EventOptimizationContext | undefined
 
+  protected abstract getRuntimeResetToken(): object | undefined
+  protected abstract registerRuntimeEffect(dispose: () => void): void
+
   override getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
     const value = super.getFlag(name, changes)
     this.attemptFlagViewTracking(name, value, changes)
@@ -204,12 +207,14 @@ abstract class CoreStatefulEventEmitter
   async trackView(
     payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
+    if (this.getRuntimeResetToken() === undefined) return { accepted: false }
     const optimizationContext = this.getEventOptimizationContext(payload.optimizationContextId)
     if (!this.hasConsent('trackView')) {
       this.onBlockedByConsent('trackView', [payload])
       return { accepted: false }
     }
 
+    const token = this.getRuntimeResetToken()
     let result: EventEmissionResult = { accepted: true }
 
     if (payload.sticky) {
@@ -221,7 +226,7 @@ abstract class CoreStatefulEventEmitter
       )
     }
 
-    if (!result.accepted) return result
+    if (!result.accepted || token !== this.getRuntimeResetToken()) return result
 
     await this.sendInsightsEvent(
       'trackView',
@@ -290,10 +295,14 @@ abstract class CoreStatefulEventEmitter
   }
 
   hasConsent(name: string): boolean {
-    return hasEventConsent(name, consentSignal.value, this.allowedEventTypes)
+    return (
+      this.getRuntimeResetToken() !== undefined &&
+      hasEventConsent(name, consentSignal.value, this.allowedEventTypes)
+    )
   }
 
   private onBlockedByConsent(name: string, args: readonly unknown[]): void {
+    if (this.getRuntimeResetToken() === undefined) return
     coreLogger.warn(
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
     )
@@ -306,6 +315,7 @@ abstract class CoreStatefulEventEmitter
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<EventEmissionResult> {
+    if (this.getRuntimeResetToken() === undefined) return { accepted: false }
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return { accepted: false }
@@ -323,6 +333,7 @@ abstract class CoreStatefulEventEmitter
     event: InsightsEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<void> {
+    if (this.getRuntimeResetToken() === undefined) return
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return
@@ -352,21 +363,29 @@ abstract class CoreStatefulEventEmitter
     return [value, payload.componentId, payload.experienceId, payload.variantIndex, profileId]
   }
 
+  protected clearFlagViewTracking(clearAccepted = true): void {
+    if (clearAccepted) this.lastAcceptedFlagViewSignatures.clear()
+    this.pendingFlagViewSignatures.clear()
+  }
+
   protected initializeFlagViewConsentEffect(): void {
     let wasReadyToTrack = this.hasConsent('trackFlagView') && profileSignal.value?.id !== undefined
     let previousProfileId = profileSignal.value?.id
 
-    signalFns.effect(() => {
-      const profileId = profileSignal.value?.id
-      const isReadyToTrack = this.hasConsent('trackFlagView') && profileId !== undefined
+    this.registerRuntimeEffect(
+      signalFns.effect(() => {
+        if (this.getRuntimeResetToken() === undefined) return
+        const profileId = profileSignal.value?.id
+        const isReadyToTrack = this.hasConsent('trackFlagView') && profileId !== undefined
 
-      if (isReadyToTrack && (!wasReadyToTrack || profileId !== previousProfileId)) {
-        this.trackActiveFlagSubscriptionViews()
-      }
+        if (isReadyToTrack && (!wasReadyToTrack || profileId !== previousProfileId)) {
+          this.trackActiveFlagSubscriptionViews()
+        }
 
-      wasReadyToTrack = isReadyToTrack
-      previousProfileId = profileId
-    })
+        wasReadyToTrack = isReadyToTrack
+        previousProfileId = profileId
+      }),
+    )
   }
 
   private attemptFlagViewTracking(
@@ -402,27 +421,48 @@ abstract class CoreStatefulEventEmitter
     }
     pendingSignatures.push(pendingSignature)
 
+    const token = this.getRuntimeResetToken()
     void this.trackFlagView(payload)
       .then(() => {
-        const lastAccepted = this.lastAcceptedFlagViewSignatures.get(name)
-        if (!lastAccepted || pendingSignature.attemptId > lastAccepted.attemptId) {
-          this.lastAcceptedFlagViewSignatures.set(name, pendingSignature)
-        }
+        this.recordAcceptedFlagView(name, pendingSignature, token)
       })
       .catch((error: unknown) => {
         logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
       })
       .finally(() => {
-        const pendingIndex = pendingSignatures.findIndex(
-          ({ attemptId }) => attemptId === pendingSignature.attemptId,
-        )
-        if (pendingIndex !== -1) {
-          pendingSignatures.splice(pendingIndex, 1)
-        }
-        if (pendingSignatures.length === 0) {
-          this.pendingFlagViewSignatures.delete(name)
-        }
+        this.removePendingFlagView(name, pendingSignature, pendingSignatures)
       })
+  }
+
+  private removePendingFlagView(
+    name: string,
+    pendingSignature: AttemptedFlagViewTrackingSignature,
+    pendingSignatures: AttemptedFlagViewTrackingSignature[],
+  ): void {
+    const pendingIndex = pendingSignatures.findIndex(
+      ({ attemptId }) => attemptId === pendingSignature.attemptId,
+    )
+    if (pendingIndex !== -1) {
+      pendingSignatures.splice(pendingIndex, 1)
+    }
+    if (
+      pendingSignatures.length === 0 &&
+      this.pendingFlagViewSignatures.get(name) === pendingSignatures
+    ) {
+      this.pendingFlagViewSignatures.delete(name)
+    }
+  }
+
+  private recordAcceptedFlagView(
+    name: string,
+    pendingSignature: AttemptedFlagViewTrackingSignature,
+    token: object | undefined,
+  ): void {
+    if (token !== this.getRuntimeResetToken()) return
+    const lastAccepted = this.lastAcceptedFlagViewSignatures.get(name)
+    if (!lastAccepted || pendingSignature.attemptId > lastAccepted.attemptId) {
+      this.lastAcceptedFlagViewSignatures.set(name, pendingSignature)
+    }
   }
 
   private trackActiveFlagSubscriptionViews(): void {

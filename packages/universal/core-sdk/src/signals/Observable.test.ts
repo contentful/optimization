@@ -56,6 +56,78 @@ describe('Observable helpers', () => {
     expect(values).toEqual([1, 2])
   })
 
+  it('does not track unrelated signal reads in subscriber callbacks', () => {
+    const source = signal(1)
+    const unrelated = signal(0)
+    const values: number[] = []
+    const subscription = toObservable(source).subscribe((value) => {
+      void unrelated.value
+      values.push(value)
+    })
+
+    unrelated.value = 1
+    expect(values).toEqual([1])
+
+    source.value = 2
+    unrelated.value = 2
+    expect(values).toEqual([1, 2])
+
+    subscription.unsubscribe()
+  })
+
+  it('does not track unrelated signal reads in custom snapshots', () => {
+    const source = signal(1)
+    const unrelated = signal(0)
+    const values: number[] = []
+    const observable = toObservable(source, (value) => {
+      void unrelated.value
+      return value
+    })
+    const subscription = observable.subscribe((value) => {
+      values.push(value)
+    })
+
+    unrelated.value = 1
+    expect(values).toEqual([1])
+
+    source.value = 2
+    unrelated.value = 2
+    expect(values).toEqual([1, 2])
+
+    subscription.unsubscribe()
+  })
+
+  it('emits once when its snapshot and callback read unrelated signals', () => {
+    const source = signal<number | undefined>(undefined)
+    const snapshotDependency = signal(0)
+    const callbackDependency = signal(0)
+    const snapshotValues: Array<number | undefined> = []
+    const values: number[] = []
+    const observable = toObservable(source, (value) => {
+      void snapshotDependency.value
+      snapshotValues.push(value)
+      return value
+    })
+    const subscription = observable.subscribeOnce((value) => {
+      void callbackDependency.value
+      values.push(value)
+    })
+
+    snapshotDependency.value = 1
+    callbackDependency.value = 1
+    expect(snapshotValues).toEqual([])
+
+    source.value = 1
+    snapshotDependency.value = 2
+    callbackDependency.value = 2
+    source.value = 2
+
+    expect(snapshotValues).toEqual([1])
+    expect(values).toEqual([1])
+
+    subscription.unsubscribe()
+  })
+
   it('emits only the first non-nullish value then unsubscribes automatically', () => {
     const source = signal<string | null | undefined>(undefined)
     const values: string[] = []

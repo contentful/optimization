@@ -7,16 +7,16 @@ import {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
-import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
+import type { EventOptimizationContext } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
 import {
-  event as eventSignal,
   experienceRequestState as experienceRequestStateSignal,
   online as onlineSignal,
   profile as profileSignal,
   type ExperienceRequestFailureReason,
 } from '../signals'
 import { applyOptimizationDataToSignals } from '../state/applyOptimizationDataToSignals'
+import { publishEventStream } from './publishEventStream'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
@@ -42,6 +42,7 @@ export interface ExperienceQueueDropContext {
 }
 
 interface ExperienceQueueOptions {
+  getResetToken?: () => object | undefined
   experienceApi: {
     upsertProfile: (payload: {
       profileId?: string
@@ -70,6 +71,10 @@ export class ExperienceQueue {
   private readonly onOfflineDrop?: ExperienceQueueOptions['onOfflineDrop']
   private readonly queuedExperienceEvents = new Set<ExperienceEventPayload>()
   private readonly stateInterceptors: ExperienceQueueOptions['stateInterceptors']
+  private resetToken: object = {}
+  private readonly getResetToken: () => object | undefined
+  private destroying = false
+  private teardownProfileId: string | undefined
 
   constructor(options: ExperienceQueueOptions) {
     const {
@@ -88,6 +93,7 @@ export class ExperienceQueue {
     this.offlineMaxEvents = offlineMaxEvents
     this.onOfflineDrop = onOfflineDrop
     this.stateInterceptors = stateInterceptors
+    this.getResetToken = options.getResetToken ?? (() => this)
     this.flushRuntime = new QueueFlushRuntime({
       policy: flushPolicy,
       onRetry: () => {
@@ -104,6 +110,7 @@ export class ExperienceQueue {
   }
 
   clearQueuedEvents(): void {
+    this.resetToken = {}
     this.queuedExperienceEvents.clear()
     this.flushRuntime.reset()
   }
@@ -112,17 +119,15 @@ export class ExperienceQueue {
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<OptimizationData | undefined> {
+    const { resetToken: token } = this
+    if (!this.isLive(token)) return undefined
     const intercepted = await this.eventInterceptors.run(event)
+    if (!this.isLive(token)) return undefined
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
 
-    eventSignal.value =
-      optimizationContext === undefined
-        ? validEvent
-        : ({
-            ...validEvent,
-            optimization: optimizationContext,
-          } satisfies OptimizationEventStreamEvent)
+    publishEventStream(validEvent, optimizationContext)
 
+    if (!this.isLive(token)) return undefined
     if (onlineSignal.value) return await this.upsertProfile([validEvent])
 
     coreLogger.debug(`Queueing ${validEvent.type} event`, validEvent)
@@ -132,37 +137,63 @@ export class ExperienceQueue {
   }
 
   async flush(options: { force?: boolean } = {}): Promise<void> {
+    if (!this.destroying && this.getResetToken() === undefined) return
     const { force = false } = options
 
-    if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
-
-    if (this.queuedExperienceEvents.size === 0) {
+    if (!this.flushRuntime.hasActiveFlush && this.queuedExperienceEvents.size === 0) {
       this.flushRuntime.clearScheduledRetry()
       return
     }
 
-    coreLogger.debug('Flushing offline Experience event queue')
+    await this.flushRuntime.runFlush({ force, isOnline: !!onlineSignal.value }, async () => {
+      coreLogger.debug('Flushing offline Experience event queue')
+      await this.flushAttempt(Array.from(this.queuedExperienceEvents), this.resetToken)
+    })
+  }
 
-    const queuedEvents = Array.from(this.queuedExperienceEvents)
-    this.flushRuntime.markFlushStarted()
-
+  private async flushAttempt(queuedEvents: ExperienceEventArray, token: object): Promise<void> {
     try {
       const sendSuccess = await this.tryUpsertQueuedEvents(queuedEvents)
+      if (!this.isDeliveryCurrent(token)) return
 
       if (sendSuccess) {
         queuedEvents.forEach((queuedEvent) => {
           this.queuedExperienceEvents.delete(queuedEvent)
         })
         this.flushRuntime.handleFlushSuccess()
-      } else {
+      } else if (!this.destroying) {
         this.flushRuntime.handleFlushFailure({
           queuedBatches: this.queuedExperienceEvents.size > 0 ? 1 : 0,
           queuedEvents: this.queuedExperienceEvents.size,
         })
       }
     } finally {
-      this.flushRuntime.markFlushFinished()
+      if (this.isDeliveryCurrent(token) && this.destroying) this.clearQueuedEvents()
     }
+  }
+
+  async flushOnDestroy(): Promise<void> {
+    if (this.destroying) {
+      await this.flush({ force: true })
+      return
+    }
+    this.teardownProfileId = this.getAnonymousId() ?? profileSignal.value?.id
+    this.destroying = true
+    this.clearScheduledRetry()
+    try {
+      await this.flush({ force: true })
+    } finally {
+      this.clearQueuedEvents()
+      this.teardownProfileId = undefined
+    }
+  }
+
+  private isLive(token: object): boolean {
+    return !this.destroying && this.isDeliveryCurrent(token)
+  }
+
+  private isDeliveryCurrent(token: object): boolean {
+    return token === this.resetToken && (this.destroying || this.getResetToken() !== undefined)
   }
 
   private enqueueEvent(event: ExperienceEventPayload): void {
@@ -223,27 +254,41 @@ export class ExperienceQueue {
     }
   }
 
-  protected async upsertProfile(events: ExperienceEventArray): Promise<OptimizationData> {
-    const anonymousId = this.getAnonymousId()
+  protected async upsertProfile(
+    events: ExperienceEventArray,
+  ): Promise<OptimizationData | undefined> {
+    const { resetToken: token } = this
+    const anonymousId = this.getRequestProfileId()
     if (anonymousId) coreLogger.debug(`Anonymous ID found: ${anonymousId}`)
 
-    experienceRequestStateSignal.value = { status: 'pending' }
+    if (this.isLive(token)) experienceRequestStateSignal.value = { status: 'pending' }
+    if (!this.isDeliveryCurrent(token)) return undefined
 
     try {
       const data = await this.experienceApi.upsertProfile({
-        profileId: anonymousId ?? profileSignal.value?.id,
+        profileId: anonymousId,
         events,
       })
 
-      await applyOptimizationDataToSignals(data, this.stateInterceptors)
+      if (!this.isDeliveryCurrent(token)) return undefined
+      if (this.isLive(token)) {
+        await applyOptimizationDataToSignals(data, this.stateInterceptors, () => this.isLive(token))
+      }
 
-      return data
+      return this.isLive(token) ? data : undefined
     } catch (error) {
+      if (!this.isLive(token)) return undefined
       experienceRequestStateSignal.value = {
         status: 'failed',
         reason: classifyExperienceRequestFailure(error),
       }
       throw error
     }
+  }
+
+  private getRequestProfileId(): string | undefined {
+    return this.destroying
+      ? this.teardownProfileId
+      : (this.getAnonymousId() ?? profileSignal.value?.id)
   }
 }

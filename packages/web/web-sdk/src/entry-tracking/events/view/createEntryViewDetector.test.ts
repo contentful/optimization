@@ -1,4 +1,9 @@
-import { advance, createEntryTrackingHarness, installIOPolyfill } from '../../../test/helpers'
+import {
+  advance,
+  createEntryTrackingHarness,
+  deferred,
+  installIOPolyfill,
+} from '../../../test/helpers'
 import { createEntryViewDetector, type EntryViewTrackingCore } from './createEntryViewDetector'
 
 const rect = (left: number, top: number, width: number, height: number): DOMRect =>
@@ -497,6 +502,61 @@ describe('EntryViewTracker', () => {
       }),
     )
 
+    cleanup()
+  })
+
+  it('remembers an accepted sticky result across an observer restart in the same runtime', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-sticky-restart'
+    entry.dataset.ctflSticky = 'true'
+    document.body.append(entry)
+    const trackView = rs.fn().mockResolvedValue({ accepted: true })
+    const token = {}
+    const { cleanup, tracker } = createEntryTrackingHarness(
+      createEntryViewDetector({ trackView }, () => token),
+    )
+
+    tracker.start()
+    io.getLast()?.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(1000)
+    await tracker.endActive()
+    expect(trackView).toHaveBeenCalledWith(expect.objectContaining({ sticky: true }))
+
+    tracker.stop()
+    tracker.start()
+    io.getLast()?.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(1000)
+
+    expect(trackView).toHaveBeenLastCalledWith(expect.objectContaining({ sticky: undefined }))
+    cleanup()
+  })
+
+  it('does not remember a sticky result that settles after its observer is replaced', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-sticky-stale'
+    entry.dataset.ctflSticky = 'true'
+    document.body.append(entry)
+    const pending = deferred<{ accepted: boolean }>()
+    const trackView = rs
+      .fn()
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue({ accepted: true })
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector({ trackView }))
+
+    tracker.start()
+    io.getLast()?.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(1000)
+    expect(trackView).toHaveBeenCalledTimes(1)
+
+    tracker.stop()
+    tracker.start()
+    pending.resolve({ accepted: true })
+    await Promise.resolve()
+    io.getLast()?.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(1000)
+
+    expect(trackView).toHaveBeenCalledTimes(2)
+    expect(trackView).toHaveBeenLastCalledWith(expect.objectContaining({ sticky: true }))
     cleanup()
   })
 

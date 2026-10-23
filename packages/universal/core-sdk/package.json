@@ -113,8 +113,8 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 23200,
-        "index.mjs": 23100,
+        "index.cjs": 24200,
+        "index.mjs": 23500,
         "bridge-support.cjs": 1000,
         "bridge-support.mjs": 800,
         "runtime.cjs": 3700,

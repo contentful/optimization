@@ -17,6 +17,7 @@ export type EntryHoverTrackingCore = Pick<CoreStateful, 'trackHover'>
 
 export function createEntryHoverDetector(
   core: EntryHoverTrackingCore,
+  getResetToken?: () => object | undefined,
 ): EntryInteractionDetector<undefined, EntryHoverInteractionElementOptions> {
   return createTimedEntryDetector<
     EntryHoverTrackingCore,
@@ -26,6 +27,7 @@ export function createEntryHoverDetector(
     ElementHoverObserver
   >({
     core,
+    getResetToken,
     interaction: 'hovers',
     createObserver: (callback) => new ElementHoverObserver(callback),
     resolveAttributeOptions: (): undefined => undefined,

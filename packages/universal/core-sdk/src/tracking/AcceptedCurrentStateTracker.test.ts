@@ -91,6 +91,35 @@ describe('AcceptedCurrentStateTracker', () => {
     expect(emit).toHaveBeenCalledTimes(3)
   })
 
+  it('does not let an old completion settle a fresh attempt for the same key after reset', async () => {
+    const tracker = new AcceptedCurrentStateTracker<string>()
+    const old = deferred<{ accepted: true }>()
+    const fresh = deferred<{ accepted: true }>()
+    const emit = rs
+      .fn()
+      .mockReturnValueOnce(old.promise)
+      .mockReturnValueOnce(fresh.promise)
+      .mockResolvedValue({ accepted: true })
+    const oldAttempt = tracker.emitIfNeeded({ key: 'home', isAllowed: true, emit })
+    tracker.reset()
+    const freshAttempt = tracker.emitIfNeeded({ key: 'home', isAllowed: true, emit })
+    old.resolve({ accepted: true })
+    await oldAttempt
+    expect(tracker.hasAccepted()).toBe(false)
+    expect(await tracker.emitIfNeeded({ key: 'home', isAllowed: true, emit })).toEqual({
+      accepted: false,
+      attempted: false,
+    })
+    const rejection = expect(freshAttempt).rejects.toThrow('network')
+    fresh.reject(new Error('network'))
+    await rejection
+    expect(await tracker.emitIfNeeded({ key: 'home', isAllowed: true, emit })).toEqual({
+      accepted: true,
+      attempted: true,
+    })
+    expect(emit).toHaveBeenCalledTimes(3)
+  })
+
   it('does not call emit when tracking is not allowed', async () => {
     const tracker = new AcceptedCurrentStateTracker<string>()
     const emit = rs.fn().mockResolvedValue({ accepted: true })

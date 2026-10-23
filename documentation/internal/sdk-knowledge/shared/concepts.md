@@ -223,8 +223,31 @@ interceptors and schema validation; `states.blockedEventStream` emits only conse
 subscribe and then later signal updates; the exposed streams keep only the latest accepted or
 blocked event value while Experience/Insights delivery queues remain internal. A late subscriber
 must dedupe from the events it observes; the SDK does not replay a full event history through these
-observables. Blocked callback failures are logged rather than thrown.
-source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#signals/Observable.ts#toObservable; core-sdk#signals/signals.ts#event; core-sdk#signals/signals.ts#blockedEvent; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#queues/InsightsQueue.ts#InsightsQueue; core-sdk#events/BlockedEvent.ts#BlockedEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent
+observables. Blocked callback failures are logged rather than thrown. Event-stream subscriber
+failures during publication are logged without preventing API delivery or queue admission.
+source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#signals/Observable.ts#toObservable; core-sdk#signals/signals.ts#event; core-sdk#signals/signals.ts#blockedEvent; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#queues/InsightsQueue.ts#InsightsQueue; core-sdk#events/BlockedEvent.ts#BlockedEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent; core-sdk#queues/publishEventStream.ts#publishEventStream
+
+Observable subscription snapshot functions and callbacks run without reactive dependency tracking;
+reading another SDK state inside a subscriber does not subscribe that callback to the other state.
+source: core-sdk#signals/Observable.ts#toObservable
+
+Stateful runtime reset clears delivery queues, accepted flag-view deduplication, and volatile
+profile/event/request state. Reset, event-consent withdrawal, and destruction invalidate pending
+event work so stale completions cannot publish state into the current lifecycle. Event-consent
+withdrawal preserves accepted flag-view deduplication and the active in-memory profile. Queue purge
+and invalidation complete before consent subscribers observe withdrawal.
+source: core-sdk#CoreStateful.ts#CoreStateful; core-sdk#CoreStatefulEventEmitter.ts#CoreStatefulEventEmitter; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#queues/InsightsQueue.ts#InsightsQueue
+
+Each runtime owns its internal reactive effects and disposes them on destruction. Caller-created
+observable subscriptions retain their own unsubscribe handles. A fresh runtime clears event-attempt,
+blocked-event, and Experience-request diagnostics before publishing its initial state. Final
+Experience teardown delivery uses captured profile identity and does not publish response state.
+source: core-sdk#CoreStateful.ts#CoreStateful; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
+
+Insights flush sends a snapshot of queued events and removes only that snapshot after success;
+events appended during the request remain queued. Concurrent flush calls join the queue's active
+attempt rather than starting duplicate delivery.
+source: core-sdk#queues/InsightsQueue.ts#InsightsQueue; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 
 Event-stream payloads carry each event's normal schema plus universal event fields such as
 `messageId`, `channel`, `context`, and timestamps. Optimized-entry interactions add `optimization`
@@ -244,6 +267,8 @@ Consent-blocked stateful events stop before API delivery or queueing: Experience
 not replay blocked diagnostics or rebuild the blocked call. Current-page/screen trackers do not mark
 blocked attempts as accepted, so a later caller/effect can retry the same current key and build a
 fresh payload under the current consent state.
+Reset invalidates pending tracker attempts, so an older completion cannot accept or clear a newer
+attempt for the same page or screen key.
 source: core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent; core-sdk#CoreStateful.ts#consent; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage; optimization-js-bridge#index.ts#Bridge
 
 ## Experience response payload

@@ -437,11 +437,11 @@ the generated reference for the complete `states` surface.
 
 - Browser storage persistence is best-effort. If `localStorage` writes fail, the SDK continues with
   in-memory state and retries persistence on subsequent writes.
-- `reset()` clears internal state except consent and persistence consent. Use it when the active
-  profile changes.
+- `reset()` clears internal state and queued events except consent and persistence consent, and
+  prevents pending work from publishing stale state. Use it when the active profile changes.
 - `flush()` drains queued Insights API and Experience API events.
 - Browser lifecycle events use `navigator.sendBeacon()` for last-chance Insights delivery.
-- `destroy()` releases listeners and singleton ownership for explicit teardown paths such as tests
+- `destroy()` disposes internal reactive effects, releases listeners and singleton ownership for explicit teardown paths such as tests
   or hot-reload workflows.
 - Lifecycle interceptors exist for first-party SDK and preview-panel integration. Most application
   code does not need them directly.

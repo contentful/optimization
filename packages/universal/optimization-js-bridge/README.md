@@ -11,6 +11,9 @@ SDK (JavaScriptCore) and the native Android SDK (QuickJS). One bridge source wra
 `@contentful/optimization-core`, exposes an engine-friendly callback API, and keeps the shared
 optimization state machine available to native runtime code.
 
+Event-consent withdrawal discards queued work and resets current-screen admission before state
+subscribers run, so a discarded offline screen can be tracked again after consent is granted.
+
 ## When to use this package
 
 Use this package when changing the native bridge contract, callback payloads, preview override

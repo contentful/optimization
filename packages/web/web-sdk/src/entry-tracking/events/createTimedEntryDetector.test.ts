@@ -338,7 +338,61 @@ describe('createTimedEntryDetector', () => {
       core,
       expect.objectContaining({ componentId: 'entry-with-payload' }),
       info,
-      element,
+      { element, isCurrent: expect.any(Function) },
     )
+  })
+
+  it('ignores an old observer callback after a replacement starts', async () => {
+    const callbacks: Array<(element: Element, info: TestInfo) => Promise<void>> = []
+    const track = rs.fn(noopTrack)
+    const detector = createTimedEntryDetector({
+      core: {},
+      interaction: 'views',
+      createObserver: (callback: (element: Element, info: TestInfo) => Promise<void>) => {
+        callbacks.push(callback)
+        return makeObserver()
+      },
+      resolveAttributeOptions: () => undefined,
+      track,
+    })
+    const element = makeEntryElement()
+
+    detector.start()
+    detector.stop()
+    detector.start()
+    await callbacks[0]?.(element, {})
+    expect(track).not.toHaveBeenCalled()
+
+    await callbacks[1]?.(element, {})
+    expect(track).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets pending callbacks drain after manual stop until the runtime token changes', async () => {
+    let token: object | undefined = {}
+    let callback: ((element: Element, info: TestInfo) => Promise<void>) | undefined
+    const track = rs.fn(noopTrack)
+    const detector = createTimedEntryDetector({
+      core: {},
+      interaction: 'hovers',
+      getResetToken: () => token,
+      createObserver: (next: (element: Element, info: TestInfo) => Promise<void>) => {
+        callback = next
+        return makeObserver()
+      },
+      resolveAttributeOptions: () => undefined,
+      track,
+    })
+    const element = makeEntryElement()
+
+    detector.start()
+    detector.stop()
+    await callback?.(element, {})
+    expect(track).toHaveBeenCalledTimes(1)
+
+    token = {}
+    await callback?.(element, {})
+    token = undefined
+    await callback?.(element, {})
+    expect(track).toHaveBeenCalledTimes(1)
   })
 })

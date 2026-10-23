@@ -13,19 +13,90 @@ describe('QueueFlushRuntime', () => {
     rs.useRealTimers()
   })
 
-  it('skips flush while in flight and allows force bypass', () => {
+  it('joins an active attempt before evaluating gates and starts attempts synchronously', async () => {
     const runtime = new QueueFlushRuntime({
       policy: resolveQueueFlushPolicy(undefined),
       onRetry: rs.fn(),
     })
+    const pending = Promise.withResolvers<undefined>()
+    const attempt = rs.fn(async () => {
+      await pending.promise
+    })
+    const gates = { force: false, isOnline: true }
+    const first = runtime.runFlush(gates, attempt)
+    let joined = false
+    const second = runtime.runFlush({ force: false, isOnline: false }, attempt).then(() => {
+      joined = true
+    })
 
-    expect(runtime.shouldSkip({ force: false, isOnline: true })).toBe(false)
+    expect(attempt).toHaveBeenCalledTimes(1)
+    await Promise.resolve()
+    expect(joined).toBe(false)
+    pending.resolve(undefined)
+    await Promise.all([first, second])
+    expect(joined).toBe(true)
+  })
 
-    runtime.markFlushStarted()
-    expect(runtime.shouldSkip({ force: false, isOnline: true })).toBe(true)
+  it('reserves joining before synchronous attempt observers run', async () => {
+    const runtime = new QueueFlushRuntime({
+      policy: resolveQueueFlushPolicy(undefined),
+      onRetry: rs.fn(),
+    })
+    const pending = Promise.withResolvers<undefined>()
+    const unexpectedAttempt = rs.fn(async () => {
+      await Promise.resolve(undefined)
+    })
+    let joined: Promise<void> | undefined
+    const first = runtime.runFlush({ force: false, isOnline: true }, async () => {
+      joined = runtime.runFlush({ force: true, isOnline: true }, unexpectedAttempt)
+      await pending.promise
+    })
 
-    runtime.markFlushFinished()
-    expect(runtime.shouldSkip({ force: true, isOnline: false })).toBe(false)
+    expect(unexpectedAttempt).not.toHaveBeenCalled()
+    pending.resolve(undefined)
+    await first
+    await joined
+  })
+
+  it('detaches reset attempts without letting their completion clear a fresh attempt', async () => {
+    const runtime = new QueueFlushRuntime({
+      policy: resolveQueueFlushPolicy(undefined),
+      onRetry: rs.fn(),
+    })
+    const old = Promise.withResolvers<undefined>()
+    const fresh = Promise.withResolvers<undefined>()
+    const gates = { force: false, isOnline: true }
+    const first = runtime.runFlush(gates, async () => {
+      await old.promise
+    })
+    runtime.reset()
+    const second = runtime.runFlush(gates, async () => {
+      await fresh.promise
+    })
+    old.resolve(undefined)
+    await first
+
+    const unexpectedAttempt = rs.fn(async () => {
+      await Promise.resolve(undefined)
+    })
+    const third = runtime.runFlush(gates, unexpectedAttempt)
+    expect(unexpectedAttempt).not.toHaveBeenCalled()
+    fresh.resolve(undefined)
+    await Promise.all([second, third])
+  })
+
+  it('skips offline attempts and allows force bypass', async () => {
+    const runtime = new QueueFlushRuntime({
+      policy: resolveQueueFlushPolicy(undefined),
+      onRetry: rs.fn(),
+    })
+    const attempt = rs.fn(async () => {
+      await Promise.resolve(undefined)
+    })
+    await runtime.runFlush({ force: false, isOnline: false }, attempt)
+    expect(attempt).not.toHaveBeenCalled()
+    await runtime.runFlush({ force: true, isOnline: false }, attempt)
+    expect(attempt).toHaveBeenCalledTimes(1)
   })
 
   it('schedules retries and opens a circuit window at the failure threshold', async () => {
@@ -89,10 +160,15 @@ describe('QueueFlushRuntime', () => {
     })
 
     runtime.handleFlushFailure({ queuedBatches: 1, queuedEvents: 1 })
-    expect(runtime.shouldSkip({ force: false, isOnline: true })).toBe(true)
+    const attempt = rs.fn(async () => {
+      await Promise.resolve(undefined)
+    })
+    await runtime.runFlush({ force: false, isOnline: true }, attempt)
+    expect(attempt).not.toHaveBeenCalled()
 
     runtime.handleFlushSuccess()
-    expect(runtime.shouldSkip({ force: false, isOnline: true })).toBe(false)
+    await runtime.runFlush({ force: false, isOnline: true }, attempt)
+    expect(attempt).toHaveBeenCalledTimes(1)
     expect(onFlushRecovered).toHaveBeenCalledWith({ consecutiveFailures: 1 })
 
     await rs.advanceTimersByTimeAsync(10)

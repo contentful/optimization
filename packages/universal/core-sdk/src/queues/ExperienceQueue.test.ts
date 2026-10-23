@@ -2,6 +2,7 @@ import type {
   ExperienceEventArray,
   OptimizationData,
 } from '@contentful/optimization-api-client/api-schemas'
+import EventBuilder from '../events/EventBuilder'
 import { InterceptorManager } from '../lib/interceptor'
 import { resolveQueueFlushPolicy } from '../lib/queue'
 import {
@@ -20,7 +21,7 @@ const SAMPLE_DATA: OptimizationData = {
 }
 
 class ExperienceQueueTestHarness extends ExperienceQueue {
-  async invokeUpsert(events: ExperienceEventArray): Promise<OptimizationData> {
+  async invokeUpsert(events: ExperienceEventArray): Promise<OptimizationData | undefined> {
     return await this.upsertProfile(events)
   }
 }
@@ -65,6 +66,62 @@ const observeRequestState = (): {
 }
 
 describe('ExperienceQueue.experienceRequestState transitions', () => {
+  it('joins a queued flush until its transport settles', async () => {
+    let complete!: (data: OptimizationData) => void
+    const { queue, upsertProfile } = buildQueue({
+      upsertProfile: async () =>
+        await new Promise<OptimizationData>((resolve) => {
+          complete = resolve
+        }),
+    })
+    const builder = new EventBuilder({ channel: 'web', library: { name: 'test', version: '1' } })
+    onlineSignal.value = false
+    await queue.send(builder.buildPageView())
+    const first = queue.flush({ force: true })
+    let joined = false
+    const second = queue.flush({ force: true }).then(() => {
+      joined = true
+    })
+    await Promise.resolve()
+    expect(joined).toBe(false)
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+    complete(SAMPLE_DATA)
+    await Promise.all([first, second])
+    expect(joined).toBe(true)
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+  it('joins a flush requested by a pending-state subscriber before delivery starts', async () => {
+    const response = Promise.withResolvers<OptimizationData>()
+    const { queue, upsertProfile } = buildQueue({
+      upsertProfile: async () => await response.promise,
+    })
+    const builder = new EventBuilder({ channel: 'web', library: { name: 'test', version: '1' } })
+    onlineSignal.value = false
+    await queue.send(builder.buildPageView())
+    let joined = false
+    let second: Promise<void> | undefined
+    const unsubscribe = experienceRequestState.subscribe(({ status }) => {
+      if (status !== 'pending') return
+      second = queue.flush({ force: true }).then(() => {
+        joined = true
+      })
+    })
+
+    try {
+      const first = queue.flush({ force: true })
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+      await Promise.resolve()
+      expect(joined).toBe(false)
+      response.resolve(SAMPLE_DATA)
+      await first
+      await second
+      expect(joined).toBe(true)
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+    } finally {
+      unsubscribe()
+    }
+  })
+
   beforeEach(() => {
     experienceRequestState.value = { status: 'idle' }
     onlineSignal.value = true

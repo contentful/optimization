@@ -236,7 +236,8 @@ For each element, the runtime resolves tracking in this order:
 3. Global automatic tracking state and the element registry.
 
 `reset()` stops interaction trackers and clears manual element overrides. `destroy()` also
-disconnects DOM observers and browser lifecycle listeners.
+disconnects DOM observers and browser lifecycle listeners. Delayed view and hover callbacks from
+stopped tracking cannot emit into a replacement tracking lifecycle.
 
 ## DOM discovery
 
@@ -446,7 +447,9 @@ continuity.
 
 Insights events are queued by current profile ID and sent in batches. The queue flushes
 periodically, flushes when the queued event count reaches the batch threshold, and can be flushed
-explicitly with `optimization.flush()`.
+explicitly with `optimization.flush()`. Each flush sends a snapshot of the queued events; events
+added while that request is in flight stay queued after it succeeds. Concurrent flush calls wait for
+the active attempt rather than sending its events again.
 
 Experience events are sent immediately when the browser is online. When the browser is offline,
 Experience events are queued up to the configured offline maximum and replayed when the online

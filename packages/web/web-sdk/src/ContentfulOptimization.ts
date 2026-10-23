@@ -12,10 +12,12 @@
 
 import {
   AcceptedCurrentStateTracker,
+  batch,
   CoreStateful,
   effect,
   resolveStatefulDefaults,
   signals,
+  type ConsentInput,
   type CoreStatefulConfig,
   type EventEmissionResult,
   type PageViewBuilderArgs,
@@ -273,6 +275,8 @@ function canPersistDurableContinuity(persistenceConsent: boolean | undefined): b
 class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
   declare readonly [CORE_BRIDGE_CAPABILITIES_SYMBOL]: CoreBridgeCapabilities
 
+  private readonly browserEffects: Array<() => void> = []
+
   private readonly currentPageTracker = new AcceptedCurrentStateTracker<string>()
 
   /**
@@ -280,7 +284,7 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    *
    * @internal
    */
-  private readonly entryInteractionRuntime: EntryInteractionRuntime
+  private readonly entryInteractionRuntime?: EntryInteractionRuntime
   /**
    * Namespaced tracking controls for automatic and per-element entry interactions.
    *
@@ -300,14 +304,14 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    *
    * @internal
    */
-  private readonly cleanupOnlineListener: () => void
+  private readonly cleanupOnlineListener?: () => void
 
   /**
    * Cleanup function for visibility listener bindings.
    *
    * @internal
    */
-  private readonly cleanupVisibilityListener: () => void
+  private readonly cleanupVisibilityListener?: () => void
 
   /**
    * Create a new ContentfulOptimization Web SDK instance.
@@ -337,90 +341,114 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
     const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
     super(mergedConfig)
-    clearProfilelessHandoffDurableContinuity()
+    try {
+      clearProfilelessHandoffDurableContinuity()
 
-    const canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent === true
-    const { cookieValue, legacyCookieValue } = readInitialCookieValues(canLoadPersistedContinuity)
+      const canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent === true
+      const { cookieValue, legacyCookieValue } = readInitialCookieValues(canLoadPersistedContinuity)
 
-    const entryInteractionRuntime = new EntryInteractionRuntime(this, autoTrackEntryInteraction)
-    const { tracking } = entryInteractionRuntime
-    this.entryInteractionRuntime = entryInteractionRuntime
-    this.tracking = tracking
+      const entryInteractionRuntime = new EntryInteractionRuntime(
+        this,
+        autoTrackEntryInteraction,
+        () => this.getRuntimeResetToken(),
+      )
+      const { tracking } = entryInteractionRuntime
+      this.entryInteractionRuntime = entryInteractionRuntime
+      this.tracking = tracking
 
-    this.cookieAttributes = {
-      domain: mergedConfig.cookie?.domain,
-      expires: mergedConfig.cookie?.expires ?? EXPIRATION_DAYS_DEFAULT,
+      this.cookieAttributes = {
+        domain: mergedConfig.cookie?.domain,
+        expires: mergedConfig.cookie?.expires ?? EXPIRATION_DAYS_DEFAULT,
+      }
+
+      this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
+        this.online = isOnline
+      })
+
+      this.cleanupVisibilityListener = createVisibilityChangeListener(async () => {
+        await entryInteractionRuntime.endActiveInteractions()
+        await this.flushQueues({ force: true, beacon: beaconHandler })
+      })
+
+      this.initializeBrowserEffects()
+
+      this.initializeFromCookieValues(cookieValue, legacyCookieValue)
+
+      if (typeof window !== 'undefined') window.contentfulOptimization ??= this
+    } catch (error) {
+      this.destroy()
+      throw error
     }
+  }
 
-    this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
-      this.online = isOnline
-    })
+  private initializeBrowserEffects(): void {
+    this.browserEffects.push(
+      effect(() => {
+        const {
+          changes: { value },
+          persistenceConsent: { value: persistenceConsent },
+        } = signals
 
-    this.cleanupVisibilityListener = createVisibilityChangeListener(async () => {
-      await this.entryInteractionRuntime.endActiveInteractions()
-      await this.flushQueues({ force: true, beacon: beaconHandler })
-    })
+        if (canPersistDurableContinuity(persistenceConsent)) LocalStore.changes = value
+      }),
+    )
 
-    effect(() => {
-      const {
-        changes: { value },
-        persistenceConsent: { value: persistenceConsent },
-      } = signals
+    this.browserEffects.push(
+      effect(() => {
+        const {
+          consent: { value },
+        } = signals
 
-      if (canPersistDurableContinuity(persistenceConsent)) LocalStore.changes = value
-    })
+        this.entryInteractionRuntime?.syncAutoTrackedEntryInteractions()
+        LocalStore.consent = value
+      }),
+    )
 
-    effect(() => {
-      const {
-        consent: { value },
-      } = signals
+    this.browserEffects.push(
+      effect(() => {
+        const {
+          persistenceConsent: { value },
+        } = signals
 
-      this.entryInteractionRuntime.syncAutoTrackedEntryInteractions()
-      LocalStore.consent = value
-    })
+        LocalStore.persistenceConsent = value
+        if (value === true) this.initializeFromCurrentCookieValues()
+        if (value === false) {
+          removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
+          removeCookie(ANONYMOUS_ID_COOKIE_LEGACY, this.cookieAttributes)
+          LocalStore.clearProfileContinuity()
+        }
+      }),
+    )
 
-    effect(() => {
-      const {
-        persistenceConsent: { value },
-      } = signals
+    this.browserEffects.push(
+      effect(() => {
+        const {
+          persistenceConsent: { value: persistenceConsent },
+          profile: { value },
+        } = signals
 
-      LocalStore.persistenceConsent = value
-      if (value === true) this.initializeFromCurrentCookieValues()
-      if (value === false) {
-        removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
-        removeCookie(ANONYMOUS_ID_COOKIE_LEGACY, this.cookieAttributes)
-        LocalStore.clearProfileContinuity()
-      }
-    })
+        if (value !== undefined && !isDurableContinuityPersistenceSuppressed()) {
+          clearProfilelessHandoffDurableContinuity()
+        }
 
-    effect(() => {
-      const {
-        persistenceConsent: { value: persistenceConsent },
-        profile: { value },
-      } = signals
+        if (persistenceConsent !== true) return
 
-      if (value !== undefined && !isDurableContinuityPersistenceSuppressed()) {
-        clearProfilelessHandoffDurableContinuity()
-      }
+        LocalStore.profile = value
+        this.setAnonymousId(value?.id ?? LocalStore.anonymousId)
+      }),
+    )
 
-      if (persistenceConsent !== true) return
+    this.browserEffects.push(
+      effect(() => {
+        const {
+          persistenceConsent: { value: persistenceConsent },
+          selectedOptimizations: { value },
+        } = signals
 
-      LocalStore.profile = value
-      this.setAnonymousId(value?.id ?? LocalStore.anonymousId)
-    })
-
-    effect(() => {
-      const {
-        persistenceConsent: { value: persistenceConsent },
-        selectedOptimizations: { value },
-      } = signals
-
-      if (canPersistDurableContinuity(persistenceConsent)) LocalStore.selectedOptimizations = value
-    })
-
-    this.initializeFromCookieValues(cookieValue, legacyCookieValue)
-
-    if (typeof window !== 'undefined') window.contentfulOptimization ??= this
+        if (canPersistDurableContinuity(persistenceConsent))
+          LocalStore.selectedOptimizations = value
+      }),
+    )
   }
 
   private initializeFromCurrentCookieValues(): void {
@@ -489,12 +517,30 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    * @public
    */
   reset(): void {
+    if (this.getRuntimeResetToken() === undefined) return
     this.currentPageTracker.reset()
-    this.entryInteractionRuntime.reset()
+    this.entryInteractionRuntime?.reset()
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
     clearProfilelessHandoffDurableContinuity()
     super.reset()
+  }
+
+  override consent(accept: ConsentInput): void {
+    if (this.getRuntimeResetToken() === undefined) return
+    const events = typeof accept === 'boolean' ? accept : accept.events
+    const persistence = typeof accept === 'boolean' ? accept : accept.persistence
+
+    batch(() => {
+      // Persist explicit decisions before subscribers can dispose browser effects.
+      if (events !== undefined) LocalStore.consent = events
+      if (persistence !== undefined) LocalStore.persistenceConsent = persistence
+      super.consent(accept)
+      if (events === false) {
+        this.currentPageTracker.reset()
+        this.entryInteractionRuntime?.restartCurrentInteractions()
+      }
+    })
   }
 
   /**
@@ -538,16 +584,21 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    * clear persisted user state.
    */
   destroy(): void {
-    this.entryInteractionRuntime.destroy()
-    this.cleanupOnlineListener()
-    this.cleanupVisibilityListener()
-    clearProfilelessHandoffDurableContinuity()
+    if (this.getRuntimeResetToken() === undefined) return
 
-    if (typeof window !== 'undefined' && window.contentfulOptimization === this) {
-      delete window.contentfulOptimization
+    try {
+      for (const dispose of this.browserEffects.splice(0)) dispose()
+      this.entryInteractionRuntime?.destroy()
+      this.cleanupOnlineListener?.()
+      this.cleanupVisibilityListener?.()
+      clearProfilelessHandoffDurableContinuity()
+
+      if (typeof window !== 'undefined' && window.contentfulOptimization === this) {
+        delete window.contentfulOptimization
+      }
+    } finally {
+      super.destroy()
     }
-
-    super.destroy()
   }
 }
 

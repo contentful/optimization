@@ -209,6 +209,9 @@ let statefulInstanceCounter = 0
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
+  private destroying = false
+  private resetToken: object = {}
+  private readonly coreEffects: Array<() => void> = []
   protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
@@ -276,18 +279,25 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
         insightsApi: this.api.insights,
+        getResetToken: () => this.getRuntimeResetToken(),
       })
       this.experienceQueue = new ExperienceQueue({
         experienceApi: this.api.experience,
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
         getAnonymousId: getAnonymousId ?? (() => undefined),
+        getResetToken: () => this.getRuntimeResetToken(),
         offlineMaxEvents: resolvedQueuePolicy.offlineMaxEvents,
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
-      installCoreBridgeCapabilities(this, this.interceptors.state)
+      installCoreBridgeCapabilities(this, this.interceptors.state, () =>
+        this.getRuntimeResetToken(),
+      )
       batch(() => {
+        blockedEventSignal.value = undefined
+        eventSignal.value = undefined
+        experienceRequestStateSignal.value = { status: 'idle' }
         consentSignal.value = defaultConsent
         persistenceConsentSignal.value = defaultPersistenceConsent ?? defaultConsent
         changesSignal.value = defaultChanges
@@ -297,6 +307,8 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
       this.initializeEffects()
     } catch (error) {
+      this.destroyed = true
+      this.disposeRuntimeEffects()
       releaseStatefulRuntimeSingleton(this.singletonOwner)
       throw error
     }
@@ -305,47 +317,77 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   private initializeEffects(): void {
     this.initializeFlagViewConsentEffect()
 
-    effect(() => {
-      coreLogger.debug(
-        `Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.debug(
+          `Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
+        )
+      }),
+    )
 
-    effect(() => {
-      coreLogger.debug(
-        `Variants have been ${selectedOptimizationsSignal.value?.length ? 'populated' : 'cleared'}`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.debug(
+          `Variants have been ${selectedOptimizationsSignal.value?.length ? 'populated' : 'cleared'}`,
+        )
+      }),
+    )
 
-    effect(() => {
-      coreLogger.info(
-        `Core ${consentSignal.value ? 'will' : 'will not'} emit gated events due to consent (${consentSignal.value})`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.info(
+          `Core ${consentSignal.value ? 'will' : 'will not'} emit gated events due to consent (${consentSignal.value})`,
+        )
+      }),
+    )
 
-    effect(() => {
-      coreLogger.info(
-        `Core ${persistenceConsentSignal.value ? 'will' : 'will not'} persist profile continuity due to persistence consent (${persistenceConsentSignal.value})`,
-      )
-    })
+    this.registerRuntimeEffect(
+      effect(() => {
+        coreLogger.info(
+          `Core ${persistenceConsentSignal.value ? 'will' : 'will not'} persist profile continuity due to persistence consent (${persistenceConsentSignal.value})`,
+        )
+      }),
+    )
 
-    effect(() => {
-      if (!onlineSignal.value) return
+    this.registerRuntimeEffect(
+      effect(() => {
+        if (!onlineSignal.value || this.destroyed) return
 
-      this.insightsQueue.clearScheduledRetry()
-      this.experienceQueue.clearScheduledRetry()
-      void this.flushQueues({ force: true })
-    })
+        this.insightsQueue.clearScheduledRetry()
+        this.experienceQueue.clearScheduledRetry()
+        void this.flushQueues({ force: true })
+      }),
+    )
+  }
+
+  protected registerRuntimeEffect(dispose: () => void): void {
+    this.coreEffects.push(dispose)
+  }
+
+  private disposeRuntimeEffects(): void {
+    for (const dispose of this.coreEffects.splice(0)) dispose()
   }
 
   protected async flushQueues(
     options: { force?: boolean } & InsightsApiClientRequestOptions = {},
   ): Promise<void> {
+    const token = this.getRuntimeResetToken()
+    if (token === undefined) return
     await this.insightsQueue.flush(options)
-    await this.experienceQueue.flush(options)
+    if (this.isRuntimeCurrent(token)) await this.experienceQueue.flush(options)
   }
 
-  private clearQueuedEvents(): void {
+  protected getRuntimeResetToken(): object | undefined {
+    return this.destroyed ? undefined : this.resetToken
+  }
+
+  protected isRuntimeCurrent(token: object | undefined): boolean {
+    return token !== undefined && token === this.getRuntimeResetToken()
+  }
+
+  private clearQueuedEvents(clearAcceptedFlagViews = false): void {
+    this.resetToken = {}
+    this.clearFlagViewTracking(clearAcceptedFlagViews)
     this.insightsQueue.clearQueuedEvents()
     this.experienceQueue.clearQueuedEvents()
   }
@@ -434,24 +476,29 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   destroy(): void {
-    if (this.destroyed) return
+    if (this.destroyed || this.destroying) return
+    this.destroying = true
 
-    this.destroyed = true
     this.optimizationContexts.clear()
     void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
       logger.warn('Failed to flush insights queue during destroy()', String(error))
     })
-    void this.experienceQueue.flush({ force: true }).catch((error: unknown) => {
+    void this.experienceQueue.flushOnDestroy().catch((error: unknown) => {
       logger.warn('Failed to flush Experience queue during destroy()', String(error))
     })
+    this.destroyed = true
+    this.disposeRuntimeEffects()
     this.insightsQueue.clearPeriodicFlushTimer()
+    this.insightsQueue.clearScheduledRetry()
 
     releaseStatefulRuntimeSingleton(this.singletonOwner)
   }
 
   reset(): void {
+    if (this.destroyed) return
     this.optimizationContexts.clear()
     batch(() => {
+      this.clearQueuedEvents(true)
       blockedEventSignal.value = undefined
       eventSignal.value = undefined
       changesSignal.value = undefined
@@ -466,6 +513,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   consent(accept: ConsentInput): void {
+    if (this.destroyed) return
     const isBoolean = typeof accept === 'boolean'
     const eventConsent = isBoolean ? accept : accept.events
     const persistenceConsent = isBoolean ? accept : accept.persistence
@@ -473,9 +521,11 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     batch(() => {
       if (eventConsent !== undefined) consentSignal.value = eventConsent
       if (persistenceConsent !== undefined) persistenceConsentSignal.value = persistenceConsent
+      if (eventConsent === false) {
+        this.clearQueuedEvents()
+        experienceRequestStateSignal.value = { status: 'idle' }
+      }
     })
-
-    if (eventConsent === false) this.clearQueuedEvents()
   }
 
   /**

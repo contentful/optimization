@@ -50,8 +50,32 @@ const PROFILE_RESPONSE = {
 describe('bridge contract', () => {
   afterEach(() => {
     bridge.destroy()
+    bridge.setOnline(true)
     rs.restoreAllMocks()
     rs.unstubAllGlobals()
+  })
+
+  it('can admit the same current screen after withdrawal discards its offline event', async () => {
+    const fetchMock = rs.fn<typeof fetch>(
+      async () => new Response(JSON.stringify(PROFILE_RESPONSE)),
+    )
+    rs.stubGlobal('fetch', fetchMock)
+    bridge.initialize({ spaceId: 'test-client', environment: 'main', defaults: { consent: true } })
+    bridge.setOnline(false)
+    const trackScreen = async (): Promise<unknown> =>
+      await new Promise((resolve, reject) => {
+        bridge.trackCurrentScreen(
+          { name: 'Home', routeKey: '/home' },
+          (json) => resolve(JSON.parse(json)),
+          (error) => reject(new Error(error)),
+        )
+      })
+    expect(await trackScreen()).toEqual({ accepted: true })
+    bridge.consent(false)
+    bridge.consent(true)
+    expect(await trackScreen()).toEqual({ accepted: true })
+    expect(fetchMock).not.toHaveBeenCalled()
+    bridge.consent(false)
   })
 
   it('installs a callable bridge object on globalThis', () => {

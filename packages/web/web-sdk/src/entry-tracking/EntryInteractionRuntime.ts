@@ -181,13 +181,14 @@ export class EntryInteractionRuntime {
   public constructor(
     core: EntryInteractionRuntimeCore,
     autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions,
+    getResetToken?: () => object | undefined,
   ) {
     this.core = core
 
     this.entryInteractionDetectors = {
       clicks: createEntryClickDetector(core),
-      views: createEntryViewDetector(core),
-      hovers: createEntryHoverDetector(core),
+      views: createEntryViewDetector(core, getResetToken),
+      hovers: createEntryHoverDetector(core, getResetToken),
     }
     this.autoTrack = resolveAutoTrackEntryInteractionOptions(autoTrackEntryInteraction)
 
@@ -223,6 +224,11 @@ export class EntryInteractionRuntime {
     this.stopAllEntryInteractions()
     this.clearAllElementOverrides()
     this.stopEntryElementObservation()
+  }
+
+  public restartCurrentInteractions(): void {
+    this.stopAllEntryInteractions()
+    this.reconcileAllInteractions()
   }
 
   public syncAutoTrackedEntryInteractions(): void {
