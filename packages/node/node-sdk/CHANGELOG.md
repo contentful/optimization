@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.2](https://github.com/contentful/optimization/compare/optimization-node-v2.1.1...optimization-node-v2.1.2) (2026-10-23)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.1.2
+
 ## [2.1.1](https://github.com/contentful/optimization/compare/optimization-node-v2.1.0...optimization-node-v2.1.1) (2026-10-21)
 
 ### Dependencies
