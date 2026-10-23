@@ -38,12 +38,16 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
   Passing replacement `api` or `api.location` props through the root/provider after mounting does
   not reconfigure the live SDK's default; this follows the
   [Web initialization contract](./web.md#setup--initialization-and-binding).
-  source: react-web-sdk#root/OptimizationRoot.tsx#DefaultOptimizationRoot; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; kb:web/web.md
+  source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; kb:web/web.md
 - Configure by passing props directly to `OptimizationRoot`; mount it exactly once around the subtree
   that uses the SDK. It composes `OptimizationProvider` + `LiveUpdatesProvider`, creates the Web SDK
-  instance after React commits, and destroys it on unmount.
+  instance after React commits, and destroys it on unmount. Route and handoff changes retain the same
+  provider, live SDK, and descendant component lifetimes. The initial render captures whether to run
+  `beforeInitialPage`; an initial prepared replay bypasses that callback for the retained root
+  lifetime, and later routes use replay admission or ordinary page tracking through the same runtime.
   source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot
-- An owned root with `beforeInitialPage` resolves its watchdog before mounting the provider.
+- An owned root that selects `beforeInitialPage` on its initial render resolves its watchdog before
+  mounting the provider.
   Omission uses 3,000 ms, and positive finite configured values are accepted. `0`, negative values,
   `NaN`, and either infinity synchronously throw
   `TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')`; the provider,
@@ -216,27 +220,31 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   retryable, and a distinct preparation can initialize. The Web SDK owns consent admission and route
   deduplication.
   source: react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#trackCurrentPage
-- A plain `OptimizationRoot` mounts its initial page emitter only when a handoff is present. Supplying
+- A plain `OptimizationRoot` enables its initial page emitter only when a handoff is present. Supplying
   a matching replay or an explicit root payload enables that emitter. Without either, the child
   tracker owns fallback page construction, including its custom payload properties. Supplying
   `routeKey` and `buildPagePayload` without a handoff does not emit a page by itself; a mounted
-  auto-page tracker owns ordinary initial and later route events. A root configured with
-  `beforeInitialPage` follows its separate callback and direct-page sequence instead.
-  source: react-web-sdk#root/OptimizationRoot.tsx#DefaultOptimizationRoot; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+  auto-page tracker owns ordinary initial and later route events. A root that initially selects
+  `beforeInitialPage` gates later emissions on its callback/direct-page sequence or matching replay takeover.
+  source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
 - A root with `beforeInitialPage` invokes the callback only after its owned runtime is live, once per
   retained root lifetime, with receiver-safe bound `identify`, `screen`, and `track` delegates. It
-  awaits only returned work or the watchdog, then reads the latest route and payload builder for one
-  direct page attempt. A root with a prepared replay uses the normal handoff path instead of this
+  awaits returned work or the watchdog, then reads the latest route and payload builder for one
+  direct page attempt. A matching replay arriving while the callback is pending releases readiness
+  and starts replay admission through the same SDK without waiting for callback completion or the watchdog.
+  Callback work continues, but its eventual settlement or rejection cannot emit the superseded
+  direct page or duplicate replay. This takeover applies only before the direct page attempt starts.
+  A root initially supplied a prepared replay uses the normal handoff path instead of this
   callback sequence. After the direct attempt settles, including rejection or
-  `{ accepted: false }`, readiness activates the existing emitter with one non-emitting `skip` mark
-  for the attempted route. This root owns the page sequence for its subtree; a separate auto-page
+  `{ accepted: false }`, readiness becomes true while the emitter suppresses a repeat for
+  the attempted route until a later route change. This root owns the page sequence for its subtree; a separate auto-page
   tracker is a second page owner.
-  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#createBeforeInitialPageClient; react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence; react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#createBeforeInitialPageClient; react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence; react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
 - A route change after the direct page attempt starts neither cancels that attempt nor starts a
   competing page attempt. The root settles and marks the captured attempted route before enabling
   later page emission; a route observed only during the in-flight attempt is not emitted, while a
   route change after readiness emits normally.
-  source: react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+  source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
 - `getPagePayload` receives `{ context, routeKey, isInitialEmission }`; React Router `context` has
   `pathname`. It returns `AutoPagePayload | undefined`, the argument shape accepted by `sdk.page()`.
   Put application-specific route values under `properties` rather than returning arbitrary
@@ -333,14 +341,14 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   all-locale payloads: see
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
   source: react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry; concept:entry-personalization-and-variant-resolution
-- A callback throw, returned-work rejection, or watchdog expiry is reported through `onError` when
-  supplied and logged otherwise. While the root remains mounted on the same runtime, the direct page
-  is still attempted. A throwing `onError` and page rejection are caught and logged; page rejection
+- Before matching replay takeover, a callback throw, returned-work rejection, or watchdog expiry is reported through `onError` when
+  supplied and logged otherwise. While the root remains mounted on the same runtime and the callback
+  has not been superseded by matching replay, the direct page is still attempted. A throwing `onError` and page rejection are caught and logged; page rejection
   and `{ accepted: false }` both release readiness. The watchdog does not cancel callback work or
   requests, and fire-and-forget work is not awaited. If the root unmounts or its live owned runtime
   is no longer current, this sequence suppresses only unsent local page/readiness continuation; it
   does not cancel callback or page work it already started.
-  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence
+  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence
 - If owned SDK construction succeeds but initial handoff hydration fails, the provider retains the
   live runtime and publishes the error. This retention applies only to the owned-runtime path.
   source: react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider
