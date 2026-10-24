@@ -1097,6 +1097,34 @@ request default, pass `experienceOptions: { location: {} }`. For how omitted and
 If both `locale` and `experienceOptions.locale` are supplied to `forRequest()`, the request-scoped
 top-level `locale` wins.
 
+For a custom integration that needs to inspect or prepare a payload before sending it, use
+`requestOptimization.eventBuilder`. It applies this request's event context and locale defaults
+before constructing the event. The singleton's `optimization.eventBuilder` is unbound to requests.
+For normal submission, use direct request methods such as `identify()` and `page()`.
+
+Construction does not check whether consent permits the event, apply request consent metadata,
+run event interceptors (callbacks that transform events before sending), send the event, or update the request profile or selections. The built
+event's `context.gdpr.isConsentGiven` comes from the shared builder and is `false` in Node, even
+with request consent. If you send the payload through a low-level API, your application owns request
+consent enforcement and submission processing; the request client does not apply them automatically.
+
+This snippet uses the request client above and the app-owned identity helper from
+[Identify known users](#identify-known-users). Place it inside the request handler where your custom
+integration needs the payload; it constructs an event even when the request's event consent is false.
+
+**Adapt this to your use case:**
+
+```ts
+const userId = getAuthenticatedUserId(req)
+const identifyEvent = userId
+  ? requestOptimization.eventBuilder.buildIdentify({ userId })
+  : undefined
+```
+
+When `userId` exists, inspect `identifyEvent.context` to verify the request locale, page, and user
+agent are present. Building the payload alone makes no API request. For merge precedence and builder
+defaults, see [Event paths](../concepts/interaction-tracking-in-node-and-stateless-environments.md#event-paths).
+
 ### Keep caches safe for personalized rendering
 
 **Integration category:** Advanced or production-only

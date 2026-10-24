@@ -160,6 +160,19 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   the `page.*` object from its own incoming request (URL, headers, parsed query); the SDK does not
   derive or infer any `page.*` field from the request — it only receives what the app passes.
   source: core-sdk#CoreStatelessRequest.ts#withEventContext; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs; api-client#schemas/experience/event/properties/Page.ts#Page
+- Request `eventBuilder` construction delegates to the shared Core builder after applying request
+  event context. The merge is shallow: explicit arguments, including `undefined`, replace matching
+  request values before builder defaults and inference run. Explicit `page` and `campaign` replace
+  the whole corresponding request value. Page-event `properties` still merge with builder page
+  defaults separately from `context.page`; request context does not become page-event properties.
+  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#withEventContext; core-sdk#events/EventBuilder.ts#buildPageView; core-sdk#events/EventBuilder.ts#buildUniversalEventProperties
+- Request `eventBuilder` construction does not submit, consent-gate, apply request consent metadata,
+  invoke submission interceptors, or update the request profile or selections. Shared builder
+  configuration and providers supply metadata and defaults; `context.gdpr.isConsentGiven` follows
+  the underlying builder (`false` for Node), independent of request consent. Low-level API calls
+  with built events do not automatically run request submission processing. Direct request event
+  methods apply request consent and submission processing. The singleton `eventBuilder` is unbound.
+  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#sendExperienceEvent; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent; core-sdk#events/EventBuilder.ts#buildUniversalEventProperties; node-sdk#ContentfulOptimization.ts#ContentfulOptimization
 
 ## Consent & persistence
 
@@ -182,8 +195,9 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent
 - Locale precedence: when `forRequest()` receives both a top-level `locale` and
   `experienceOptions.locale`, the top-level request `locale` wins — the constructor rewrites
-  `experienceOptions.locale` (and `eventContext.locale`) to the normalized request locale.
-  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#locale.ts#normalizeExplicitLocale
+  `experienceOptions.locale` (and `eventContext.locale`) to the normalized request locale. Per-event
+  arguments override that event-context default, including through the request `eventBuilder`.
+  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#withEventContext; core-sdk#locale.ts#normalizeExplicitLocale
 - Request-scoped API options: `experienceOptions` (`CoreStatelessRequestOptions`: `ip`, `locale`,
   `plainText`, `preflight`) and `insightsOptions` (`CoreStatelessInsightsOptions`: `beacon`) apply only
   to that request's calls.

@@ -3,7 +3,12 @@ import type { ChainModifiers, Entry, EntryFieldTypes, EntrySkeletonType } from '
 import { isEntryOfContentType } from './api-schemas'
 import { OPTIMIZATION_NODE_SDK_NAME } from './constants'
 import ContentfulOptimization, { type OptimizationNodeConfig } from './ContentfulOptimization'
-import type { EntryFor, FetchOptimizedEntryResult } from './core-sdk'
+import type {
+  CoreStatelessRequestEventBuilder,
+  EntryFor,
+  EventBuilder,
+  FetchOptimizedEntryResult,
+} from './core-sdk'
 
 type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
 type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
@@ -45,6 +50,29 @@ function compileNodeResolvedEntryTypes(
 }
 
 void compileNodeResolvedEntryTypes
+
+function compileNodeRequestEventBuilderTypes(node: ContentfulOptimization): void {
+  const builder: CoreStatelessRequestEventBuilder = node.forRequest({ consent: true }).eventBuilder
+  const identify: ReturnType<EventBuilder['buildIdentify']> = builder.buildIdentify({
+    userId: 'user',
+  })
+  const page: ReturnType<EventBuilder['buildPageView']> = builder.buildPageView()
+  const pageWithUndefined: ReturnType<EventBuilder['buildPageView']> =
+    builder.buildPageView(undefined)
+  const screen: ReturnType<EventBuilder['buildScreenView']> = builder.buildScreenView({
+    name: 'screen',
+    properties: {},
+  })
+  const track: ReturnType<EventBuilder['buildTrack']> = builder.buildTrack({ event: 'purchase' })
+
+  void identify
+  void page
+  void pageWithUndefined
+  void screen
+  void track
+}
+
+void compileNodeRequestEventBuilderTypes
 
 const SPACE_ID = 'key_123'
 const ENVIRONMENT = 'main'

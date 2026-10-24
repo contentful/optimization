@@ -1,4 +1,4 @@
-import { cloneDeep } from 'es-toolkit'
+import { cloneDeep } from 'es-toolkit/object'
 
 /**
  * A utility type representing a value that can be synchronously available or

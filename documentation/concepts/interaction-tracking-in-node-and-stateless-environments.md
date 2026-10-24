@@ -69,8 +69,8 @@ interaction decides which facts are available.
 
 Apply these constraints before choosing server-only, hybrid, or manual tracking:
 
-- Consent is application policy. The SDK blocks events unless consent or `allowedEventTypes` permits
-  the event type.
+- Consent is application policy. SDK event-emitting methods block submission unless consent or
+  `allowedEventTypes` permits the event type.
 - Persistence consent decides whether profile continuity can survive beyond the current runtime.
   Persist `ctfl-opt-aid`, browser profile state, selected optimizations, and changes only when that
   policy permits durable continuity.
@@ -147,14 +147,42 @@ In practice, the application must supply:
 - user agent and optional IP override when server-side evaluation needs client request metadata
 - the selected entry metadata needed for entry interaction events
 
-The stateless methods are side-effecting API calls, not cacheable reads. Cache raw Contentful
+The stateless event-emitting methods are side-effecting API calls, not cacheable reads. Cache raw Contentful
 delivery payloads and resolve them per request. Do not cache `page()`, `identify()`, `track()`,
 `screen()`, `trackView()`, `trackClick()`, `trackHover()`, or `trackFlagView()` responses as if they
 were pure data lookups.
 
 ## Event paths
 
-Tracking uses two API paths with different semantics:
+For custom Node or stateless Core integrations, the request client's readonly `eventBuilder` facade
+constructs identify, page, screen, and track payloads with request context applied before building.
+The singleton's `optimization.eventBuilder` is unbound to any request. Use direct request event
+methods for normal submission; construction alone does not deliver or evaluate an event.
+
+Request context and explicit builder arguments merge shallowly: arguments replace matching request
+values, including explicit `undefined`, before the shared builder applies its defaults and inference.
+Passing `page` or `campaign` replaces that entire request value rather than merging its fields.
+An explicit `undefined` replaces the request value in the builder input, so builder fallback or
+inference can supply a value. The normalized top-level `forRequest({ locale })` overrides
+`eventContext.locale` and `experienceOptions.locale`; per-event arguments can override that event
+locale default.
+
+Page-event `properties` and `context.page` remain separate. `buildPageView()` merges `properties`
+with the shared builder's page defaults. Request `eventContext.page` supplies context, not page-event
+properties; an explicit `page` argument replaces that context value. See
+[Campaign attribution in event context](./core-state-management.md#campaign-attribution-in-event-context)
+for how the builder chooses campaign metadata from page URLs.
+
+Construction does not check consent admission, apply request consent metadata, invoke submission
+interceptors, submit the event, or update the request profile or selections. Shared builder
+configuration and providers still supply defaults and metadata. In particular,
+`context.gdpr.isConsentGiven` follows the builder's consent provider, which returns `false` in Node,
+even when request consent is granted. Sending a built payload through a low-level API does not
+automatically apply request consent or request submission processing: the caller owns those steps.
+For a construction example, see
+[Control pre-consent event admission and request options](../guides/integrating-the-node-sdk-in-a-node-app.md#control-pre-consent-event-admission-and-request-options).
+
+Direct request event methods use two API paths with different semantics:
 
 | Path           | Methods                                                                     | Purpose                                                                 | Profile behavior                                                                        |
 | -------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
