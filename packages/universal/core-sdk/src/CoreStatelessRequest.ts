@@ -21,6 +21,7 @@ import { PartialProfile, type OptimizationData } from './api-schemas'
 import type {
   AllowedEventType,
   ClickBuilderArgs,
+  EventBuilder,
   EventEmissionResult,
   FlagViewBuilderArgs,
   HoverBuilderArgs,
@@ -60,6 +61,18 @@ export type CoreStatelessRequestConsent =
       /** Whether profile continuity may be persisted by the host application. */
       persistence?: boolean
     }
+
+/**
+ * Personalization event construction with request context applied before building.
+ *
+ * @remarks
+ * Building does not submit events or apply request consent and submission processing.
+ *
+ * @public
+ */
+export type CoreStatelessRequestEventBuilder = Readonly<
+  Pick<EventBuilder, 'buildIdentify' | 'buildPageView' | 'buildScreenView' | 'buildTrack'>
+>
 
 /**
  * Options used to bind stateless SDK calls to an incoming request.
@@ -160,6 +173,21 @@ export class CoreStatelessRequest {
   private readonly insightsOptions: CoreStatelessInsightsOptions | undefined
   private readonly requestLocale: string | undefined
   readonly canPersistProfile: boolean
+
+  /**
+   * Build Personalization events with this request's context and locale defaults.
+   *
+   * @remarks
+   * Explicit event arguments override request context, including explicit `undefined`.
+   * Construction does not perform consent admission, invoke interceptors, submit events,
+   * or update request state. Use the direct request methods for SDK-managed submission.
+   */
+  readonly eventBuilder: CoreStatelessRequestEventBuilder = {
+    buildIdentify: (args) => this.core.eventBuilder.buildIdentify(this.withEventContext(args)),
+    buildPageView: (args = {}) => this.core.eventBuilder.buildPageView(this.withEventContext(args)),
+    buildScreenView: (args) => this.core.eventBuilder.buildScreenView(this.withEventContext(args)),
+    buildTrack: (args) => this.core.eventBuilder.buildTrack(this.withEventContext(args)),
+  }
 
   constructor(core: CoreStateless, options: CoreStatelessForRequestOptions) {
     const { consent, eventContext, experienceOptions, insightsOptions, locale, profile } = options

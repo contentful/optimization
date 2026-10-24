@@ -2,7 +2,7 @@ import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import type { OptimizationData } from './api-schemas'
 import type { ContentfulEntryClient, ContentfulEntryQuery } from './CoreBase'
 import CoreStateless from './CoreStateless'
-import type { BlockedEvent } from './events'
+import { DEFAULT_PAGE_PROPERTIES, type BlockedEvent, type EventBuilder } from './events'
 import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { selectedOptimizations } from './test/fixtures/selectedOptimizations'
 
@@ -148,6 +148,188 @@ describe('CoreStateless', () => {
 
     expect(core.locale).toBeUndefined()
     expect(Reflect.get(core.api.experience, 'locale')).toBeUndefined()
+  })
+
+  it('binds construction context per request without changing the shared builder', () => {
+    const core = new CoreStateless({ spaceId: 'key_123', locale: 'en-GB' })
+    const sharedContext = core.eventBuilder.buildIdentify({ userId: 'user' }).context
+    const firstPage = { ...DEFAULT_PAGE_PROPERTIES, path: '/first' }
+    const secondPage = { ...DEFAULT_PAGE_PROPERTIES, path: '/second' }
+    const first = core.forRequest({
+      consent: true,
+      locale: ' de_DE ',
+      eventContext: {
+        locale: 'fr-FR',
+        page: firstPage,
+        campaign: { source: 'first' },
+        screen: { name: 'first-screen' },
+        userAgent: 'first-agent',
+      },
+      experienceOptions: { locale: 'it-IT' },
+    })
+    const second = core.forRequest({
+      consent: false,
+      eventContext: {
+        locale: 'es-ES',
+        page: secondPage,
+        campaign: { source: 'second' },
+        screen: { name: 'second-screen' },
+        userAgent: 'second-agent',
+      },
+    })
+
+    for (const [request, locale, userAgent, page, source, screenName] of [
+      [first, 'de-DE', 'first-agent', firstPage, 'first', 'first-screen'],
+      [second, 'es-ES', 'second-agent', secondPage, 'second', 'second-screen'],
+      [first, 'de-DE', 'first-agent', firstPage, 'first', 'first-screen'],
+    ] as const) {
+      const identify: ReturnType<EventBuilder['buildIdentify']> =
+        request.eventBuilder.buildIdentify({ userId: 'user' })
+      const pageView: ReturnType<EventBuilder['buildPageView']> =
+        request.eventBuilder.buildPageView()
+      const screen: ReturnType<EventBuilder['buildScreenView']> =
+        request.eventBuilder.buildScreenView({ name: 'screen', properties: {} })
+      const track: ReturnType<EventBuilder['buildTrack']> = request.eventBuilder.buildTrack({
+        event: 'purchase',
+      })
+
+      for (const event of [identify, pageView, screen, track]) {
+        expect(event.context).toEqual(
+          expect.objectContaining({ locale, userAgent, campaign: { source } }),
+        )
+      }
+      expect(identify.context.page).toEqual(page)
+      expect(pageView.context.page).toEqual(page)
+      expect(track.context.page).toEqual(page)
+      expect(screen.context.screen).toEqual({ name: screenName })
+      expect(request.eventBuilder.buildPageView(undefined).context.page).toEqual(page)
+    }
+
+    expect(core.eventBuilder.buildIdentify({ userId: 'user' }).context).toEqual(sharedContext)
+  })
+
+  it('replaces request context with explicit construction arguments before building', () => {
+    const core = new CoreStateless({ spaceId: 'key_123' })
+    const requestPage = {
+      ...DEFAULT_PAGE_PROPERTIES,
+      path: '/request',
+      query: { request: 'only' },
+      title: 'Request page',
+    }
+    const request = core.forRequest({
+      consent: true,
+      locale: 'de-DE',
+      eventContext: {
+        page: requestPage,
+        campaign: { name: 'request', source: 'request' },
+        userAgent: 'request-agent',
+      },
+    })
+    const page = { ...DEFAULT_PAGE_PROPERTIES, path: '/explicit', query: { event: 'only' } }
+    const args = {
+      userId: 'user',
+      page,
+      campaign: { medium: 'email' },
+      locale: 'fr-FR',
+      userAgent: 'explicit-agent',
+    }
+
+    expect(request.eventBuilder.buildIdentify(args).context).toEqual(
+      core.eventBuilder.buildIdentify(args).context,
+    )
+    expect(request.eventBuilder.buildIdentify(args).context).toEqual(
+      expect.objectContaining({ page, campaign: { medium: 'email' }, locale: 'fr-FR' }),
+    )
+    expect(request.eventBuilder.buildIdentify({ userId: 'user' }).context.page).toEqual(requestPage)
+  })
+
+  it('lets explicit undefined construction arguments replace request defaults', () => {
+    const core = new CoreStateless({ spaceId: 'key_123', locale: 'en-GB' })
+    const request = core.forRequest({
+      consent: true,
+      locale: 'de-DE',
+      eventContext: {
+        page: { ...DEFAULT_PAGE_PROPERTIES, path: '/request' },
+        campaign: { source: 'request' },
+        userAgent: 'request-agent',
+      },
+    })
+    const args = {
+      userId: 'user',
+      locale: undefined,
+      page: undefined,
+      campaign: undefined,
+      userAgent: undefined,
+    }
+
+    expect(request.eventBuilder.buildIdentify(args).context).toEqual(
+      core.eventBuilder.buildIdentify(args).context,
+    )
+  })
+
+  it('keeps request page context separate from constructed page-event properties', () => {
+    const core = new CoreStateless({ spaceId: 'key_123' })
+    const page = { ...DEFAULT_PAGE_PROPERTIES, path: '/context', title: 'Context page' }
+    const request = core.forRequest({ consent: true, eventContext: { page } })
+    const properties = { path: '/event', title: 'Event page' }
+
+    const event = request.eventBuilder.buildPageView({ properties })
+
+    expect(event.context.page).toEqual(page)
+    expect(event.properties).toEqual(expect.objectContaining(properties))
+    expect(request.eventBuilder.buildPageView().properties).toEqual(
+      core.eventBuilder.buildPageView().properties,
+    )
+  })
+
+  it('constructs events without request consent admission, submission, or state changes', async () => {
+    const onEventBlocked = rs.fn()
+    const core = new CoreStateless({
+      spaceId: 'key_123',
+      onEventBlocked,
+      contentful: { client: createOptimizedEntryClient(), cache: false },
+    })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      ...EMPTY_OPTIMIZATION_DATA,
+      selectedOptimizations,
+    })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+    await request.page()
+    const currentProfile = request.profile
+    const selectedBefore = (await request.fetchOptimizedEntry(optimizedEntry.sys.id))
+      .selectedOptimization
+    expect(selectedBefore).toBeDefined()
+    const runEvent = rs.spyOn(core.interceptors.event, 'run')
+    const runState = rs.spyOn(core.interceptors.state, 'run')
+    upsertProfile.mockClear()
+
+    for (const builder of [
+      request.eventBuilder,
+      core.forRequest({ consent: false }).eventBuilder,
+    ]) {
+      const events = [
+        builder.buildIdentify({ userId: 'user' }),
+        builder.buildPageView(),
+        builder.buildScreenView({ name: 'screen', properties: {} }),
+        builder.buildTrack({ event: 'purchase' }),
+      ]
+      expect(events.map((event) => event.context.gdpr.isConsentGiven)).toEqual([
+        false,
+        false,
+        false,
+        false,
+      ])
+    }
+
+    expect(onEventBlocked).not.toHaveBeenCalled()
+    expect(runEvent).not.toHaveBeenCalled()
+    expect(runState).not.toHaveBeenCalled()
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+    expect(request.profile).toBe(currentProfile)
+    const result = await request.fetchOptimizedEntry(optimizedEntry.sys.id)
+    expect(result.selectedOptimization).toEqual(selectedBefore)
   })
 
   it('binds consent, profile, event context, and Experience request options with forRequest()', async () => {

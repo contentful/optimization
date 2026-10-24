@@ -121,6 +121,13 @@ server-side functions. It does not store consent or profile state between reques
 `forRequest()` to create a request-bound event client with the consent, profile, event context, and
 Experience options for that one incoming request.
 
+Request clients also expose a readonly `eventBuilder` facade for constructing identify, page,
+screen, and track payloads with request context and locale defaults. Construction uses the shared
+builder's metadata and providers without applying request consent, running submission interceptors,
+or updating request state. Use direct request event methods for normal submission; low-level API
+calls with built events do not automatically apply that processing. The root SDK's `eventBuilder`
+is unbound. See the [Node request-scoped events example](../../node/node-sdk/README.md#request-scoped-events).
+
 ## Common configuration
 
 Shared Core configuration:
