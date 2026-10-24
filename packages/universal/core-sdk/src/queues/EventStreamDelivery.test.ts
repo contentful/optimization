@@ -79,8 +79,8 @@ describe('Event stream observer error containment', () => {
     const first = builder.buildPageView()
     const second = builder.buildTrack({ event: 'next-event' })
 
-    await expect(queue.send(first, context)).resolves.toEqual(sampleData)
-    await expect(queue.send(second)).resolves.toEqual(sampleData)
+    await expect(queue.send(first, context)).resolves.toEqual({ accepted: true, data: sampleData })
+    await expect(queue.send(second)).resolves.toEqual({ accepted: true, data: sampleData })
 
     expect(received).toEqual([{ ...first, optimization: context }, second])
     expect(received[0]?.optimization).toBe(context)
@@ -100,8 +100,8 @@ describe('Event stream observer error containment', () => {
     const second = builder.buildTrack({ event: 'queued-event' })
     online.value = false
 
-    await expect(queue.send(first, context)).resolves.toBeUndefined()
-    await expect(queue.send(second)).resolves.toBeUndefined()
+    await expect(queue.send(first, context)).resolves.toEqual({ accepted: true })
+    await expect(queue.send(second)).resolves.toEqual({ accepted: true })
     expect(upsertProfile).not.toHaveBeenCalled()
 
     online.value = true

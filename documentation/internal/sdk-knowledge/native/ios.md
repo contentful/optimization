@@ -339,7 +339,9 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   connectivity change and `flush()` on reconnect; `AppStateHandler` calls `flush()` on
   `willResignActive` (UIKit-only) for a best-effort background drain. Queues are in-memory only (no
   durable outbox), capped at 100 offline Experience events by default (`OFFLINE_QUEUE_MAX_EVENTS`,
-  tunable via `QueuePolicy.offlineMaxEvents`); they do not survive process death. source: extern:NetworkMonitor NWPathMonitor + AppStateHandler background flush — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/NetworkMonitor.swift#NetworkMonitor; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/AppStateHandler.swift#AppStateHandler; core-sdk#CoreStateful.ts#CoreStatefulConfig
+  tunable via `QueuePolicy.offlineMaxEvents`); they do not survive process death. At capacity,
+  incoming Experience events are rejected and accepted events retain FIFO order. The deprecated
+  `onOfflineDrop` callback is inactive. source: extern:NetworkMonitor NWPathMonitor + AppStateHandler background flush — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/NetworkMonitor.swift#NetworkMonitor; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/AppStateHandler.swift#AppStateHandler; core-sdk#CoreStateful.ts#CoreStatefulConfig; core-sdk#queues/ExperienceQueue.ts#send
 - iOS Simulator reaches host `localhost` directly — there is no localhost rewrite in the SDK, and the
   reference app points base URLs straight at `http://localhost:8000` (contrast React Native, which
   rewrites `localhost` to `10.0.2.2` on the Android emulator). source: impl:ios-sdk#shared/Config.swift; extern:the iOS Simulator shares the host network so host localhost resolves without a rewrite — packages/ios/README.md

@@ -58,4 +58,6 @@ The file or filter is optional; omit it only when the full Playwright suite is w
   use `pnpm exec eslint implementations/web-sdk_angular/<path>`.
 - Run shared Playwright E2E for user-visible behavior, routing, event flow, tracking, preview
   behavior, or Angular integration changes.
+- Run the JavaScript-disabled SSR checks with `E2E_FLAGS=CSR,HYDRATION,SSR`; do not add `SKIP_NO_JS`
+  for this implementation.
 - The pre-commit hook runs lint and Prettier automatically — fix any errors before committing.

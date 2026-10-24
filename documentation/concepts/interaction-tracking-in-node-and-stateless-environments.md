@@ -432,11 +432,12 @@ delivery. Choose one of these patterns before enabling interaction tracking:
   call the Node SDK with the request's profile ID. This is a manual tracking architecture, not the
   Web SDK auto-tracking path.
 
-In Next.js server-rendered integrations, `initialPageEvent="skip"` intentionally avoids the initial
-browser Experience API `page()` request when the server or edge helper already accepted that page
-event. If that skip leaves the browser with neither a bound root or provider `handoff` nor manual
-handoff, and without a prior persisted browser profile, automatic entry views, clicks, and hovers
-cannot deliver until a later browser Experience API call populates profile state.
+In Next.js private request handoffs, the server prepares the initial page event and previews the
+result for rendering. The browser admits the prepared event batch, including that page, to its normal
+Experience queue. Keep the request handoff with the page rendered from its preview so the matching
+browser route can commit the batch and hydrate the profile state used by automatic entry tracking.
+If preview fails before an API-issued profile ID is available, the prepared batch can still reach the
+browser and use the API's profile-creation path when admitted.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.

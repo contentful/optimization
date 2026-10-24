@@ -9,34 +9,35 @@ import {
   getServerTrackingAttributes,
   resolveEntriesForSelections,
 } from '@/lib/optimization'
-import { cacheLife, cacheTag } from 'next/cache'
+import { unstable_cache } from 'next/cache'
 import { notFound } from 'next/navigation'
+
+export const revalidate = 60
 
 export function generateStaticParams() {
   return getCustomerSegmentStaticParams()
 }
 
 async function loadAnalyticsOnlyPage(segmentSlug: string) {
-  'use cache'
-
-  cacheLife({ revalidate: 60 })
-
   const segment = getCustomerSegment(segmentSlug)
 
   if (segment === undefined) return undefined
 
-  const entries = await loadRequiredPageEntries([segment.baselineEntryId], {
-    onMissingEntry: staticPublicHandoffMissingRequiredEntryBehavior,
-  })
+  const handoff = createCustomerSegmentAnalyticsHandoff(segment)
+  const entries = await unstable_cache(
+    () =>
+      loadRequiredPageEntries([segment.baselineEntryId], {
+        onMissingEntry: staticPublicHandoffMissingRequiredEntryBehavior,
+      }),
+    [`analytics-only:${segment.slug}`],
+    { revalidate, tags: [...(handoff.cache.tags ?? [])] },
+  )()
   if (entries === undefined) return undefined
 
   const resolvedEntries = resolveEntriesForSelections({
     entries,
     selectedOptimizations: segment.selectedOptimizations,
   })
-  const handoff = createCustomerSegmentAnalyticsHandoff(segment)
-  if (handoff.cache.tags !== undefined) cacheTag(...handoff.cache.tags)
-
   return { handoff, resolvedEntries }
 }
 

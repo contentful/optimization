@@ -1,11 +1,11 @@
-import { AppShellBody, AppShellChrome, PersonalizedContentFallback } from '@/components/AppShell'
+import { AppShellBody, AppShellChrome } from '@/components/AppShell'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
-import { RequestOptimizationRoot } from '@/lib/optimization'
+import { RequestOptimizationProvider } from '@/lib/optimization'
 import { connection } from 'next/server'
-import { Suspense, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-async function RequestRuntime({
+export default async function RequestLayout({
   children,
 }: Readonly<{
   children: ReactNode
@@ -13,25 +13,13 @@ async function RequestRuntime({
   await connection()
 
   return (
-    <RequestOptimizationRoot>
-      <GlobalLiveUpdatesProvider>
-        <PreviewPanel />
-        <AppShellBody>{children}</AppShellBody>
-      </GlobalLiveUpdatesProvider>
-    </RequestOptimizationRoot>
-  )
-}
-
-export default function RequestLayout({
-  children,
-}: Readonly<{
-  children: ReactNode
-}>) {
-  return (
     <AppShellChrome>
-      <Suspense fallback={<PersonalizedContentFallback />}>
-        <RequestRuntime>{children}</RequestRuntime>
-      </Suspense>
+      <RequestOptimizationProvider>
+        <GlobalLiveUpdatesProvider>
+          <PreviewPanel />
+          <AppShellBody>{children}</AppShellBody>
+        </GlobalLiveUpdatesProvider>
+      </RequestOptimizationProvider>
     </AppShellChrome>
   )
 }
