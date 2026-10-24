@@ -694,6 +694,132 @@ describe('CoreStateless', () => {
     expect(requestOptimization.profile).toEqual(secondProfile)
   })
 
+  it('bypasses empty event interceptors, including after the last handler is removed', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const run = rs.spyOn(core.interceptors.event, 'run')
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+
+    await request.page()
+    await request.trackClick({ componentId: 'hero-banner' })
+    expect(run).not.toHaveBeenCalled()
+
+    const id = core.interceptors.event.add((event) => {
+      event.context.userAgent = 'intercepted'
+      return event
+    })
+    const asyncId = core.interceptors.event.add(async (event) => {
+      await Promise.resolve()
+      event.context.locale = 'de-DE'
+      return event
+    })
+    await request.page()
+    await request.trackClick({ componentId: 'hero-banner' })
+    expect(run).toHaveBeenCalledTimes(2)
+    const interceptedContext = expect.objectContaining({
+      gdpr: { isConsentGiven: true },
+      locale: 'de-DE',
+      userAgent: 'intercepted',
+    })
+    expect(upsertProfile.mock.calls[1]?.[0].events[0]?.context).toEqual(interceptedContext)
+    expect(sendBatchEvents.mock.calls[1]?.[0][0]?.events[0]?.context).toEqual(interceptedContext)
+
+    core.interceptors.event.remove(id)
+    core.interceptors.event.remove(asyncId)
+    await request.page()
+    await request.trackClick({ componentId: 'hero-banner' })
+    expect(run).toHaveBeenCalledTimes(2)
+    expect(upsertProfile.mock.calls[2]?.[0].events[0]?.context.userAgent).toBeUndefined()
+    expect(sendBatchEvents.mock.calls[2]?.[0][0]?.events[0]?.context.userAgent).toBeUndefined()
+  })
+
+  it('validates intercepted events against their destination before transport', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+
+    core.interceptors.event.add(() => core.eventBuilder.buildClick({ componentId: 'hero' }))
+    await expect(request.page()).rejects.toThrow()
+    core.interceptors.event.clear()
+    core.interceptors.event.add(async () => {
+      await Promise.resolve()
+      return core.eventBuilder.buildIdentify({ userId: 'user' })
+    })
+    await expect(request.trackClick({ componentId: 'hero' })).rejects.toThrow()
+
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+    expect(request.profile).toEqual({ id: 'initial-profile' })
+  })
+
+  it('propagates interceptor errors without sending or adopting a response', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+    const failure = new Error('interceptor failed')
+    core.interceptors.event.add(() => {
+      throw failure
+    })
+
+    await expect(request.page()).rejects.toBe(failure)
+    await expect(request.trackClick({ componentId: 'hero' })).rejects.toBe(failure)
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+    expect(request.profile).toEqual({ id: 'initial-profile' })
+  })
+
+  it('still validates request profiles for direct Insights delivery without interceptors', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const profile = { id: 'initial-profile' }
+    Reflect.set(profile, 'invalid', () => undefined)
+    const request = core.forRequest({ consent: true, profile })
+
+    await expect(request.trackClick({ componentId: 'hero' })).rejects.toThrow()
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+  })
+
+  it('selects Experience profiles after yielding while Insights retains its call-time profile', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    let resolveFirst: (value: OptimizationData) => void = () => undefined
+    const firstResponse = new Promise<OptimizationData>((resolve) => {
+      resolveFirst = resolve
+    })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockReturnValueOnce(firstResponse)
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+
+    const first = request.page()
+    expect(upsertProfile).not.toHaveBeenCalled()
+    await Promise.resolve()
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+
+    resolveFirst(EMPTY_OPTIMIZATION_DATA)
+    const second = request.identify({ userId: 'user' })
+    const click = request.trackClick({ componentId: 'hero' })
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+    await Promise.all([first, second, click])
+
+    expect(upsertProfile.mock.calls.map(([body]) => body.profileId)).toEqual([
+      'initial-profile',
+      EMPTY_OPTIMIZATION_DATA.profile.id,
+    ])
+    expect(sendBatchEvents.mock.calls[0]?.[0][0]?.profile).toEqual({ id: 'initial-profile' })
+    expect(request.profile).toEqual(EMPTY_OPTIMIZATION_DATA.profile)
+  })
+
   it('sends sticky entry views through both the Experience API and Insights API', async () => {
     const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
     const upsertProfile = rs

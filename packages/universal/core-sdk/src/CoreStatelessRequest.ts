@@ -454,10 +454,15 @@ export class CoreStatelessRequest {
   private async sendAllowedExperienceEvent(
     event: ExperienceEventPayload,
   ): Promise<OptimizationData> {
-    const intercepted = await this.core.interceptors.event.run(
-      withRequestEventConsent(event, this.requestEventConsent === true),
-    )
-    const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
+    const consentedEvent = withRequestEventConsent(event, this.requestEventConsent === true)
+    const hasInterceptors = this.core.interceptors.event.count() > 0
+    // Keep the async boundary before selecting the current request profile.
+    const intercepted = await (hasInterceptors
+      ? this.core.interceptors.event.run(consentedEvent)
+      : consentedEvent)
+    const validEvent = hasInterceptors
+      ? parseWithFriendlyError(ExperienceEventSchema, intercepted)
+      : consentedEvent
     const result = await this.core.api.experience.upsertProfile(
       {
         profileId: this.currentProfile?.id,
@@ -477,10 +482,14 @@ export class CoreStatelessRequest {
     event: InsightsEventPayload,
     profile: PartialProfile,
   ): Promise<void> {
-    const intercepted = await this.core.interceptors.event.run(
-      withRequestEventConsent(event, this.requestEventConsent === true),
-    )
-    const validEvent = parseWithFriendlyError(InsightsEventSchema, intercepted)
+    const consentedEvent = withRequestEventConsent(event, this.requestEventConsent === true)
+    const hasInterceptors = this.core.interceptors.event.count() > 0
+    const intercepted = await (hasInterceptors
+      ? this.core.interceptors.event.run(consentedEvent)
+      : consentedEvent)
+    const validEvent = hasInterceptors
+      ? parseWithFriendlyError(InsightsEventSchema, intercepted)
+      : consentedEvent
     const batchEvent: BatchInsightsEventArray = parseWithFriendlyError(BatchInsightsEventArray, [
       { profile: parseWithFriendlyError(PartialProfile, profile), events: [validEvent] },
     ])

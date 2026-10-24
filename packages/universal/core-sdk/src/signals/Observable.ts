@@ -1,5 +1,5 @@
 import { effect, untracked } from '@preact/signals-core'
-import { cloneDeep } from 'es-toolkit'
+import { cloneDeep } from 'es-toolkit/object'
 
 /**
  * Disposable handle returned by observable subscriptions.
