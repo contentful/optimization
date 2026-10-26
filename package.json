@@ -112,6 +112,7 @@
     "lint-staged": "^16.2.7",
     "pm2": "catalog:",
     "prettier": "^3.8.1",
+    "prettier-plugin-astro": "1.1.2",
     "prettier-plugin-organize-imports": "^4.3.0",
     "release-please": "^17.10.2",
     "tsx": "catalog:",

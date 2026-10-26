@@ -133,6 +133,8 @@ patterns with intentionally minimal application code.
   SDK
 - [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md) - split server/browser flow
   using Node and Web SDKs together
+- [Astro + React](./implementations/astro-react/README.md) - exploratory hybrid rendering with the Node
+  and React Web SDKs, with a compatibility and developer experience report
 - [Next.js SDK App Router](./implementations/nextjs-sdk_app-router/README.md) - Next.js App Router
   first-paint SSR with browser-side takeover after hydration
 - [Next.js SDK Pages Router](./implementations/nextjs-sdk_pages-router/README.md) - Next.js Pages

@@ -1,5 +1,5 @@
 {
-  "plugins": ["prettier-plugin-organize-imports"],
+  "plugins": ["prettier-plugin-organize-imports", "prettier-plugin-astro"],
   "printWidth": 100,
   "proseWrap": "preserve",
   "singleQuote": true,

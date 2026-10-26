@@ -23,6 +23,7 @@ export default defineConfig(
     ignores: [
       '**/*.{js,jsx,cjs,mjs}',
       '**/.bundle/**',
+      '**/.astro/**',
       '**/.rslib',
       '**/.rstack',
       '**/android/**',

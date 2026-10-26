@@ -1,0 +1,15 @@
+---
+import Personalization from '../components/Personalization'
+import Layout from '../layouts/Layout.astro'
+import { fetchBaseline } from '../lib/content'
+export const prerender = true
+const baselineEntry = await fetchBaseline()
+---
+
+<Layout title="Personalized in the browser">
+  <p>
+    This HTML contains baseline content from build time. Personalization starts after hydration and
+    consent.
+  </p>
+  <Personalization client:load baselineEntry={baselineEntry} routeKey="/static" />
+</Layout>

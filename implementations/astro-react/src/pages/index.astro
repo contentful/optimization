@@ -1,0 +1,19 @@
+---
+import Personalization from '../components/Personalization'
+import Layout from '../layouts/Layout.astro'
+import { fetchBaseline } from '../lib/content'
+import { preparePersonalization } from '../lib/server'
+export const prerender = false
+Astro.response.headers.set('Cache-Control', 'private, no-store')
+const [baselineEntry, handoff] = await Promise.all([fetchBaseline(), preparePersonalization(Astro)])
+---
+
+<Layout title="Personalized on the server">
+  <p>This page renders per request and hydrates one React personalization island.</p>
+  <Personalization
+    client:load
+    baselineEntry={baselineEntry}
+    handoff={handoff}
+    routeKey={Astro.url.pathname + Astro.url.search}
+  />
+</Layout>
