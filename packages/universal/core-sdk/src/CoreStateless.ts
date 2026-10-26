@@ -70,6 +70,7 @@ export { CoreStatelessRequest } from './CoreStatelessRequest'
 export type {
   CoreStatelessForRequestOptions,
   CoreStatelessRequestConsent,
+  CoreStatelessRequestEventBuilder,
   StatelessExperiencePayload,
   StatelessInsightsPayload,
   StatelessNonStickyTrackViewPayload,

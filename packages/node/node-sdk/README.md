@@ -250,6 +250,27 @@ In stateless runtimes, Insights-backed methods require a request-bound profile f
 Non-sticky `trackView`, `trackClick`, `trackHover`, and `trackFlagView` require a profile ID passed
 to `forRequest()`.
 
+For custom integrations that need an event payload before submission, use the request client's
+`eventBuilder`. It exposes `buildIdentify`, `buildPageView`, `buildScreenView`, and `buildTrack`
+with request event context and locale defaults. In this example, `appConsent`, `appLocale`,
+`appUserAgent`, and `appUserId` come from your application's request and identity handling:
+
+```ts
+const requestOptimization = optimization.forRequest({
+  consent: appConsent,
+  locale: appLocale,
+  eventContext: { userAgent: appUserAgent },
+})
+const identifyEvent = requestOptimization.eventBuilder.buildIdentify({ userId: appUserId })
+```
+
+Construction does not send the event, check request consent, invoke interceptors, or update the
+request profile or selections. Built events use the shared builder's `context.gdpr.isConsentGiven`,
+which is `false` in the Node SDK, even when request consent is granted. Sending `identifyEvent` through a
+low-level API does not automatically apply request consent or SDK submission processing. For normal
+submission, use request-bound `identify()`, `page()`, `screen()`, or `track()`. The singleton's
+`optimization.eventBuilder` remains unbound to any request.
+
 ### Content resolution
 
 When a `contentful.js` client is available, prefer SDK-managed fetching by entry ID or content type
