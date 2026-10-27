@@ -23,7 +23,7 @@ catalog:
   '@contentful/rich-text-html-renderer': ^17.1.6
   '@contentful/rich-text-types': ^17.2.5
   '@microsoft/api-extractor': ^7.59.1
-  '@playwright/test': 1.63.0
+  '@playwright/test': 1.64.1
   '@preact/signals-core': ^1.13.0
   '@rsbuild/core': ^2.2.7
   '@rstest/core': ^0.12.0
@@ -35,10 +35,10 @@ catalog:
   '@types/node': ^24.0.13
   contentful: ^11.10.5
   ejs: ^6.0.1
-  es-toolkit: ^1.46.0
+  es-toolkit: ^1.53.0
   express: ^5.2.1
   express-rate-limit: ^8.7.0
-  happy-dom: ^20.14.5
+  happy-dom: ^21.0.4
   msw: ^2.12.10
   p-retry: ^8.0.0
   pm2: ^7.0.4
@@ -46,7 +46,7 @@ catalog:
   tslib: ^2.8.1
   tsx: ^4.21.0
   typescript: ^5.8.3
-  zod: ^4.3.6
+  zod: ^4.6.6
 
 engineStrict: true
 

@@ -35,7 +35,7 @@
     "tslib": "2.8.1"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.1",
     "@types/express": "5.0.6",
     "@types/node": "24.19.2",
     "@types/qs": "6.15.1",
