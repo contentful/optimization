@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/contentful/optimization/compare/optimization-node-v2.1.1...optimization-node-v2.2.0) (2026-10-27)
+
+### Features
+
+- **core:** add request-bound event construction and stateless fast paths ([#564](https://github.com/contentful/optimization/issues/564)) ([7ddc83d](https://github.com/contentful/optimization/commit/7ddc83d6b6b8a0553ce0b6a86bef36f8c678d698))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.2.0
+
 ## [2.1.1](https://github.com/contentful/optimization/compare/optimization-node-v2.1.0...optimization-node-v2.1.1) (2026-10-21)
 
 ### Dependencies
