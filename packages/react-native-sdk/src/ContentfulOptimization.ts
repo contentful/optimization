@@ -4,6 +4,7 @@ import {
   type ConsentInput,
   CoreStateful,
   type CoreStatefulConfig,
+  type EventBuilderConfig,
   type EventEmissionResult,
   hasOptimizationSelectionStateField,
   type OptimizationSelectionState,
@@ -55,17 +56,18 @@ async function mergeConfig({
   }
 
   const storageDefaults = resolveStorageDefaults(defaults)
+  const eventBuilder: EventBuilderConfig = {
+    channel: 'mobile',
+    library: {
+      name: `${OPTIMIZATION_REACT_NATIVE_SDK_NAME}-${Platform.OS}`,
+      version: OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
+    },
+  }
 
   const mergedConfig = merge(
     {
       defaults: storageDefaults,
-      eventBuilder: {
-        channel: 'mobile',
-        library: {
-          name: `${OPTIMIZATION_REACT_NATIVE_SDK_NAME}-${Platform.OS}`,
-          version: OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
-        },
-      },
+      eventBuilder,
       logLevel: AsyncStorageStore.debug ? 'debug' : logLevel,
       getAnonymousId:
         config.getAnonymousId ??

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, readdirSync, readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { isRecord } from './typeGuards'
@@ -22,6 +22,7 @@ const ACTIONS_REQUIRING_ENV_FILE = new Set([
 interface ImplementationConfig {
   name: string
   scripts: ReadonlySet<string>
+  usesNextjs: boolean
   usesPlaywright: boolean
 }
 
@@ -83,6 +84,7 @@ function readImplementationConfigs(): ImplementationConfig[] {
     configs.push({
       name: entry.name,
       scripts: new Set(Object.keys(scripts)),
+      usesNextjs: dependencyNames.has('next'),
       usesPlaywright,
     })
   }
@@ -235,12 +237,24 @@ function runTypecheckAction(
 }
 
 function runImplementationInstallAction(
-  implementation: string,
+  implementation: ImplementationConfig,
   actionArgs: readonly string[],
 ): number {
   const localPackageTarballsExitCode = ensureLocalPackageTarballs()
   if (localPackageTarballsExitCode !== SUCCESS_EXIT_CODE) {
     return localPackageTarballsExitCode
+  }
+
+  const implementationDir = path.join(IMPLEMENTATIONS_DIRECTORY, implementation.name)
+  const generatedDirectories = ['node_modules']
+  if (implementation.usesNextjs) {
+    generatedDirectories.push('.next')
+  }
+
+  for (const directory of generatedDirectories) {
+    const directoryPath = path.join(implementationDir, directory)
+    process.stdout.write(`\n> removing generated directory ${directoryPath}\n`)
+    rmSync(directoryPath, { recursive: true, force: true })
   }
 
   const installArgs = [
@@ -256,7 +270,7 @@ function runImplementationInstallAction(
     installArgs.push('--no-frozen-lockfile')
   }
 
-  return runPnpm(implementation, installArgs)
+  return runPnpm(implementation.name, installArgs)
 }
 
 function runAction(
@@ -266,7 +280,7 @@ function runAction(
 ): number {
   switch (requestedAction) {
     case 'implementation:install':
-      return runImplementationInstallAction(implementation.name, actionArgs)
+      return runImplementationInstallAction(implementation, actionArgs)
     case 'implementation:build:run': {
       if (implementation.scripts.has('build')) {
         const buildExitCode = runScript(implementation.name, 'build')

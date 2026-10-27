@@ -250,6 +250,10 @@ Common helper actions include:
 - `implementation:setup:e2e`
 - `implementation:test:e2e:run`
 
+`implementation:install` removes the target implementation's `node_modules` and, for Next.js,
+`.next` before installing dependencies. Run `pnpm build:pkgs` first when SDK source changes so the
+install consumes fresh local tarballs.
+
 You can also pass an implementation-local script name, such as `serve`, `build`, `typecheck`,
 `test:e2e:ui`, `test:e2e:compose`, or `test:e2e:ios:build:release`.
 
