@@ -235,7 +235,7 @@ catalogs:
       version: 4.21.0
     zod:
       specifier: ^4.3.6
-      version: 4.3.6
+      version: 4.6.6
 
 overrides:
   '@playwright/test': 1.63.0
@@ -508,7 +508,7 @@ importers:
         version: 2.0.3
       zod:
         specifier: 'catalog:'
-        version: 4.3.6
+        version: 4.6.6
     devDependencies:
       '@babel/core':
         specifier: ^7.29.6
@@ -611,7 +611,7 @@ importers:
     dependencies:
       zod:
         specifier: 'catalog:'
-        version: 4.3.6
+        version: 4.6.6
     devDependencies:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
@@ -688,7 +688,7 @@ importers:
         version: 5.9.3
       zod:
         specifier: 'catalog:'
-        version: 4.3.6
+        version: 4.6.6
 
   packages/universal/core-sdk:
     dependencies:
@@ -709,7 +709,7 @@ importers:
         version: 1.46.0
       zod:
         specifier: 'catalog:'
-        version: 4.3.6
+        version: 4.6.6
     devDependencies:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
@@ -951,7 +951,7 @@ importers:
         version: 11.10.5(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       zod:
         specifier: 'catalog:'
-        version: 4.3.6
+        version: 4.6.6
     devDependencies:
       '@rsbuild/core':
         specifier: 'catalog:'
@@ -8229,8 +8229,8 @@ packages:
     resolution: {integrity: sha512-xYqdZFUK/VYazNl/oCDYN+3WloWQwMfZxBoiNt6qNyk+xfOdi598muWE42rNZFp1kNOiqW936q5RhUdnpqElSg==}
     engines: {node: '>=18'}
 
-  zod@4.3.6:
-    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+  zod@4.6.6:
+    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
 
 snapshots:
 
@@ -14865,7 +14865,7 @@ snapshots:
       '@babel/types': 7.29.7
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
-      metro-symbolicate: 0.83.4(supports-color@8.1.1)
+      metro-symbolicate: 0.83.4
       nullthrows: 1.1.1
       ob1: 0.83.4
       source-map: 0.5.7
@@ -14873,7 +14873,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  metro-symbolicate@0.83.4(supports-color@8.1.1):
+  metro-symbolicate@0.83.4:
     dependencies:
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
@@ -14881,8 +14881,6 @@ snapshots:
       nullthrows: 1.1.1
       source-map: 0.5.7
       vlq: 1.0.1
-    transitivePeerDependencies:
-      - supports-color
 
   metro-transform-plugins@0.83.4(supports-color@8.1.1):
     dependencies:
@@ -14947,7 +14945,7 @@ snapshots:
       metro-resolver: 0.83.4
       metro-runtime: 0.83.4
       metro-source-map: 0.83.4(supports-color@8.1.1)
-      metro-symbolicate: 0.83.4(supports-color@8.1.1)
+      metro-symbolicate: 0.83.4
       metro-transform-plugins: 0.83.4(supports-color@8.1.1)
       metro-transform-worker: 0.83.4(supports-color@8.1.1)
       mime-types: 3.0.2
@@ -17091,4 +17089,4 @@ snapshots:
 
   yoctocolors@2.2.0: {}
 
-  zod@4.3.6: {}
+  zod@4.6.6: {}
