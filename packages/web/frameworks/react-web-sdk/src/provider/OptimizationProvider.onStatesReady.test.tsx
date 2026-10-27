@@ -4,11 +4,11 @@ import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { InterceptorManager } from '@contentful/optimization-web/core-sdk'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
-import { beforeEach, describe, expect, it, rs } from '@rstest/core'
+import { describe, expect, it, rs } from '@rstest/core'
 import { act, type ReactElement, useContext } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
-import { resetAutoPageEmitterState, useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
 import type { OptimizationContextValue } from '../context/OptimizationContext'
 import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
 import {
@@ -117,7 +117,6 @@ function createContentHandoff(
   return {
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
-    initialPageEvent: 'skip',
     state: createServerOptimizationState(profileId),
     ...overrides,
   }
@@ -192,10 +191,6 @@ async function renderClientAsync(
 }
 
 describe('OptimizationProvider onStatesReady', () => {
-  beforeEach(() => {
-    resetAutoPageEmitterState()
-  })
-
   it('accepts onStatesReady on OptimizationProvider and OptimizationRoot props', () => {
     const onStatesReady = rs.fn()
     const providerProps: OptimizationProviderProps = {
@@ -321,6 +316,28 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
+  it('prefetches only entries absent from the supplied handoff', async () => {
+    const baselineEntry = createTestEntry('supplied-entry')
+    const prefetch = rs
+      .spyOn(ContentfulOptimization.prototype, 'prefetchManagedEntries')
+      .mockResolvedValue([])
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b', {
+      entries: [{ entryId: baselineEntry.sys.id, baselineEntry }],
+    })
+    const rendered = await renderClientAsync(
+      <OptimizationProvider
+        {...testConfig}
+        handoff={handoff}
+        prefetchManagedEntries={['supplied-entry', 'next-entry']}
+      >
+        <div />
+      </OptimizationProvider>,
+    )
+    expect(prefetch).toHaveBeenCalledWith(['next-entry'])
+    rendered.unmount()
+    prefetch.mockRestore()
+  })
+
   it('makes standalone hydration visible to provider children without a handoff', async () => {
     let capturedHydration: unknown
 
@@ -394,6 +411,9 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('retains a usable owned runtime and surfaces the error when initial handoff apply fails', async () => {
+    const page = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
+      .mockResolvedValue({ accepted: true })
     const hydrationError = new Error('owned handoff apply failed')
     const hydration = rs
       .spyOn(InterceptorManager.prototype, 'run')
@@ -418,7 +438,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const sdk = requireOptimizationSdk(context.sdk)
     expect(sdk).toBeInstanceOf(ContentfulOptimization)
     await expect(
-      sdk.trackCurrentPage({ initialPageEvent: 'skip', routeKey: '/failed-handoff' }),
+      sdk.trackCurrentPage({ routeKey: '/failed-handoff', buildPayload: () => ({}) }),
     ).resolves.toEqual({ accepted: true })
     expect(destroy).not.toHaveBeenCalled()
 
@@ -426,6 +446,7 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(destroy).toHaveBeenCalledTimes(1)
     hydration.mockRestore()
     destroy.mockRestore()
+    page.mockRestore()
   })
 
   it('keeps injected initial-handoff failure behavior unchanged', async () => {
@@ -714,7 +735,9 @@ describe('OptimizationProvider onStatesReady', () => {
           <Probe />
         </OptimizationProvider>,
       )
-    }).toThrow('Profile state should not be included in public or static optimization caches.')
+    }).toThrow(
+      'Profile state, identity and replay must not be included in public or static optimization caches.',
+    )
     expect(childRendered).toBe(false)
     expect(window.contentfulOptimization).toBeUndefined()
   })

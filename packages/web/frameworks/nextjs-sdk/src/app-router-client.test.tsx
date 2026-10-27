@@ -57,6 +57,13 @@ describe('Next.js App Router client components', () => {
       ...testConfig,
       consent: { clientDefaults: { consent: false, persistenceConsent: false } },
       contentful,
+      cookie: {
+        path: '/products',
+        sameSite: 'strict',
+        secure: true,
+        domain: 'example.test',
+        expires: 1,
+      },
       liveUpdates: true,
     })
     const handoff = components.createHandoffFromSelections({
@@ -65,7 +72,6 @@ describe('Next.js App Router client components', () => {
         { baselineEntry: createEntry('4ib0hsHWoSOnCVdDkizE8d'), entryId: '4ib0hsHWoSOnCVdDkizE8d' },
       ],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -92,6 +98,13 @@ describe('Next.js App Router client components', () => {
     expect(components).not.toHaveProperty('createRequestHandoff')
     expect(components).not.toHaveProperty('request')
     expect(element.props).toMatchObject({
+      cookie: {
+        path: '/products',
+        sameSite: 'strict',
+        secure: true,
+        domain: 'example.test',
+        expires: 1,
+      },
       api: testConfig.api,
       children: 'Bound content',
       spaceId: testConfig.spaceId,
@@ -138,7 +151,6 @@ describe('Next.js App Router client components', () => {
       cache: { scope: 'static' },
       entries: [{ baselineEntry, entryId: '4ib0hsHWoSOnCVdDkizE8d' }],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -166,7 +178,6 @@ describe('Next.js App Router client components', () => {
     const analyticsHandoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
     const root = components.OptimizationRoot({

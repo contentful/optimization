@@ -28,6 +28,7 @@ import type {
   TrackBuilderArgs,
   ViewBuilderArgs,
 } from './events'
+import { validatePreparedEvents, withEventConsent } from './events/preparedEvents'
 import type { ExperienceQueue } from './queues/ExperienceQueue'
 import type { InsightsQueue } from './queues/InsightsQueue'
 import {
@@ -197,8 +198,8 @@ abstract class CoreStatefulEventEmitter
    * @returns Whether the event was accepted and, for sticky views, any resulting
    * {@link OptimizationData}.
    * @remarks
-   * Experience receives sticky entry views only; Insights is always invoked
-   * regardless of `sticky`.
+   * Experience receives sticky entry views only. Accepted views invoke Insights
+   * regardless of `sticky`; a rejected sticky view does not enqueue an Insights event.
    * @example
    * ```ts
    * await core.trackView({ componentId: 'entry-123', sticky: true })
@@ -301,7 +302,7 @@ abstract class CoreStatefulEventEmitter
     )
   }
 
-  private onBlockedByConsent(name: string, args: readonly unknown[]): void {
+  protected onBlockedByConsent(name: string, args: readonly unknown[]): void {
     if (this.getRuntimeResetToken() === undefined) return
     coreLogger.warn(
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
@@ -321,10 +322,34 @@ abstract class CoreStatefulEventEmitter
       return { accepted: false }
     }
 
-    const data = await this.experienceQueue.send(event, optimizationContext)
-    if (data === undefined) return { accepted: true }
+    return await this.experienceQueue.send(event, optimizationContext)
+  }
 
-    return { accepted: true, data }
+  protected async sendPreparedExperienceEvents(
+    events: readonly ExperienceEventPayload[],
+    profileId?: string,
+    locale?: string,
+  ): Promise<EventEmissionResult> {
+    if (this.getRuntimeResetToken() === undefined) return { accepted: false }
+    let validEvents: ExperienceEventPayload[] = []
+    try {
+      validEvents = validatePreparedEvents(events)
+    } catch (error) {
+      coreLogger.warn('Invalid prepared Experience events; delivery was not admitted.', error)
+      return { accepted: false }
+    }
+    for (const event of validEvents) {
+      if (!this.hasConsent(event.type)) {
+        this.onBlockedByConsent(event.type, [event])
+        return { accepted: false }
+      }
+    }
+    return await Promise.resolve(
+      this.experienceQueue.sendPrepared(
+        validEvents.map((event) => withEventConsent(event, consentSignal.value === true)),
+        { profileId, locale },
+      ),
+    )
   }
 
   protected async sendInsightsEvent(

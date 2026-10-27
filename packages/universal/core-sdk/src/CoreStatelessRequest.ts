@@ -17,11 +17,21 @@ import type {
 } from './CoreBase'
 import type CoreStateless from './CoreStateless'
 import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
+import type {
+  CoreStatelessForRequestOptions,
+  CoreStatelessRequestEventBuilder,
+  InitialExperienceEvent,
+  PrepareRequestHandoffOptions,
+  PrepareRequestHandoffResult,
+  StatelessExperiencePayload,
+  StatelessInsightsPayload,
+  StatelessNonStickyTrackViewPayload,
+  StatelessStickyTrackViewPayload,
+} from './CoreStatelessRequest.types'
 import { PartialProfile, type OptimizationData } from './api-schemas'
 import type {
   AllowedEventType,
   ClickBuilderArgs,
-  EventBuilder,
   EventEmissionResult,
   FlagViewBuilderArgs,
   HoverBuilderArgs,
@@ -30,10 +40,13 @@ import type {
   ScreenViewBuilderArgs,
   TrackBuilderArgs,
   UniversalEventBuilderArgs,
-  ViewBuilderArgs,
 } from './events'
+import { validatePreparedEvents, withEventConsent } from './events/preparedEvents'
+import type { OptimizationHandoff } from './handoff'
 import { normalizeExplicitLocale } from './locale'
 import { createManagedEntryHandoffs, normalizeManagedEntryDescriptor } from './managed-entry'
+
+export type * from './CoreStatelessRequest.types'
 
 const coreLogger = createScopedLogger('CoreStateless')
 
@@ -48,91 +61,6 @@ const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
 const STICKY_TRACK_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackView() could not derive a profile from the sticky Experience response. Bind `profile.id` with forRequest() if you need a fallback.'
 
-/**
- * Request-scoped consent accepted by stateless request clients.
- *
- * @public
- */
-export type CoreStatelessRequestConsent =
-  | boolean
-  | {
-      /** Whether events may be emitted for this request. */
-      events?: boolean
-      /** Whether profile continuity may be persisted by the host application. */
-      persistence?: boolean
-    }
-
-/**
- * Personalization event construction with request context applied before building.
- *
- * @remarks
- * Building does not submit events or apply request consent and submission processing.
- *
- * @public
- */
-export type CoreStatelessRequestEventBuilder = Readonly<
-  Pick<EventBuilder, 'buildIdentify' | 'buildPageView' | 'buildScreenView' | 'buildTrack'>
->
-
-/**
- * Options used to bind stateless SDK calls to an incoming request.
- *
- * @public
- */
-export interface CoreStatelessForRequestOptions {
-  /** Request-scoped event and persistence consent. */
-  consent: CoreStatelessRequestConsent
-  /**
-   * Request-scoped SDK locale used for Experience API requests, default event context, and
-   * SDK-managed Contentful entry fetching when no Contentful query locale is configured.
-   */
-  locale?: string
-  /** Profile already known for the request, such as an anonymous ID from a cookie. */
-  profile?: PartialProfile
-  /** Universal event context shared by event calls made through this request object. */
-  eventContext?: UniversalEventBuilderArgs
-  /** Experience API options shared by Experience calls made through this request object. */
-  experienceOptions?: CoreStatelessRequestOptions
-  /** Insights API options shared by Insights calls made through this request object. */
-  insightsOptions?: CoreStatelessInsightsOptions
-}
-
-/**
- * Payload accepted by request-bound Experience methods.
- *
- * @typeParam TPayload - Event-builder arguments for the specific method.
- *
- * @public
- */
-export type StatelessExperiencePayload<TPayload> = TPayload
-
-/**
- * Payload accepted by request-bound Insights methods.
- *
- * @typeParam TPayload - Event-builder arguments for the specific method.
- *
- * @public
- */
-export type StatelessInsightsPayload<TPayload> = TPayload
-
-/**
- * Sticky request-bound view-tracking payload.
- *
- * @public
- */
-export type StatelessStickyTrackViewPayload = ViewBuilderArgs & {
-  sticky: true
-}
-
-/**
- * Non-sticky request-bound view-tracking payload.
- *
- * @public
- */
-export type StatelessNonStickyTrackViewPayload = Omit<ViewBuilderArgs, 'sticky'> & {
-  sticky?: false | undefined
-}
-
 const requireInsightsProfile = (
   profile: PartialProfile | undefined,
   errorMessage: string,
@@ -141,20 +69,6 @@ const requireInsightsProfile = (
 
   throw new Error(errorMessage)
 }
-
-const withRequestEventConsent = <TEvent extends ExperienceEventPayload | InsightsEventPayload>(
-  event: TEvent,
-  isConsentGiven: boolean,
-): TEvent => ({
-  ...event,
-  context: {
-    ...event.context,
-    gdpr: {
-      ...event.context.gdpr,
-      isConsentGiven,
-    },
-  },
-})
 
 type RequestExperienceMethod = 'identify' | 'page' | 'screen' | 'track'
 
@@ -167,11 +81,13 @@ export class CoreStatelessRequest {
   private readonly core: CoreStateless
   private currentProfile: PartialProfile | undefined
   private currentSelectedOptimizations: OptimizationData['selectedOptimizations'] | undefined
+  private profileRevision = 0
   private readonly requestEventConsent: boolean | undefined
   private readonly eventContext: UniversalEventBuilderArgs
   private readonly experienceOptions: CoreStatelessRequestOptions | undefined
   private readonly insightsOptions: CoreStatelessInsightsOptions | undefined
   private readonly requestLocale: string | undefined
+  /** Whether the host application is permitted to persist profile continuity for this request. */
   readonly canPersistProfile: boolean
 
   /**
@@ -204,17 +120,114 @@ export class CoreStatelessRequest {
         ? (eventContext ?? {})
         : { ...eventContext, locale: requestLocale }
     this.experienceOptions =
-      requestLocale === undefined
-        ? experienceOptions
-        : { ...experienceOptions, locale: requestLocale }
+      experienceOptions === undefined
+        ? undefined
+        : {
+            ip: experienceOptions.ip,
+            plainText: experienceOptions.plainText,
+            locale: experienceOptions.locale,
+          }
+    if (requestLocale !== undefined)
+      this.experienceOptions = { ...this.experienceOptions, locale: requestLocale }
     this.insightsOptions = insightsOptions
   }
 
   /**
-   * Current request profile, updated after Experience responses.
+   * Current request profile, updated from Experience API responses, including preview responses.
+   * A profile ID returned by a preview can continue the browser request without implying that the
+   * preview committed profile state.
    */
   get profile(): PartialProfile | undefined {
     return this.currentProfile
+  }
+
+  /**
+   * Prepare a private-request handoff and preview its initial Experience events.
+   *
+   * The replay contains consent-permitted initial events followed by the page event. A successful
+   * preview returns optimization data and an API-issued profile ID for browser continuation; it
+   * does not commit the previewed profile state. If the preview request fails, the prepared replay
+   * is still returned and `data` is omitted.
+   *
+   * @public
+   */
+  async prepareRequestHandoff({
+    routeKey,
+    initialEvents,
+    page,
+  }: PrepareRequestHandoffOptions): Promise<PrepareRequestHandoffResult> {
+    const profileId = this.currentProfile?.id
+    const { profileRevision } = this
+    const handoff: OptimizationHandoff = {
+      cache: { scope: 'private-request' },
+      profileId,
+    }
+    if (!this.hasConsent('page')) {
+      this.reportBlockedEvent('page', [page])
+      return { handoff }
+    }
+    let events: ExperienceEventPayload[] = []
+    try {
+      if (!routeKey.startsWith('/'))
+        throw new TypeError('Request handoff requires a pathname/search route key.')
+      events = await this.buildHandoffEvents(initialEvents, page)
+    } catch (error) {
+      coreLogger.warn('Invalid request handoff inputs; no replay was prepared.', error)
+      return { handoff }
+    }
+    const preparedHandoff: OptimizationHandoff = {
+      ...handoff,
+      replay: { routeKey, events, locale: this.experienceOptions?.locale ?? this.core.locale },
+    }
+    try {
+      const data = await this.core.api.experience.upsertProfile(
+        { profileId, events },
+        { ...this.experienceOptions, preflight: true },
+      )
+      const { profile } = data
+      this.publishExperienceData(data, profileRevision)
+      return { handoff: { ...preparedHandoff, profileId: profileId ?? profile.id }, data }
+    } catch (error) {
+      coreLogger.warn('Request preview failed; the prepared handoff remains available.', error)
+      return { handoff: preparedHandoff }
+    }
+  }
+
+  private async buildHandoffEvents(
+    initialEvents: readonly InitialExperienceEvent[] = [],
+    page: PageViewBuilderArgs = {},
+  ): Promise<ExperienceEventPayload[]> {
+    const inputs: ExperienceEventPayload[] = []
+    for (const input of initialEvents) {
+      if (!['identify', 'track'].includes(input.type))
+        throw new TypeError('Initial handoff events must be identify or track inputs.')
+      if (!this.hasConsent(input.type)) {
+        this.reportBlockedEvent(input.type, [input])
+        continue
+      }
+      inputs.push(
+        input.type === 'identify'
+          ? this.core.eventBuilder.buildIdentify(this.withEventContext(input))
+          : this.core.eventBuilder.buildTrack(this.withEventContext(input)),
+      )
+    }
+    inputs.push(
+      this.core.eventBuilder.buildPageView(
+        this.withEventContext({
+          ...page,
+          properties: { ...this.eventContext.page, ...page.properties },
+        }),
+      ),
+    )
+    const events: Array<ExperienceEventPayload | InsightsEventPayload> = []
+    for (const event of inputs) {
+      events.push(
+        await this.core.interceptors.event.run(
+          withEventConsent(event, this.requestEventConsent === true),
+        ),
+      )
+    }
+    return validatePreparedEvents(events)
   }
 
   async identify(
@@ -482,7 +495,8 @@ export class CoreStatelessRequest {
   private async sendAllowedExperienceEvent(
     event: ExperienceEventPayload,
   ): Promise<OptimizationData> {
-    const consentedEvent = withRequestEventConsent(event, this.requestEventConsent === true)
+    const { profileRevision } = this
+    const consentedEvent = withEventConsent(event, this.requestEventConsent === true)
     const hasInterceptors = this.core.interceptors.event.count() > 0
     // Keep the async boundary before selecting the current request profile.
     const intercepted = await (hasInterceptors
@@ -499,18 +513,25 @@ export class CoreStatelessRequest {
       this.experienceOptions,
     )
 
-    const { profile, selectedOptimizations } = result
-    this.currentProfile = profile
-    this.currentSelectedOptimizations = selectedOptimizations
+    this.publishExperienceData(result, profileRevision)
 
     return result
+  }
+
+  private publishExperienceData(data: OptimizationData, profileRevision: number): void {
+    if (profileRevision !== this.profileRevision) return
+
+    const { profile, selectedOptimizations } = data
+    this.currentProfile = profile
+    this.currentSelectedOptimizations = selectedOptimizations
+    this.profileRevision++
   }
 
   private async sendAllowedInsightsEvent(
     event: InsightsEventPayload,
     profile: PartialProfile,
   ): Promise<void> {
-    const consentedEvent = withRequestEventConsent(event, this.requestEventConsent === true)
+    const consentedEvent = withEventConsent(event, this.requestEventConsent === true)
     const hasInterceptors = this.core.interceptors.event.count() > 0
     const intercepted = await (hasInterceptors
       ? this.core.interceptors.event.run(consentedEvent)

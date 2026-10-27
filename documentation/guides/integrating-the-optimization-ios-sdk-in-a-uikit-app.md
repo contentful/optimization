@@ -1322,12 +1322,16 @@ lifecycle handler flushes on `willResignActive`.
 
 1. Add `QueuePolicy` only when production telemetry needs queue limits or lifecycle callbacks. The
    offline Experience queue holds up to 100 events by default (tunable via
-   `QueuePolicy.offlineMaxEvents`); queues are in-memory only and do not survive process death.
-2. Use queue callbacks for operational diagnostics, not for resending blocked or dropped events.
+   `QueuePolicy.offlineMaxEvents`); queues are in-memory only and do not survive process death. At
+   capacity, an incoming Experience event is rejected and accepted events keep their order.
+2. Use active queue callbacks for flush diagnostics. `onOfflineDrop` is deprecated and inactive.
 3. Keep Contentful entry caching in the application layer — the SDK does not cache CDA responses for
    UIKit rendering.
 4. Call `flush()` only for deliberate release, test, or lifecycle flows; the SDK already flushes on
    background and reconnect.
+
+`diagnostics` is your app's operational logger. Each flush callback receives a `QueueEvent`; its
+`context` dictionary contains the details to record.
 
 **Adapt this to your use case:**
 
@@ -1337,11 +1341,6 @@ let config = OptimizationConfig(
     spaceId: "your-space-id",
     queuePolicy: QueuePolicy(
         offlineMaxEvents: 500,
-        onOfflineDrop: { event in
-            // event is a QueueEvent with a type and a context dictionary;
-            // diagnostics is reader-owned: your own operational logging.
-            diagnostics.record("optimization-offline-drop", context: event.context)
-        },
         onFlushFailure: { event in
             diagnostics.record("optimization-flush-failure", context: event.context)
         },
