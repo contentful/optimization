@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.2](https://github.com/contentful/optimization/compare/optimization-web-v2.1.1...optimization-web-v2.1.2) (2026-10-27)
+
+### Bug Fixes
+
+- **runtime:** isolate lifecycle state and queued event delivery ([#558](https://github.com/contentful/optimization/issues/558)) ([1ef0d12](https://github.com/contentful/optimization/commit/1ef0d12e4754a23121cdab3881302ee554f52045))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.2.0
+
 ## [2.1.1](https://github.com/contentful/optimization/compare/optimization-web-v2.1.0...optimization-web-v2.1.1) (2026-10-21)
 
 ### Dependencies

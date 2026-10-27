@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.2](https://github.com/contentful/optimization/compare/optimization-swift-v2.1.1...optimization-swift-v2.1.2) (2026-10-27)
+
+### Bug Fixes
+
+- **swift:** refresh shared native runtime ([7ddc83d](https://github.com/contentful/optimization/commit/7ddc83d6b6b8a0553ce0b6a86bef36f8c678d698))
+
 ## [2.1.1](https://github.com/contentful/optimization/compare/optimization-swift-v2.1.0...optimization-swift-v2.1.1) (2026-10-21)
 
 ### Bug Fixes

@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0](https://github.com/contentful/optimization/compare/optimization-core-v2.1.1...optimization-core-v2.2.0) (2026-10-27)
+
+### Features
+
+- **core:** add request-bound event construction and stateless fast paths ([#564](https://github.com/contentful/optimization/issues/564)) ([7ddc83d](https://github.com/contentful/optimization/commit/7ddc83d6b6b8a0553ce0b6a86bef36f8c678d698))
+
+### Bug Fixes
+
+- **runtime:** isolate lifecycle state and queued event delivery ([#558](https://github.com/contentful/optimization/issues/558)) ([1ef0d12](https://github.com/contentful/optimization/commit/1ef0d12e4754a23121cdab3881302ee554f52045))
+
 ## [2.1.1](https://github.com/contentful/optimization/compare/optimization-core-v2.1.0...optimization-core-v2.1.1) (2026-10-21)
 
 ### Dependencies
