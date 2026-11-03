@@ -25,8 +25,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/rich-text-react-renderer": "16.1.6",
-    "@contentful/rich-text-types": "17.2.5",
+    "@contentful/rich-text-react-renderer": "16.2.2",
+    "@contentful/rich-text-types": "17.2.7",
     "@contentful/optimization-web": "0.0.0",
     "@contentful/optimization-web-preview-panel": "0.0.0",
     "contentful": "11.10.5",
