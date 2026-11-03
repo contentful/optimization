@@ -2,25 +2,23 @@ import * as z from 'zod/mini'
 
 import { parseWithFriendlyError } from '.'
 
-describe('zod/mini en locale configuration', () => {
+describe('en locale messages', () => {
   it('produces descriptive error messages instead of generic "Invalid input"', () => {
     const schema = z.object({ userId: z.string() })
-    const result = schema.safeParse({ userId: 123 })
 
-    if (result.success) throw new Error('Expected failure')
-
-    const message = result.error.issues[0]?.message ?? ''
-    expect(message).toContain('expected string')
+    expect(() => parseWithFriendlyError(schema, { userId: 123 })).toThrow('expected string')
   })
 
   it('includes received type in error messages', () => {
-    const schema = z.number()
-    const result = schema.safeParse('hello')
+    expect(() => parseWithFriendlyError(z.number(), 'hello')).toThrow('received string')
+  })
+
+  it('does not change error messages for schemas parsed outside the SDK', () => {
+    const result = z.object({ userId: z.string() }).safeParse({ userId: 123 })
 
     if (result.success) throw new Error('Expected failure')
 
-    const message = result.error.issues[0]?.message ?? ''
-    expect(message).toContain('received string')
+    expect(result.error.issues[0]?.message).toBe('Invalid input')
   })
 })
 
@@ -53,14 +51,8 @@ describe('z.prettifyError', () => {
   })
 
   it('formats root-level type errors without path', () => {
-    const schema = z.string()
-    const result = schema.safeParse(123)
-
-    if (result.success) throw new Error('Expected failure')
-
-    const pretty = z.prettifyError(result.error)
-    expect(pretty).toContain('expected string')
-    expect(pretty).not.toContain('→ at')
+    expect(() => parseWithFriendlyError(z.string(), 123)).toThrow('expected string')
+    expect(() => parseWithFriendlyError(z.string(), 123)).not.toThrow('→ at')
   })
 })
 

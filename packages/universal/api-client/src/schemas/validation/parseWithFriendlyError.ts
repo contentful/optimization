@@ -1,13 +1,15 @@
 import * as z from 'zod/mini'
 import en from 'zod/v4/locales/en.js'
 
-z.config(en())
+// Scoped to this parse instead of `z.config()`, so importing the SDK does not change zod's
+// error messages for every other schema in the consumer's process.
+const { localeError } = en()
 
 export function parseWithFriendlyError<T extends z.ZodMiniType>(
   schema: T,
   data: unknown,
 ): z.output<T> {
-  const result = schema.safeParse(data)
+  const result = schema.safeParse(data, { error: localeError })
   if (result.success) return result.data
 
   throw new Error(z.prettifyError(result.error))
