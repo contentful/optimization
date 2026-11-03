@@ -12,3 +12,6 @@ overrides:
   '@contentful/optimization-web': 'file:../../pkgs/contentful-optimization-web-local.tgz'
   '@contentful/optimization-react-web': 'file:../../pkgs/contentful-optimization-react-web-local.tgz'
   '@contentful/optimization-web-preview-panel': 'file:../../pkgs/contentful-optimization-web-preview-panel-local.tgz'
+  # axios 1.21.0 reads Date.now() before fetch(), which Next.js cacheComponents rejects while
+  # prerendering routes that fetch CDA entries. Remove once contentful.js or this app avoids it.
+  axios: '~1.20.0'
