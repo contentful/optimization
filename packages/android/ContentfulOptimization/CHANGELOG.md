@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.2](https://github.com/contentful/optimization/compare/optimization-android-v2.1.1...optimization-android-v2.1.2) (2026-11-04)
+
+### Bug Fixes
+
+- **android:** refresh shared native runtime ([f1a36a2](https://github.com/contentful/optimization/commit/f1a36a2a842a60fd068ec66374167ccf42c803b6))
+
 ## [2.1.1](https://github.com/contentful/optimization/compare/optimization-android-v2.1.0...optimization-android-v2.1.1) (2026-10-21)
 
 ### Bug Fixes

@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.6](https://github.com/contentful/optimization/compare/optimization-api-schemas-v1.2.5...optimization-api-schemas-v1.2.6) (2026-11-04)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-api-client bumped to 2.2.2
+    - @contentful/optimization-core bumped to 2.2.0
+
 ## [1.2.5](https://github.com/contentful/optimization/compare/optimization-api-schemas-v1.2.4...optimization-api-schemas-v1.2.5) (2026-10-21)
 
 ### Dependencies
