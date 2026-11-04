@@ -130,7 +130,7 @@ async function getRequestOptimizationData(
     consent,
     data,
     pageAccepted: pageResult.accepted,
-    profileId: data?.profile.id ?? requestOptimization.profile?.id,
+    profileId: data?.profile.id ?? requestOptimization.profileId,
     requestOptimization,
   }
 }

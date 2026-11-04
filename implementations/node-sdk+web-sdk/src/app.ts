@@ -169,12 +169,11 @@ async function getProfile(
   }
 
   const args = getUniversalEventBuilderArgs(req, APP_LOCALE)
-  const cookieProfile = anonymousId ? { id: anonymousId } : undefined
   const requestOptimization = sdk.forRequest({
     consent: { events: true, persistence: true },
     eventContext: args,
     locale: APP_LOCALE,
-    profile: cookieProfile,
+    profileId: anonymousId,
   })
 
   if (!userId) {

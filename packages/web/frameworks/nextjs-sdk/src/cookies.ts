@@ -64,7 +64,7 @@ export function createNextjsAnonymousIdSetCookieHeader(
     deleteWhenProfileCannotPersist = true,
   }: PersistNextjsAnonymousIdOptions = {},
 ): string | undefined {
-  const profileId = data?.profile.id ?? requestOptimization.profile?.id
+  const profileId = data?.profile.id ?? requestOptimization.profileId
 
   if (requestOptimization.canPersistProfile && profileId) {
     return serializeCookie(anonymousIdCookieName, profileId, {

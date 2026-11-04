@@ -175,11 +175,10 @@ A single user action can touch either or both APIs. `trackView({ sticky: true })
 Experience first because sticky views become part of the profile, then through Insights. Plain
 `trackView` only hits Insights; `identify` only touches Experience.
 
-Insights delivery has one extra gate after consent: the SDK must have a current profile. If an entry
-view, tap, or flag view reaches `InsightsQueue` before `sdk.states.profile.current` exists, the
-queue logs a warning and drops the event before it can be batched. In practice, hydrate a persisted
-profile, call `identify`, emit `screen`, or send another Experience event before depending on
-Insights-backed interaction data.
+Insights delivery has one extra gate after consent: the SDK must have a full profile snapshot. If an
+entry view, tap, or flag view reaches `InsightsQueue` before `sdk.states.profile.current` exists,
+the queue logs a warning and drops the event. The profile can come from defaults, persisted state,
+or an Experience event such as `identify` or `screen`.
 
 Third-party analytics integrations that need one exposure for a sticky view must dedupe by semantic
 fields such as `viewId`, `componentId`, `experienceId`, and `variantIndex`, not by `messageId`.

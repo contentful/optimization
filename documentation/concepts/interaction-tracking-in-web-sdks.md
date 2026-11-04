@@ -89,7 +89,7 @@ Before relying on automatic entry interaction tracking, account for these runtim
 
 | Concern                     | Default or prerequisite                                                                                                                                                                               |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Profile state               | Call `page()` or `identify()` before relying on Insights events. Insights delivery needs a current profile in SDK state.                                                                              |
+| Profile state               | Insights delivery needs a full `Profile` snapshot in SDK state.                                                                                                                                       |
 | Consent                     | Browser SDKs allow `identify` and `page` before consent by default. Other event types need accepted consent or an explicit `allowedEventTypes` entry.                                                 |
 | Automatic tracking          | Entry view, click, and hover detectors are configured on by default, but each detector starts only when the matching event type is allowed by consent or `allowedEventTypes`.                         |
 | Persistence                 | Consent is read from `localStorage` during startup. Profile-continuity state and the anonymous ID cookie are persisted only when persistence consent permits it.                                      |
@@ -106,9 +106,9 @@ Tracking events use two API paths:
 | Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends Analytics events for entry interactions and Custom Flag observations. |
 
 The Web SDK normally starts a browser journey with `page()` or `identify()`. Those calls use the
-Experience API and populate the state that later Insights events need for attribution. If an
-Insights event is emitted before the stateful SDK has a profile, Core logs a warning and drops that
-Insights event because there is no profile to attach to the batch.
+Experience API and populate the full profile state that Insights events need for attribution.
+A server handoff, `defaults.profile`, or persisted state can also supply the profile. If an Insights
+event is emitted without a current profile, Core logs a warning and drops the event.
 
 The entry interaction methods map to these wire event types:
 
@@ -152,7 +152,7 @@ Consent affects two parts of automatic entry tracking:
 
 This means a typical browser integration needs both:
 
-1. A profile-producing event such as `page()` or `identify()`.
+1. A full profile snapshot in SDK state.
 2. Consent or an explicit event allow-list for the interaction event types the application wants to
    send.
 
@@ -478,8 +478,7 @@ profile continuity is enabled.
 
 When an expected interaction does not appear, check the gates in this order:
 
-1. **Profile** - Call `page()` or `identify()` before relying on Insights events. Insights delivery
-   needs a current profile in state.
+1. **Profile** - Confirm `states.profile.current` contains a full profile snapshot.
 2. **Consent** - Confirm `states.consent.current === true` or configure `allowedEventTypes` for the
    event types that must emit before consent.
 3. **Detector startup** - Confirm React Web `trackEntryInteraction`, lower-level Web SDK

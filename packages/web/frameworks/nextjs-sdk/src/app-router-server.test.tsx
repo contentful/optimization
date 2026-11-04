@@ -923,7 +923,7 @@ describe('Next.js App Router v2 binding', () => {
             }),
             userAgent: 'app-router-agent',
           }),
-          profile: { id: 'incoming-id' },
+          profileId: 'incoming-id',
         }),
       )
       expect(handoff.initialPageEvent).toBe(expectedInitialPageEvent)

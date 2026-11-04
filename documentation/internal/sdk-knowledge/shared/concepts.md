@@ -244,9 +244,9 @@ blocked-event, and Experience-request diagnostics before publishing its initial 
 Experience teardown delivery uses captured profile identity and does not publish response state.
 source: core-sdk#CoreStateful.ts#CoreStateful; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 
-Insights flush sends a snapshot of queued events and removes only that snapshot after success;
-events appended during the request remain queued. Concurrent flush calls join the queue's active
-attempt rather than starting duplicate delivery.
+Insights flush sends a snapshot of queued events and removes only that snapshot after successful
+fetch delivery or Beacon queue acceptance. Events appended during the request remain queued.
+Concurrent flush calls join the queue's active attempt rather than starting duplicate delivery.
 source: core-sdk#queues/InsightsQueue.ts#InsightsQueue; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 
 Event-stream payloads carry each event's normal schema plus universal event fields such as

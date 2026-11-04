@@ -133,7 +133,7 @@ describe('Next.js Edge runtime helpers', () => {
           userAgent: 'test-agent',
         }),
         locale: 'en-US',
-        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
       }),
     )
 
@@ -169,7 +169,7 @@ describe('Next.js Edge runtime helpers', () => {
     })
 
     expect(forRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ profile: { id: 'a19c3f54d2b84e37a93f6d1c0e5b7284' } }),
+      expect.objectContaining({ profileId: 'a19c3f54d2b84e37a93f6d1c0e5b7284' }),
     )
   })
 

@@ -7,13 +7,13 @@ import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { selectedOptimizations } from './test/fixtures/selectedOptimizations'
 
 const TRACK_CLICK_PROFILE_ERROR =
-  'CoreStatelessRequest.trackClick() requires a request-bound profile id for Insights delivery.'
+  'CoreStatelessRequest.trackClick() requires a complete request-bound profile for Insights delivery.'
 const TRACK_HOVER_PROFILE_ERROR =
-  'CoreStatelessRequest.trackHover() requires a request-bound profile id for Insights delivery.'
+  'CoreStatelessRequest.trackHover() requires a complete request-bound profile for Insights delivery.'
 const TRACK_FLAG_VIEW_PROFILE_ERROR =
-  'CoreStatelessRequest.trackFlagView() requires a request-bound profile id for Insights delivery.'
+  'CoreStatelessRequest.trackFlagView() requires a complete request-bound profile for Insights delivery.'
 const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
-  'CoreStatelessRequest.trackView() requires a request-bound profile id when `payload.sticky` is not `true`.'
+  'CoreStatelessRequest.trackView() requires a complete request-bound profile when `payload.sticky` is not `true`.'
 
 type ProductEntrySkeleton = EntrySkeletonType<
   {
@@ -294,7 +294,7 @@ describe('CoreStateless', () => {
       selectedOptimizations,
     })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+    const request = core.forRequest({ consent: true, profileId: 'initial-profile' })
     await request.page()
     const currentProfile = request.profile
     const selectedBefore = (await request.fetchOptimizedEntry(optimizedEntry.sys.id))
@@ -358,7 +358,7 @@ describe('CoreStateless', () => {
         userAgent: 'unit-test',
       },
       experienceOptions: requestOptions,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.identify({ userId: 'user-123' })
@@ -400,7 +400,7 @@ describe('CoreStateless', () => {
           url: 'https://example.test/products?audience=beta',
         },
       },
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.page()
@@ -430,7 +430,7 @@ describe('CoreStateless', () => {
       consent: true,
       eventContext: { locale: 'en-US' },
       experienceOptions: { locale: 'de-DE' },
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.page()
@@ -456,7 +456,7 @@ describe('CoreStateless', () => {
       eventContext: { locale: 'en-US' },
       experienceOptions: { locale: 'fr-FR', preflight: true },
       locale: ' de_DE ',
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.page()
@@ -485,7 +485,7 @@ describe('CoreStateless', () => {
     })
     const requestOptimization = core.forRequest({
       consent: true,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.page()
@@ -697,7 +697,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: { events: false },
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.identify({ userId: 'user-123' })
@@ -721,7 +721,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await expect(requestOptimization.track({ event: 'conversion' })).resolves.toEqual({
@@ -751,7 +751,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await expect(requestOptimization.page()).resolves.toEqual({ accepted: false })
@@ -772,7 +772,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.track({ event: 'server-preflight' })
@@ -791,7 +791,7 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profile: EMPTY_OPTIMIZATION_DATA.profile,
     })
 
     await requestOptimization.trackView({
@@ -804,7 +804,7 @@ describe('CoreStateless', () => {
     expect(blockedEvents.map((event) => event.method)).toEqual(['trackView'])
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {
-        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+        profile: EMPTY_OPTIMIZATION_DATA.profile,
         events: [
           expect.objectContaining({
             componentId: 'dark-mode',
@@ -827,7 +827,7 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profile: EMPTY_OPTIMIZATION_DATA.profile,
     })
 
     await requestOptimization.trackView({
@@ -863,8 +863,11 @@ describe('CoreStateless', () => {
       .mockResolvedValueOnce({ ...EMPTY_OPTIMIZATION_DATA, profile: secondProfile })
     const requestOptimization = core.forRequest({
       consent: true,
-      profile: { id: 'initial-profile' },
+      profileId: 'initial-profile',
     })
+
+    expect(requestOptimization.profile).toBeUndefined()
+    expect(requestOptimization.profileId).toBe('initial-profile')
 
     await requestOptimization.page()
     await requestOptimization.identify({ userId: 'user-123' })
@@ -874,6 +877,7 @@ describe('CoreStateless', () => {
       'first-profile',
     ])
     expect(requestOptimization.profile).toEqual(secondProfile)
+    expect(requestOptimization.profileId).toBe(secondProfile.id)
   })
 
   it('bypasses empty event interceptors, including after the last handler is removed', async () => {
@@ -883,7 +887,7 @@ describe('CoreStateless', () => {
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+    const request = core.forRequest({ consent: true, profileId: 'initial-profile' })
 
     await request.page()
     await request.trackClick({ componentId: 'hero-banner' })
@@ -924,7 +928,10 @@ describe('CoreStateless', () => {
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+    const request = core.forRequest({
+      consent: true,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'initial-profile' },
+    })
 
     core.interceptors.event.add(() => core.eventBuilder.buildClick({ componentId: 'hero' }))
     await expect(request.page()).rejects.toThrow()
@@ -937,7 +944,7 @@ describe('CoreStateless', () => {
 
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(sendBatchEvents).not.toHaveBeenCalled()
-    expect(request.profile).toEqual({ id: 'initial-profile' })
+    expect(request.profile).toEqual({ ...EMPTY_OPTIMIZATION_DATA.profile, id: 'initial-profile' })
   })
 
   it('propagates interceptor errors without sending or adopting a response', async () => {
@@ -946,7 +953,10 @@ describe('CoreStateless', () => {
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+    const request = core.forRequest({
+      consent: true,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'initial-profile' },
+    })
     const failure = new Error('interceptor failed')
     core.interceptors.event.add(() => {
       throw failure
@@ -956,18 +966,7 @@ describe('CoreStateless', () => {
     await expect(request.trackClick({ componentId: 'hero' })).rejects.toBe(failure)
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(sendBatchEvents).not.toHaveBeenCalled()
-    expect(request.profile).toEqual({ id: 'initial-profile' })
-  })
-
-  it('still validates request profiles for direct Insights delivery without interceptors', async () => {
-    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
-    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-    const profile = { id: 'initial-profile' }
-    Reflect.set(profile, 'invalid', () => undefined)
-    const request = core.forRequest({ consent: true, profile })
-
-    await expect(request.trackClick({ componentId: 'hero' })).rejects.toThrow()
-    expect(sendBatchEvents).not.toHaveBeenCalled()
+    expect(request.profile).toEqual({ ...EMPTY_OPTIMIZATION_DATA.profile, id: 'initial-profile' })
   })
 
   it('selects Experience profiles after yielding while Insights retains its call-time profile', async () => {
@@ -981,7 +980,12 @@ describe('CoreStateless', () => {
       .mockReturnValueOnce(firstResponse)
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+    const initialProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'initial-profile' }
+    const request = core.forRequest({
+      consent: true,
+      profile: initialProfile,
+      profileId: 'fallback-profile',
+    })
 
     const first = request.page()
     expect(upsertProfile).not.toHaveBeenCalled()
@@ -998,7 +1002,7 @@ describe('CoreStateless', () => {
       'initial-profile',
       EMPTY_OPTIMIZATION_DATA.profile.id,
     ])
-    expect(sendBatchEvents.mock.calls[0]?.[0][0]?.profile).toEqual({ id: 'initial-profile' })
+    expect(sendBatchEvents.mock.calls[0]?.[0][0]?.profile).toEqual(initialProfile)
     expect(request.profile).toEqual(EMPTY_OPTIMIZATION_DATA.profile)
   })
 
@@ -1011,7 +1015,7 @@ describe('CoreStateless', () => {
     const requestOptimization = core.forRequest({
       consent: true,
       experienceOptions: { preflight: true },
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.trackView({
@@ -1053,7 +1057,7 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.trackClick({ componentId: 'hero-banner' })
@@ -1069,7 +1073,7 @@ describe('CoreStateless', () => {
     const requestOptimization = core.forRequest({
       consent: true,
       insightsOptions: { beacon },
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profile: EMPTY_OPTIMIZATION_DATA.profile,
     })
 
     await requestOptimization.trackClick({ componentId: 'hero-banner' })
@@ -1098,7 +1102,7 @@ describe('CoreStateless', () => {
     expect(blockedEvents[0]?.method).toBe('trackClick')
   })
 
-  it('rejects insights-only request methods without a request-bound profile id', async () => {
+  it('rejects Insights-only request methods without a request-bound profile', async () => {
     const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({ consent: true })
@@ -1133,7 +1137,7 @@ describe('CoreStateless', () => {
     const requestOptimization = core.forRequest({
       consent: true,
       experienceOptions: { preflight: true },
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profile: EMPTY_OPTIMIZATION_DATA.profile,
     })
 
     await expect(
@@ -1147,7 +1151,7 @@ describe('CoreStateless', () => {
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {
-        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+        profile: EMPTY_OPTIMIZATION_DATA.profile,
         events: [
           expect.objectContaining({
             context: expect.objectContaining({
@@ -1160,7 +1164,7 @@ describe('CoreStateless', () => {
     ])
   })
 
-  it('rejects non-sticky entry views without a request-bound profile id', async () => {
+  it('rejects non-sticky entry views without a request-bound profile', async () => {
     const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({ consent: true })

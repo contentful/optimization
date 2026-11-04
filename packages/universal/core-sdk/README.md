@@ -82,7 +82,7 @@ const requestOptimization = statelessOptimization.forRequest({
   locale: 'en-US',
   eventContext: { locale: 'en-US' },
   experienceOptions: { preflight: false },
-  profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+  profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
 })
 
 const { accepted, data } = await requestOptimization.page()
@@ -118,8 +118,9 @@ for lifecycle and observable behavior.
 
 `CoreStateless` is the basis for SDKs that run in stateless environments such as Node servers and
 server-side functions. It does not store consent or profile state between requests. Consumers call
-`forRequest()` to create a request-bound event client with the consent, profile, event context, and
-Experience options for that one incoming request.
+`forRequest()` to bind consent, event context, and Experience options for one incoming request.
+Pass `profileId` for Experience continuity or a full `Profile` through `profile` for Insights.
+Experience responses update the request-local profile for subsequent calls.
 
 Request clients also expose a readonly `eventBuilder` facade for constructing identify, page,
 screen, and track payloads with request context and locale defaults. Construction uses the shared

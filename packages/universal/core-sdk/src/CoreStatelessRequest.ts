@@ -17,7 +17,7 @@ import type {
 } from './CoreBase'
 import type CoreStateless from './CoreStateless'
 import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
-import { PartialProfile, type OptimizationData } from './api-schemas'
+import { Profile, type OptimizationData } from './api-schemas'
 import type {
   AllowedEventType,
   ClickBuilderArgs,
@@ -38,15 +38,15 @@ import { createManagedEntryHandoffs, normalizeManagedEntryDescriptor } from './m
 const coreLogger = createScopedLogger('CoreStateless')
 
 const TRACK_CLICK_PROFILE_ERROR =
-  'CoreStatelessRequest.trackClick() requires a request-bound profile id for Insights delivery.'
+  'CoreStatelessRequest.trackClick() requires a complete request-bound profile for Insights delivery.'
 const TRACK_HOVER_PROFILE_ERROR =
-  'CoreStatelessRequest.trackHover() requires a request-bound profile id for Insights delivery.'
+  'CoreStatelessRequest.trackHover() requires a complete request-bound profile for Insights delivery.'
 const TRACK_FLAG_VIEW_PROFILE_ERROR =
-  'CoreStatelessRequest.trackFlagView() requires a request-bound profile id for Insights delivery.'
+  'CoreStatelessRequest.trackFlagView() requires a complete request-bound profile for Insights delivery.'
 const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
-  'CoreStatelessRequest.trackView() requires a request-bound profile id when `payload.sticky` is not `true`.'
+  'CoreStatelessRequest.trackView() requires a complete request-bound profile when `payload.sticky` is not `true`.'
 const STICKY_TRACK_VIEW_PROFILE_ERROR =
-  'CoreStatelessRequest.trackView() could not derive a profile from the sticky Experience response. Bind `profile.id` with forRequest() if you need a fallback.'
+  'CoreStatelessRequest.trackView() could not derive a complete profile from the sticky Experience response.'
 
 /**
  * Request-scoped consent accepted by stateless request clients.
@@ -87,8 +87,12 @@ export interface CoreStatelessForRequestOptions {
    * SDK-managed Contentful entry fetching when no Contentful query locale is configured.
    */
   locale?: string
-  /** Profile already known for the request, such as an anonymous ID from a cookie. */
-  profile?: PartialProfile
+  /**
+   * Complete profile already known for the request, or populated by an Experience API response.
+   */
+  profile?: Profile
+  /** Profile ID for Experience API continuity when no complete profile is available. */
+  profileId?: string
   /** Universal event context shared by event calls made through this request object. */
   eventContext?: UniversalEventBuilderArgs
   /** Experience API options shared by Experience calls made through this request object. */
@@ -133,11 +137,8 @@ export type StatelessNonStickyTrackViewPayload = Omit<ViewBuilderArgs, 'sticky'>
   sticky?: false | undefined
 }
 
-const requireInsightsProfile = (
-  profile: PartialProfile | undefined,
-  errorMessage: string,
-): PartialProfile => {
-  if (profile?.id !== undefined) return profile
+const requireInsightsProfile = (profile: Profile | undefined, errorMessage: string): Profile => {
+  if (profile !== undefined) return profile
 
   throw new Error(errorMessage)
 }
@@ -165,7 +166,8 @@ type RequestExperienceMethod = 'identify' | 'page' | 'screen' | 'track'
  */
 export class CoreStatelessRequest {
   private readonly core: CoreStateless
-  private currentProfile: PartialProfile | undefined
+  private currentProfile: Profile | undefined
+  private readonly initialProfileId: string | undefined
   private currentSelectedOptimizations: OptimizationData['selectedOptimizations'] | undefined
   private readonly requestEventConsent: boolean | undefined
   private readonly eventContext: UniversalEventBuilderArgs
@@ -190,12 +192,22 @@ export class CoreStatelessRequest {
   }
 
   constructor(core: CoreStateless, options: CoreStatelessForRequestOptions) {
-    const { consent, eventContext, experienceOptions, insightsOptions, locale, profile } = options
+    const {
+      consent,
+      eventContext,
+      experienceOptions,
+      insightsOptions,
+      locale,
+      profile,
+      profileId,
+    } = options
     const isBooleanConsent = typeof consent === 'boolean'
     const requestLocale = normalizeExplicitLocale(locale)
 
     this.core = core
-    this.currentProfile = profile
+    this.currentProfile =
+      profile === undefined ? undefined : parseWithFriendlyError(Profile, profile)
+    this.initialProfileId = profileId
     this.requestLocale = requestLocale
     this.requestEventConsent = isBooleanConsent ? consent : consent.events
     this.canPersistProfile = (isBooleanConsent ? consent : consent.persistence) === true
@@ -213,8 +225,13 @@ export class CoreStatelessRequest {
   /**
    * Current request profile, updated after Experience responses.
    */
-  get profile(): PartialProfile | undefined {
+  get profile(): Profile | undefined {
     return this.currentProfile
+  }
+
+  /** Current profile identity; a complete profile takes precedence over the initial ID. */
+  get profileId(): string | undefined {
+    return this.currentProfile?.id ?? this.initialProfileId
   }
 
   async identify(
@@ -493,7 +510,7 @@ export class CoreStatelessRequest {
       : consentedEvent
     const result = await this.core.api.experience.upsertProfile(
       {
-        profileId: this.currentProfile?.id,
+        profileId: this.profileId,
         events: [validEvent],
       },
       this.experienceOptions,
@@ -508,7 +525,7 @@ export class CoreStatelessRequest {
 
   private async sendAllowedInsightsEvent(
     event: InsightsEventPayload,
-    profile: PartialProfile,
+    profile: Profile,
   ): Promise<void> {
     const consentedEvent = withRequestEventConsent(event, this.requestEventConsent === true)
     const hasInterceptors = this.core.interceptors.event.count() > 0
@@ -519,7 +536,7 @@ export class CoreStatelessRequest {
       ? parseWithFriendlyError(InsightsEventSchema, intercepted)
       : consentedEvent
     const batchEvent: BatchInsightsEventArray = parseWithFriendlyError(BatchInsightsEventArray, [
-      { profile: parseWithFriendlyError(PartialProfile, profile), events: [validEvent] },
+      { profile, events: [validEvent] },
     ])
 
     if (this.insightsOptions === undefined) {

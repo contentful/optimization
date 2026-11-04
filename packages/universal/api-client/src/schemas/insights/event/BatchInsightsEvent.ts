@@ -1,23 +1,23 @@
 import * as z from 'zod/mini'
-import { PartialProfile } from '../../experience/profile'
+import { Profile } from '../../experience/profile'
 import { InsightsEventArray } from './InsightsEvent'
 
 /**
  * Zod schema describing a batched Insights event payload.
  *
  * @remarks
- * Combines a {@link PartialProfile} with one or more Insights events
+ * Combines a {@link Profile} with one or more Insights events
  * to be sent to the Contentful Insights API.
  *
  * @public
  */
 export const BatchInsightsEvent = z.object({
   /**
-   * Partial profile information used to associate events with a user.
+   * Complete profile snapshot used to associate events with a user.
    *
-   * @see {@link PartialProfile}
+   * @see {@link Profile}
    */
-  profile: PartialProfile,
+  profile: Profile,
 
   /**
    * Insights events to record for this profile.

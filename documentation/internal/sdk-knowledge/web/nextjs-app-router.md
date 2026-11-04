@@ -145,18 +145,17 @@ dependencies; each carries a symbol-anchored source pointer.
   with default allowed event types `['identify', 'page']` and event-builder library version from
   `OPTIMIZATION_NEXTJS_SDK_VERSION` unless caller library config overrides it.
   `createEdgeRequestHandoff(options)` reads cookies from a Next cookie reader or the raw `cookie`
-  header, resolves server consent with cookies and headers, derives profile continuity from the
-  anonymous-id cookie when no explicit profile is supplied, builds page context from
+  header, resolves consent, uses an explicit `profileId` or the anonymous-id cookie, and builds page context from
   URL/referrer/user-agent, emits `page()`, sets `initialPageEvent` from whether that page event was
   accepted, and returns `persist(response)` for the anonymous-id `Set-Cookie` append.
   source: `nextjs-sdk#edge.ts#configureNextjsEdgeOptimization`; `nextjs-sdk#edge.ts#createEdgeOptimizationRuntime`; `nextjs-sdk#constants.ts#OPTIMIZATION_NEXTJS_SDK_VERSION`; `nextjs-sdk#edge.ts#createEdgeRequestSnapshot`; `nextjs-sdk#edge.ts#createEdgeRequestContext`; `nextjs-sdk#edge.ts#createEdgeRequestOptimizationHandoff`; `nextjs-sdk#edge.ts#persistEdgeAnonymousId`
 - Manual `/server` flow: `configureNextjsServerOptimization(config)` creates the long-lived
   stateless server runtime; `bindNextjsOptimizationRequest(sdk, options)` binds consent,
-  request/page context, locale, and profile continuity to one request; `createNextjsRequestHandoff()`
-  emits the page event and returns a browser handoff.
+  request/page context, locale, and profile continuity to one request; a supplied profile takes
+  precedence over scalar IDs. `createNextjsRequestHandoff()` emits the page event and returns a browser handoff.
   `getServerTrackingAttributes(baselineEntry, resolvedData)` maps a manual resolution to the
   `data-ctfl-*` attributes browser interaction tracking consumes.
-  source: `nextjs-sdk#server.tsx#configureNextjsServerOptimization`; `nextjs-sdk#server.tsx#bindNextjsOptimizationRequest`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `nextjs-sdk#tracking-attributes.ts#getServerTrackingAttributes`
+  source: `nextjs-sdk#server.tsx#configureNextjsServerOptimization`; `nextjs-sdk#server.tsx#bindNextjsOptimizationRequest`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `nextjs-sdk#tracking-attributes.ts#getServerTrackingAttributes`; `core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest`
 
 ## Components & hooks
 
@@ -292,7 +291,7 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   `encodeURIComponent(JSON.stringify(value))` into the forwarded `x-ctfl-opt-server-data` request
   header without serializing profile traits, changes, or selected optimizations, and persists the
   SDK-owned anonymous ID cookie on the response when persistence permits it. `pageAccepted` is copied
-  from `pageResult.accepted`; `profileId` comes from response data or the request-bound profile.
+  from `pageResult.accepted`; `profileId` comes from response data or the request's `profileId` getter.
   Without options, it only forwards sanitized request context.
   source: `nextjs-sdk#request-handler.ts#createNextjsOptimizationContextHandler`; `nextjs-sdk#request-handler.ts#hasExistingTerminalMiddlewareTarget`; `nextjs-sdk#request-handler.ts#sanitizeForwardedRequestHeaders`; `nextjs-sdk#request-handler.ts#getRequestOptimizationData`; `nextjs-sdk#request-context.ts#serializeNextjsOptimizationRequestContext`; `nextjs-sdk#server.tsx#getNextjsServerOptimizationData`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#forwarded-request-headers.ts#createForwardedRequestHeaders`; `nextjs-sdk#forwarded-request-headers.ts#applyForwardedRequestHeaders`; `nextjs-sdk#cache-middleware.ts#createNextjsPublicPermutationCacheMiddleware`; `nextjs-sdk#cache-middleware.ts#hasExistingTerminalMiddlewareTarget`
 - **Public permutations can be static, ISR, or edge-rendered:** routes that call

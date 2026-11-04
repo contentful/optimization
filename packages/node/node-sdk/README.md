@@ -90,7 +90,7 @@ async function renderRequest(
     },
     locale: appLocale,
     eventContext: { locale: appLocale },
-    profile: { id: profileId },
+    profileId,
   })
 
   const { accepted, data } = await requestOptimization.page()
@@ -215,7 +215,7 @@ app.get('/products/:slug', async (req, res) => {
     eventContext: {
       locale: appLocale,
     },
-    profile: { id: req.cookies.profileId },
+    profileId: req.cookies.profileId,
   })
   const { accepted, data: optimizationData } = await requestOptimization.page({
     properties: { path: req.path },
@@ -246,9 +246,9 @@ Node SDK event calls fail closed except for the default pre-consent allowlist, `
 event consent is not granted. Pass `allowedEventTypes: []` to require strict opt-in for all
 stateless event methods.
 
-In stateless runtimes, Insights-backed methods require a request-bound profile for delivery.
-Non-sticky `trackView`, `trackClick`, `trackHover`, and `trackFlagView` require a profile ID passed
-to `forRequest()`.
+In stateless runtimes, non-sticky `trackView`, `trackClick`, `trackHover`, and `trackFlagView`
+require a full `Profile` supplied through `forRequest({ profile })` or returned by an Experience
+call on the same request client. Use `profileId` for Experience API continuity.
 
 For custom integrations that need an event payload before submission, use the request client's
 `eventBuilder`. It exposes `buildIdentify`, `buildPageView`, `buildScreenView`, and `buildTrack`

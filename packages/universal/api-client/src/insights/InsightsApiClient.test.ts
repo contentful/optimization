@@ -136,13 +136,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
   it('POSTs batches via fetch by default', async () => {
     const batches = generateBatchEventArray('e1')
 
-    const parseSpy = rs.spyOn(BatchInsightsEventArray, 'safeParse').mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing: bypassing schema validation
-      ((input: unknown) => ({
-        success: true,
-        data: input,
-      })) as typeof BatchInsightsEventArray.safeParse,
-    )
+    const parseSpy = rs.spyOn(BatchInsightsEventArray, 'safeParse')
 
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v2/spaces/:spaceId/environments/:env/events`,
@@ -200,6 +194,8 @@ describe('InsightsApiClient.sendBatchEvents', () => {
   })
 
   it('serializes ExperienceFragment parentVariantId without stripping it', async () => {
+    const [batch] = generateBatchEventArray('exo-profile')
+    if (!batch) throw new Error('Expected a batch')
     const properties = {
       ...generateUniversalEventProperties(),
       entityId: 'fragment-1',
@@ -210,7 +206,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     }
     const batches = [
       {
-        profile: { id: 'exo-profile' },
+        profile: batch.profile,
         events: [
           {
             ...properties,

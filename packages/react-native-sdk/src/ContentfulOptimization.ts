@@ -12,7 +12,7 @@ import {
   type ScreenViewBuilderArgs,
   signals,
 } from '@contentful/optimization-core'
-import type { PartialProfile } from '@contentful/optimization-core/api-schemas'
+import type { Profile } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
 import { Platform } from 'react-native'
 import {
@@ -156,7 +156,7 @@ export type TrackCurrentScreenPayload = ScreenViewBuilderArgs & {
    * Stable screen identity used for current-screen deduplication.
    */
   routeKey?: string
-  profile?: PartialProfile
+  profile?: Profile
 }
 
 /**
