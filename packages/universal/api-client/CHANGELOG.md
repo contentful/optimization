@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.2](https://github.com/contentful/optimization/compare/optimization-api-client-v2.2.1...optimization-api-client-v2.2.2) (2026-11-04)
+
+### Bug Fixes
+
+- **api-client:** scope zod en locale to parseWithFriendlyError [NT-4398] ([#581](https://github.com/contentful/optimization/issues/581)) ([f1a36a2](https://github.com/contentful/optimization/commit/f1a36a2a842a60fd068ec66374167ccf42c803b6))
+
 ## [2.2.1](https://github.com/contentful/optimization/compare/optimization-api-client-v2.2.0...optimization-api-client-v2.2.1) (2026-10-21)
 
 ### Bug Fixes
