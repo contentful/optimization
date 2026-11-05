@@ -308,7 +308,7 @@ describe('Next.js server helpers', () => {
     })
   })
 
-  it('binds Node SDK requests with anonymous profile from cookies', () => {
+  it('binds Node SDK requests with anonymous profile ID from cookies', () => {
     const { forRequest, sdk } = createSdk()
 
     bindNextjsOptimizationRequest(sdk, {
@@ -323,7 +323,7 @@ describe('Next.js server helpers', () => {
       expect.objectContaining({
         consent: { events: true, persistence: true },
         locale: 'en-US',
-        profile: { id: 'anonymous-id' },
+        profileId: 'anonymous-id',
       }),
     )
   })
@@ -347,7 +347,7 @@ describe('Next.js server helpers', () => {
 
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        profile: { id: 'top-level-anonymous-id' },
+        profileId: 'top-level-anonymous-id',
       }),
     )
   })
@@ -371,7 +371,7 @@ describe('Next.js server helpers', () => {
 
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        profile: { id: 'request-anonymous-id' },
+        profileId: 'request-anonymous-id',
       }),
     )
   })

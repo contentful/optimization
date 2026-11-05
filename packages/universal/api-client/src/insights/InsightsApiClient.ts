@@ -56,14 +56,8 @@ export interface InsightsApiClientConfig extends ApiConfig {}
  *
  * await insightsClient.sendBatchEvents([
  *   {
- *     profile: { id: 'profile-123', ... },
- *     events: [
- *       {
- *         type: 'track',
- *         event: 'button_clicked',
- *         properties: { id: 'primary-cta' },
- *       },
- *     ],
+ *     profile, // Complete profile snapshot returned by the Experience API
+ *     events: [viewEvent],
  *   }
  * ])
  * ```
@@ -109,6 +103,10 @@ export default class InsightsApiClient extends ApiClientBase {
    * sender or a direct request is successfully sent, `false` otherwise.
    *
    * @remarks
+   * Each batch requires a complete `Profile` snapshot.
+   * An ID-only profile fails validation before either sender is invoked.
+   * Beacon acceptance does not confirm a successful Insights service response.
+   *
    * If a `beacon` sender is provided, it will be invoked first with the
    * serialized request body. When the sender returns `true`, the events are
    * considered successfully queued and no network request is made by this

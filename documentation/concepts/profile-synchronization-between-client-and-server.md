@@ -133,12 +133,12 @@ For state shape and observable state mechanics, see
 
 The server, browser, and API each own different parts of the profile lifecycle:
 
-| Runtime or layer              | Owns                                                                                          | Does not own                                                                                                                                                                                           |
-| ----------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Experience API**            | Profile creation, profile updates, audience evaluation, selected optimizations, and changes.  | Application consent policy, cookie settings, Contentful fetching, rendering, or response caching.                                                                                                      |
-| **Node SDK**                  | Stateless Experience and Insights calls using request-scoped profile IDs and request options. | Cookies, sessions, long-lived profile state, browser storage, or consent state.                                                                                                                        |
-| **Web SDK and React Web SDK** | Browser state, consent state, localStorage caches, readable anonymous-ID cookie, and queues.  | Server sessions, server response caching, server-rendered hydration data, or Contentful entry fetching unless explicitly configured with a consumer-owned `contentful.js` client for managed fetching. |
-| **Application**               | Consent policy, identity policy, cookie attributes, request context, and cache boundaries.    | The internal profile aggregation rules of the Experience API.                                                                                                                                          |
+| Runtime or layer              | Owns                                                                                                       | Does not own                                                                                                                                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Experience API**            | Profile creation, profile updates, audience evaluation, selected optimizations, and changes.               | Application consent policy, cookie settings, Contentful fetching, rendering, or response caching.                                                                                                      |
+| **Node SDK**                  | Stateless Experience calls using profile IDs, Insights calls using complete profiles, and request options. | Cookies, sessions, long-lived profile state, browser storage, or consent state.                                                                                                                        |
+| **Web SDK and React Web SDK** | Browser state, consent state, localStorage caches, readable anonymous-ID cookie, and queues.               | Server sessions, server response caching, server-rendered hydration data, or Contentful entry fetching unless explicitly configured with a consumer-owned `contentful.js` client for managed fetching. |
+| **Application**               | Consent policy, identity policy, cookie attributes, request context, and cache boundaries.                 | The internal profile aggregation rules of the Experience API.                                                                                                                                          |
 
 The React Web SDK uses the Web SDK under its providers and hooks, so profile synchronization follows
 the same browser mechanics.
@@ -198,7 +198,6 @@ Profile identity and profile data are separate artifacts:
 | Artifact                      | Shape                       | Purpose                                                                                         | Crosses the client-server boundary?                              |
 | ----------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | **Profile ID**                | String                      | Selects which Experience API profile to create or update.                                       | Yes, commonly through `ctfl-opt-aid`.                            |
-| **Partial profile payload**   | `{ id: string, ... }`       | Lets stateless calls associate an event with an existing profile.                               | Yes, but the ID is the important continuity field.               |
 | **Full profile**              | `Profile`                   | Represents the evaluated profile returned by the Experience API. Includes traits and audiences. | Only if the application intentionally serializes it into output. |
 | **Selected optimizations**    | `SelectedOptimizationArray` | Drives entry variant resolution for the evaluated profile.                                      | Only if server-rendered output or client hydration needs it.     |
 | **Changes**                   | `ChangeArray`               | Drives Custom Flag values.                                                                      | Only if server-rendered output or client hydration needs it.     |
@@ -206,8 +205,9 @@ Profile identity and profile data are separate artifacts:
 | **Persistence consent state** | `boolean \| undefined`      | Controls whether durable profile-continuity state can be loaded, written, or persisted.         | Application-defined.                                             |
 
 The full `Profile` object can contain traits, audience memberships, location data, and session
-statistics. Treat it as profile data, not as a general client-visible session token. In a hybrid
-browser and server application, the durable shared value is normally the profile ID.
+statistics. Insights requires this full snapshot. Treat it as profile data, not as a general
+client-visible session token. In a hybrid browser and server application, the durable shared value
+is normally the profile ID.
 
 Merge tags resolve from the active `profile`. They do not read values from `changes`.
 
@@ -304,7 +304,7 @@ snapshot.
 Stateless Experience methods and `trackView()` return event results with `accepted` and optional
 `data`. Non-sticky `trackView()` resolves with no `data`; `trackClick()`, `trackHover()`, and
 `trackFlagView()` resolve without an event-result payload. Those Insights-only paths require a
-request-bound profile because there is no ambient SDK state. The caller decides what to render, what
+complete request-bound profile snapshot because there is no ambient SDK state. The caller decides what to render, what
 to persist, and what to pass into later SDK calls.
 
 ## Server-side mechanics
@@ -322,7 +322,7 @@ const profileId = req.cookies[ANONYMOUS_ID_COOKIE]
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
-  profile: profileId ? { id: profileId } : undefined,
+  profileId,
 })
 
 const { accepted, data: optimizationData } = await requestOptimization.page({
@@ -334,13 +334,14 @@ For the difference between the application Contentful locale and the SDK Experie
 see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
-The Node SDK passes that ID to the Experience API as `profileId`. If the ID is absent, the API can
-create a profile and return the new `profile.id`.
+The Node SDK passes the ID to the Experience API as `profileId`. A bound `Profile` snapshot
+supplies its ID in preference to `profileId`. If the ID is absent, the API can create a profile and
+return the new `profile.id`.
 
-Insights-only stateless methods need a request-bound profile because there is no ambient state. For
-example, non-sticky `trackView()`, `trackClick()`, `trackHover()`, and `trackFlagView()` require a
-profile ID passed to `forRequest()`. Sticky `trackView()` first sends an Experience event and can
-use the returned profile for the paired Insights event.
+Insights-only methods such as non-sticky `trackView()`, `trackClick()`, `trackHover()`, and
+`trackFlagView()` require a full profile supplied to `forRequest({ profile })` or returned by an
+Experience call on that request client. Sticky `trackView()` uses its Experience response profile
+for the paired Insights event.
 
 ### Request-scoped state
 
@@ -478,8 +479,8 @@ synchronization channel is the stateful profile ID selected by the queue. In nor
 seed or override browser identity through the shared cookie, localStorage, `defaults`, or
 `getAnonymousId`, not by trying to pass a one-off `profile` object to every stateful call.
 
-Insights events in the browser use the current profile signal. If no profile exists, the Insights
-queue logs a warning and skips delivery.
+Insights events in the browser use the current full `Profile` signal. If no profile exists, the
+Insights queue logs a warning and skips delivery.
 
 ## Hybrid request lifecycle
 
@@ -498,8 +499,8 @@ A Node and Web SDK application usually follows this lifecycle:
    `trackView()` calls update the same Experience API profile.
 5. **Browser persistence.** Each Experience response updates browser signals. It updates
    localStorage and the `ctfl-opt-aid` cookie only when persistence consent is `true`.
-6. **Later server request.** The server reads the same cookie and passes `{ profile: { id } }` into
-   the next stateless SDK call.
+6. **Later server request.** The server reads the same cookie and passes `{ profileId }` into
+   the next stateless Experience call.
 
 The `node-sdk+web-sdk` reference implementation demonstrates this flow by setting
 `ANONYMOUS_ID_COOKIE` on the server and verifying that the browser localStorage anonymous ID matches
@@ -516,11 +517,11 @@ must be attributed to the known user, call `identify()` before `page()` on that 
 
 ```ts
 const appLocale = getAppLocale(req)
-const profile = anonymousId ? { id: anonymousId } : undefined
+const profileId = anonymousId
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
-  profile,
+  profileId,
 })
 
 const identifyResult = await requestOptimization.identify({
@@ -539,7 +540,7 @@ the last Experience response for the request. The request-bound client updates i
 after each accepted Experience response, so the later `page()` call uses the profile returned by
 `identify()`. If `identify()` and `page()` happen in different request-bound clients, bind the
 returned `profile` into the later client with `forRequest({ profile })`, or persist `profile.id` and
-bind `{ id }` on the later request. Do not pass a profile into `page()`.
+bind `{ profileId: profile.id }` on the later request. Do not pass a profile into `page()`.
 
 If the request arrived anonymous but the response must include identified traits, render from the
 `identify()` response or from a later `page()` response that used the identified request-bound
@@ -581,7 +582,7 @@ The following cases are common sources of profile-sync bugs:
 | Offline browser Experience events        | Events queue locally and no new profile data is available until a successful flush.                            | Design UI so cached selections are acceptable while offline.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Missing browser profile for Insights     | Insights delivery is skipped because stateful Insights events use the current profile signal.                  | Ensure an Experience call has returned a profile before relying on Insights-only tracking. For direct Web SDK initialization, bootstrap a valid `defaults.profile` when the server already evaluated the profile. For private App Router rendering, use the request root or provider so the SDK supplies the request handoff. For top-level App Router selection or manual paths, pass the explicit handoff. For Pages Router, pass `pageProps.contentfulOptimization.handoff` through the bound root or provider. For React Web and manual Next.js provider or root handoff, use the `handoff` prop. |
 | Server uses `preflight` for normal flows | The API evaluates without storing the mutation, which breaks durable profile continuity expectations.          | Reserve `preflight` for preview or non-persistent evaluation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Full profile serialized unnecessarily    | More profile data reaches the browser than the UI needs.                                                       | Share only the profile ID unless hydration needs profile data, changes, or selections.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Full profile serialized unnecessarily    | More profile data reaches the browser than the UI needs.                                                       | Share only the profile ID unless hydration or browser Insights delivery needs full profile data, changes, or selections.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ## Implementation checklist
 
@@ -594,7 +595,7 @@ Use this checklist when implementing a hybrid Node and browser profile flow:
   not write response cookies themselves.
 - Use `path: '/'`, an appropriate domain, and a browser-readable cookie policy when the Web SDK must
   continue the same profile.
-- Pass `{ profile: { id } }` into Node SDK Experience calls when a cookie or session ID exists.
+- Pass `{ profileId }` into Node SDK Experience calls when a cookie or session ID exists.
 - Call `identify()` before `page()` on the same Node request-bound client when the page view must be
   attributed to a known user.
 - Let the Web SDK initialize once per browser runtime so it can reconcile cookie and localStorage

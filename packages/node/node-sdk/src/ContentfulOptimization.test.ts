@@ -170,7 +170,7 @@ describe('ContentfulOptimization', () => {
     const sendBatchEvents = rs.spyOn(node.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = node.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.identify({ userId: 'user-123' })
@@ -193,7 +193,7 @@ describe('ContentfulOptimization', () => {
     const requestOptimization = node.forRequest({
       consent: true,
       experienceOptions: { locale: 'de-DE', preflight: true },
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.page()
@@ -224,7 +224,7 @@ describe('ContentfulOptimization', () => {
       eventContext: { locale: 'en-US' },
       experienceOptions: { locale: 'fr-FR', preflight: true },
       locale: ' de_DE ',
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.page()
@@ -253,10 +253,10 @@ describe('ContentfulOptimization', () => {
       .mockResolvedValue(OPTIMIZATION_DATA)
 
     await node
-      .forRequest({ consent: true, profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } })
+      .forRequest({ consent: true, profileId: 'f0837d7dc6344c36a3a0a06c4cde754b' })
       .page({ locale: 'en-US' })
     await node
-      .forRequest({ consent: false, profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } })
+      .forRequest({ consent: false, profileId: 'f0837d7dc6344c36a3a0a06c4cde754b' })
       .page({ locale: 'en-US' })
 
     expect(
@@ -274,13 +274,13 @@ describe('ContentfulOptimization', () => {
     await node
       .forRequest({
         consent: true,
-        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+        profile: OPTIMIZATION_DATA.profile,
       })
       .trackClick({ componentId: 'hero-banner' })
     await node
       .forRequest({
         consent: false,
-        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+        profile: OPTIMIZATION_DATA.profile,
       })
       .trackHover({
         componentId: 'hero-banner',
@@ -300,7 +300,7 @@ describe('ContentfulOptimization', () => {
       .mockResolvedValue(OPTIMIZATION_DATA)
     const requestOptimization = node.forRequest({
       consent: false,
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     await requestOptimization.page()
@@ -322,9 +322,7 @@ describe('ContentfulOptimization', () => {
       .spyOn(node.api.experience, 'upsertProfile')
       .mockResolvedValue(OPTIMIZATION_DATA)
 
-    await node
-      .forRequest({ consent: true, profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } })
-      .page()
+    await node.forRequest({ consent: true, profileId: 'f0837d7dc6344c36a3a0a06c4cde754b' }).page()
 
     expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(true)
   })

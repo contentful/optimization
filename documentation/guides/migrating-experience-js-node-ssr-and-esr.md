@@ -60,8 +60,8 @@ browser takeover.
 
 Create one `ContentfulOptimization` instance per process and call `forRequest()` for each incoming
 request. Event methods live on the request-bound client, not on the singleton. The minimum legal
-shape is `forRequest({ consent })`; a migration request usually adds `locale`, `profile`, and
-`eventContext`. `locale` selects the request locale, `profile` carries the app-owned anonymous
+shape is `forRequest({ consent })`; a migration request usually adds `locale`, `profileId`, and
+`eventContext`. `locale` selects the request locale, `profileId` carries the app-owned anonymous
 profile ID, and `eventContext` carries URL, user-agent, referrer, query, and other page data the SDK
 cannot infer from your server framework.
 
@@ -77,7 +77,7 @@ guide so the adapter owns request state, provider handoff, page-event dedupe, an
 For a manual Node/Web hybrid, the app owns the profile cookie. The Node SDK exports
 `ANONYMOUS_ID_COOKIE` from `@contentful/optimization-node/constants`, and its value is
 `ctfl-opt-aid`, but Node does not read, write, or clear cookies for you. Read the cookie from the
-incoming request, pass it as `forRequest({ profile: { id } })`, write the returned profile ID only
+incoming request, pass it as `forRequest({ profileId })`, write the returned profile ID only
 when persistence consent allows it, and keep the cookie browser-readable if the Web SDK must
 continue the same visitor.
 
@@ -112,12 +112,12 @@ Verify the request boundary:
 
 ## Troubleshooting
 
-| Symptom                                     | Check                                                                                                  |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Server event methods are missing            | Call `forRequest()` first; event methods live on the request-bound client.                             |
-| Non-sticky interaction tracking throws      | Bind a request profile ID or use the event flow that derives one before sending Insights interactions. |
-| Browser takeover starts a different visitor | Persist and pass the target anonymous ID according to the Web or framework SDK guide.                  |
-| Personalized HTML leaks between visitors    | Remove shared caching around request-specific responses and rendered output.                           |
+| Symptom                                     | Check                                                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Server event methods are missing            | Call `forRequest()` first; event methods live on the request-bound client.                                                  |
+| Non-sticky interaction tracking throws      | Bind a full `Profile` with `forRequest({ profile })` or use the snapshot returned by an Experience call on the same client. |
+| Browser takeover starts a different visitor | Persist and pass the target anonymous ID according to the Web or framework SDK guide.                                       |
+| Personalized HTML leaks between visitors    | Remove shared caching around request-specific responses and rendered output.                                                |
 
 ## Related guides
 

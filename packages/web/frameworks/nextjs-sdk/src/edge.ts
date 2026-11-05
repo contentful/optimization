@@ -15,8 +15,8 @@ import {
   type OptimizationData,
   type OptimizationHandoff,
   type PageViewBuilderArgs,
-  type PartialProfile,
   type PrivateRequestOptimizationCacheMetadata,
+  type Profile,
   type UniversalEventBuilderArgs,
 } from '@contentful/optimization-react-web/core-sdk'
 import type {
@@ -80,7 +80,10 @@ export interface NextjsEdgeRequestHandoffOptions extends PersistNextjsAnonymousI
   readonly insightsOptions?: CoreStatelessInsightsOptions
   readonly locale?: string
   readonly pagePayload: PageViewBuilderArgs
-  readonly profile?: PartialProfile
+  /** Complete profile snapshot; takes precedence over `profileId`. */
+  readonly profile?: Profile
+  /** Personalization identity only; falls back to the anonymous ID cookie when omitted. */
+  readonly profileId?: string
   readonly request: NextjsEdgeRequest
 }
 
@@ -118,14 +121,14 @@ export function configureNextjsEdgeOptimization(
       headers: request.headers,
     })
     const anonymousId = readNextjsAnonymousId(request.cookies, options.anonymousIdCookieName)
-    const profile = options.profile ?? (anonymousId === undefined ? undefined : { id: anonymousId })
     const requestOptimization = sdk.forRequest({
       consent,
       eventContext: createEdgeRequestContext(request, options, options.locale ?? config.locale),
       experienceOptions: options.experienceOptions,
       insightsOptions: options.insightsOptions,
       locale: options.locale ?? config.locale,
-      profile,
+      profile: options.profile,
+      profileId: options.profileId ?? anonymousId,
     })
     const pageResult = await requestOptimization.page(options.pagePayload)
     const { data } = pageResult

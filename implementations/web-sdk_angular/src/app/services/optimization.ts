@@ -236,7 +236,7 @@ export class NgContentfulOptimization {
 
 /**
  * Read the SDK anonymous-id cookie from the inbound request. Returns the raw
- * value when present so it can be passed to `forRequest({ profile })` for
+ * value when present so it can be passed to `forRequest({ profileId })` for
  * cross-request profile continuity.
  */
 function readAnonymousId(request: Request): string | undefined {
@@ -304,7 +304,7 @@ async function computeSnapshot(
     consent: { events: true, persistence: true },
     locale,
     eventContext: createServerEventContext(request, locale),
-    ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
+    profileId: anonymousId,
   })
   const pageResult = await requestOptimization.page()
   if (!pageResult.accepted || !pageResult.data) {

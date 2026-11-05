@@ -399,7 +399,7 @@ For the full locale model, see
 Consent belongs to your application layer. The Node SDK accepts the request-scoped decision through
 `forRequest({ consent })`.
 
-The snippets here and in the next section call `getProfileFromRequest(req)` and `persistProfile(res,
+The snippets here and in the next section call `getProfileIdFromRequest(req)` and `persistProfile(res,
 id)` — the read and write halves of profile continuity. They are defined in
 [Persist profile identity between requests](#persist-profile-identity-between-requests); if you are
 building top to bottom, treat them as `undefined`/no-ops until you reach that section.
@@ -420,7 +420,7 @@ const requestOptimization = optimization.forRequest({
   consent: { events: true, persistence: true },
   locale: appLocale,
   eventContext: getRequestContext(req, appLocale),
-  profile: getProfileFromRequest(req),
+  profileId: getProfileIdFromRequest(req),
 })
 ```
 
@@ -441,7 +441,7 @@ const requestOptimization = optimization.forRequest({
   consent: { events: allowed, persistence: allowed },
   locale: appLocale,
   eventContext: getRequestContext(req, appLocale),
-  profile: getProfileFromRequest(req),
+  profileId: getProfileIdFromRequest(req),
 })
 ```
 
@@ -491,7 +491,7 @@ app.get('/', async (req, res) => {
     consent: { events: allowed, persistence: allowed },
     locale: appLocale,
     eventContext: getRequestContext(req, appLocale),
-    profile: getProfileFromRequest(req),
+    profileId: getProfileIdFromRequest(req),
   })
 
   // page() performs event delivery and returns request-local optimization data.
@@ -523,7 +523,7 @@ The Node SDK does not choose the identity key or fetch traits for you.
 
 1. Read the known user ID from authentication middleware, a session, a JWT, or an upstream account
    service.
-2. Bind the current anonymous profile ID, if one exists, with `forRequest({ profile })`.
+2. Bind the current anonymous profile ID, if one exists, with `forRequest({ profileId })`.
 3. Call `identify()` when the user is known and your consent policy permits that event.
 4. Render from the response object that best matches the user state for the current response.
 
@@ -564,7 +564,7 @@ state you want on the page.
 **Integration category:** Common but policy-dependent
 
 The Node SDK is stateless, so it does not remember a visitor between requests. Persist only the
-profile ID that your consent policy allows, then pass it back through `forRequest({ profile })`.
+profile ID that your consent policy allows, then pass it back through `forRequest({ profileId })`.
 
 1. Choose an application session or first-party cookie for profile continuity.
 2. Install cookie parsing middleware or use your framework's existing cookie/session reader.
@@ -581,11 +581,11 @@ import type { Request, Response } from 'express'
 
 app.use(cookieParser())
 
-function getProfileFromRequest(req: Request): { id: string } | undefined {
+function getProfileIdFromRequest(req: Request): string | undefined {
   // Use the shared cookie name when browser SDK continuity is part of the app.
   const id = req.cookies?.[ANONYMOUS_ID_COOKIE]
 
-  return typeof id === 'string' && id.length > 0 ? { id } : undefined
+  return typeof id === 'string' && id.length > 0 ? id : undefined
 }
 
 function persistProfile(res: Response, profileId?: string): void {
@@ -694,7 +694,7 @@ app.get('/article/:slug', async (req, res) => {
     consent: { events: true, persistence: true },
     locale: appLocale,
     eventContext: getRequestContext(req, appLocale),
-    profile: getProfileFromRequest(req),
+    profileId: getProfileIdFromRequest(req),
   })
   // Evaluate the request before resolving entry variants for this response.
   const pageResult = await requestOptimization.page()
@@ -913,8 +913,8 @@ real interaction.
 1. Bind consent, locale, event context, and profile for the request or server action.
 2. Use `track()` for custom business events.
 3. Use `trackView()` when the server knows exactly which optimized entry was rendered.
-4. Bind a profile for Insights-only calls such as non-sticky `trackView()`, `trackClick()`,
-   `trackHover()`, and `trackFlagView()`.
+4. Bind a full profile snapshot for Insights-only calls such as non-sticky `trackView()`,
+   `trackClick()`, `trackHover()`, and `trackFlagView()`.
 
 Unlike a Custom Flag key, the `track()` `event` name and its `properties` are your own free-choice
 labels — pick names that fit your analytics plan; they do not need to match anything authored in
@@ -969,9 +969,9 @@ if (appPolicyAllowsOptimizationEvent(req) && pageResponse?.profile) {
 }
 ```
 
-Sticky `trackView()` sends an Experience event first and can reuse the returned profile for the
-paired Insights event. Non-sticky `trackView()` and the Insights-only methods require a
-request-bound profile ID because the Node SDK has no ambient profile state.
+Sticky `trackView()` sends an Experience event first and uses its response profile for the paired
+Insights event. Insights-only methods require a full `Profile` supplied to `forRequest({ profile })`
+or returned by an Experience call on the same request client.
 
 For the lower-level mechanics, see
 [Interaction tracking in Node and stateless environments](../concepts/interaction-tracking-in-node-and-stateless-environments.md).
@@ -1082,7 +1082,7 @@ const requestOptimization = optimization.forRequest({
   // Advanced Experience API options stay request-scoped in stateless runtimes.
   experienceOptions: { preflight: true, location: { countryCode: 'FR', city: 'Paris' } },
   locale: appLocale,
-  profile: getProfileFromRequest(req),
+  profileId: getProfileIdFromRequest(req),
 })
 
 const pageResult = await requestOptimization.page()
@@ -1181,16 +1181,16 @@ Before releasing a Node SDK integration, verify these points:
 
 ## Troubleshooting
 
-| Symptom                                                          | Likely cause                                                                                                 | Check                                                                                                                                     |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Entry always resolves to the baseline                            | No variant applies, no `selectedOptimizations` passed, the entry is not optimized, or an all-locale payload  | Author a variant that targets you, confirm an accepted `page()`/`identify()` ran first, fetch one `locale` with enough `include`          |
-| The variant never appears even though it is authored             | The request does not match the experience's audience, or resolution ran without the request's selections     | Target all visitors for a first test or force the variant with the preview panel; pass `selectedOptimizations` or use the bound helper    |
-| `page()` returns `{ accepted: false }`                           | Event consent is not granted and the event type is not allow-listed                                          | Bind `consent.events: true` for the request, or confirm `allowedEventTypes` permits `page`; inspect `onEventBlocked`                      |
-| `trackView() requires a request-bound profile id` error thrown   | A non-sticky `trackView()`, `trackClick()`, `trackHover()`, or `trackFlagView()` ran without a bound profile | Pass `forRequest({ profile })`, or use sticky `trackView()` which derives the profile from its Experience response                        |
-| Profile does not stay consistent across requests                 | The returned `profile.id` is not persisted, or `canPersistProfile` was `false`                               | Persist the ID only when `requestOptimization.canPersistProfile` is `true`, then read it back into `forRequest({ profile })`              |
-| Hybrid browser sessions start with a different anonymous profile | Server and browser do not share the same readable anonymous-id cookie                                        | Verify the `ctfl-opt-aid` cookie path and same-site settings, and that it is not `HttpOnly` so browser SDK code can read it               |
-| Merge tags render the fallback for every visitor                 | No matching profile value, or the profile locale and entry locale differ                                     | Confirm `getMergeTagValue()` receives the request `profile`, and pass one `APP_LOCALE` to both the CDA fetch and `forRequest({ locale })` |
-| Personalized output leaks between visitors                       | A `page()`/`identify()` response or merge-tag-rendered entry was shared through a cache                      | Cache only raw Contentful payloads; clone before request transforms; never memoize event-method responses                                 |
+| Symptom                                                          | Likely cause                                                                                                | Check                                                                                                                                     |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry always resolves to the baseline                            | No variant applies, no `selectedOptimizations` passed, the entry is not optimized, or an all-locale payload | Author a variant that targets you, confirm an accepted `page()`/`identify()` ran first, fetch one `locale` with enough `include`          |
+| The variant never appears even though it is authored             | The request does not match the experience's audience, or resolution ran without the request's selections    | Target all visitors for a first test or force the variant with the preview panel; pass `selectedOptimizations` or use the bound helper    |
+| `page()` returns `{ accepted: false }`                           | Event consent is not granted and the event type is not allow-listed                                         | Bind `consent.events: true` for the request, or confirm `allowedEventTypes` permits `page`; inspect `onEventBlocked`                      |
+| Insights interaction throws a profile error                      | An Insights-only call ran without a request-bound profile                                                   | Bind a full `Profile` with `forRequest({ profile })` or use the snapshot returned by an Experience call on the same client                |
+| Profile does not stay consistent across requests                 | The returned `profile.id` is not persisted, or `canPersistProfile` was `false`                              | Persist the ID only when `requestOptimization.canPersistProfile` is `true`, then read it back into `forRequest({ profileId })`            |
+| Hybrid browser sessions start with a different anonymous profile | Server and browser do not share the same readable anonymous-id cookie                                       | Verify the `ctfl-opt-aid` cookie path and same-site settings, and that it is not `HttpOnly` so browser SDK code can read it               |
+| Merge tags render the fallback for every visitor                 | No matching profile value, or the profile locale and entry locale differ                                    | Confirm `getMergeTagValue()` receives the request `profile`, and pass one `APP_LOCALE` to both the CDA fetch and `forRequest({ locale })` |
+| Personalized output leaks between visitors                       | A `page()`/`identify()` response or merge-tag-rendered entry was shared through a cache                     | Cache only raw Contentful payloads; clone before request transforms; never memoize event-method responses                                 |
 
 ## Reference implementations to compare against
 

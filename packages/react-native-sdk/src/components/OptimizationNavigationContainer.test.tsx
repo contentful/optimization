@@ -1,5 +1,7 @@
+import type { OptimizationData } from '@contentful/optimization-core/api-schemas'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import React, { act, type ReactElement } from 'react'
+import { profile as profileFixture } from '../../../universal/core-sdk/src/test/fixtures/profile'
 import { loadTestRenderer } from '../test/testRenderer'
 import type {
   NavigationContainerRef,
@@ -44,14 +46,14 @@ rs.mock('@contentful/optimization-core/logger', () => ({
 
 interface MockScreenEmissionResult {
   readonly accepted: boolean
-  readonly data?: unknown
+  readonly data?: OptimizationData
 }
 
 const mockTrackCurrentScreen = rs
   .fn<(payload: unknown) => Promise<MockScreenEmissionResult>>()
   .mockResolvedValue({
     accepted: true,
-    data: { profile: {}, changes: [], selectedOptimizations: [] },
+    data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
   })
 const mockHasConsent = rs.fn((_method: string) => true)
 let acceptedRouteKey: string | undefined = undefined
@@ -175,7 +177,7 @@ describe('OptimizationNavigationContainer', () => {
     mockHasConsent.mockReturnValue(true)
     mockTrackCurrentScreen.mockResolvedValue({
       accepted: true,
-      data: { profile: {}, changes: [], selectedOptimizations: [] },
+      data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
     })
     latestProps = undefined
   })
@@ -282,7 +284,7 @@ describe('OptimizationNavigationContainer', () => {
       .mockResolvedValueOnce({ accepted: false, data: undefined })
       .mockResolvedValueOnce({
         accepted: true,
-        data: { profile: {}, changes: [], selectedOptimizations: [] },
+        data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
       })
 
     await renderContainer(OptimizationNavigationContainer)
@@ -305,7 +307,7 @@ describe('OptimizationNavigationContainer', () => {
     const { OptimizationNavigationContainer } = await import('./OptimizationNavigationContainer')
     const deferred = createDeferred<{
       accepted: boolean
-      data: { profile: object; changes: unknown[]; selectedOptimizations: unknown[] }
+      data: OptimizationData
     }>()
 
     mockTrackCurrentScreen.mockReturnValueOnce(deferred.promise)
@@ -327,7 +329,7 @@ describe('OptimizationNavigationContainer', () => {
     await act(async () => {
       deferred.resolve({
         accepted: true,
-        data: { profile: {}, changes: [], selectedOptimizations: [] },
+        data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
       })
       await flushPromises()
     })

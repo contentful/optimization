@@ -1,4 +1,6 @@
+import type { OptimizationData } from '@contentful/optimization-core/api-schemas'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
+import { profile as profileFixture } from '../../../universal/core-sdk/src/test/fixtures/profile'
 import type { UseScreenTrackingOptions, UseScreenTrackingReturn } from './useScreenTracking'
 
 // Mock React Native
@@ -41,20 +43,20 @@ rs.mock('@contentful/optimization-core/logger', () => ({
 // Create mock optimization instance
 interface MockScreenEmissionResult {
   readonly accepted: boolean
-  readonly data?: unknown
+  readonly data?: OptimizationData
 }
 
 const mockScreen = rs
   .fn<(payload: unknown) => Promise<MockScreenEmissionResult>>()
   .mockResolvedValue({
     accepted: true,
-    data: { profile: {}, changes: [], selectedOptimizations: [] },
+    data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
   })
 const mockTrackCurrentScreen = rs
   .fn<(payload: unknown) => Promise<MockScreenEmissionResult>>()
   .mockResolvedValue({
     accepted: true,
-    data: { profile: {}, changes: [], selectedOptimizations: [] },
+    data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
   })
 const mockHasConsent = rs.fn(() => true)
 const mockConsentObservable = {
@@ -201,11 +203,11 @@ describe('useScreenTracking', () => {
     mockHasConsent.mockReturnValue(true)
     mockScreen.mockResolvedValue({
       accepted: true,
-      data: { profile: {}, changes: [], selectedOptimizations: [] },
+      data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
     })
     mockTrackCurrentScreen.mockResolvedValue({
       accepted: true,
-      data: { profile: {}, changes: [], selectedOptimizations: [] },
+      data: { profile: profileFixture, changes: [], selectedOptimizations: [] },
     })
   })
 
@@ -284,8 +286,8 @@ describe('useScreenTracking', () => {
   })
 
   it('should return the emission result on success', async () => {
-    const expectedData = {
-      profile: { id: 'test-profile' },
+    const expectedData: OptimizationData = {
+      profile: profileFixture,
       changes: [],
       selectedOptimizations: [],
     }

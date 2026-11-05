@@ -2,7 +2,7 @@ import ContentfulOptimizationRuntime, {
   createRequestHandoffFromData,
   type OptimizationNodeConfig,
 } from '@contentful/optimization-node'
-import type { OptimizationData, PartialProfile } from '@contentful/optimization-node/api-schemas'
+import type { OptimizationData, Profile } from '@contentful/optimization-node/api-schemas'
 import type {
   CoreStatelessInsightsOptions,
   CoreStatelessRequest,
@@ -41,7 +41,7 @@ import type {
 } from './tracking-attributes'
 
 export type { OptimizationNodeConfig } from '@contentful/optimization-node'
-export type { OptimizationData, PartialProfile } from '@contentful/optimization-node/api-schemas'
+export type { OptimizationData, Profile } from '@contentful/optimization-node/api-schemas'
 export {
   prefetchManagedEntries,
   type ManagedEntryDescriptor,
@@ -108,7 +108,10 @@ export interface BindNextjsOptimizationRequestOptions {
   readonly insightsOptions?: CoreStatelessInsightsOptions
   readonly locale?: string
   readonly page?: NextjsPageContextInput
-  readonly profile?: PartialProfile
+  /** Complete profile snapshot; takes precedence over `profileId`. */
+  readonly profile?: Profile
+  /** Personalization identity only; falls back to the anonymous ID cookie when omitted. */
+  readonly profileId?: string
   readonly request?: NextjsRequestLike
 }
 
@@ -286,15 +289,14 @@ export function bindNextjsOptimizationRequest(
   const anonymousId =
     readNextjsAnonymousId(options.cookies, options.anonymousIdCookieName) ??
     readNextjsAnonymousId(options.request?.cookies, options.anonymousIdCookieName)
-  const profile = options.profile ?? (anonymousId ? { id: anonymousId } : undefined)
-
   return sdk.forRequest({
     consent: options.consent,
     eventContext: createNextjsRequestContext(options),
     experienceOptions: options.experienceOptions,
     insightsOptions: options.insightsOptions,
     locale: options.locale,
-    profile,
+    profile: options.profile,
+    profileId: options.profileId ?? anonymousId,
   })
 }
 
@@ -410,7 +412,7 @@ export function persistNextjsAnonymousId(
     deleteWhenProfileCannotPersist = true,
   }: PersistNextjsAnonymousIdOptions = {},
 ): void {
-  const profileId = data?.profile.id ?? requestOptimization.profile?.id
+  const profileId = data?.profile.id ?? requestOptimization.profileId
 
   if (requestOptimization.canPersistProfile && profileId) {
     response.cookies.set(anonymousIdCookieName, profileId, {

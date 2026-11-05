@@ -3,7 +3,6 @@ import type {
   ExperienceEvent as ExperienceEventPayload,
   InsightsEvent as InsightsEventPayload,
   Json,
-  PartialProfile,
   Profile,
 } from '@contentful/optimization-api-client/api-schemas'
 import { isVariableChange } from '@contentful/optimization-api-client/guards'
@@ -116,7 +115,7 @@ abstract class CoreStatefulEventEmitter
    * ```
    */
   async identify(
-    payload: IdentifyBuilderArgs & { profile?: PartialProfile },
+    payload: IdentifyBuilderArgs & { profile?: Profile },
   ): Promise<EventEmissionResult> {
     return await this.sendExperienceEventWithResult(
       'identify',
@@ -136,7 +135,7 @@ abstract class CoreStatefulEventEmitter
    * ```
    */
   async page(
-    payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
+    payload: PageViewBuilderArgs & { profile?: Profile } = {},
   ): Promise<EventEmissionResult> {
     return await this.sendExperienceEventWithResult(
       'page',
@@ -156,7 +155,7 @@ abstract class CoreStatefulEventEmitter
    * ```
    */
   async screen(
-    payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
+    payload: ScreenViewBuilderArgs & { profile?: Profile },
   ): Promise<EventEmissionResult> {
     return await this.sendExperienceEventWithResult(
       'screen',
@@ -178,9 +177,7 @@ abstract class CoreStatefulEventEmitter
    * })
    * ```
    */
-  async track(
-    payload: TrackBuilderArgs & { profile?: PartialProfile },
-  ): Promise<EventEmissionResult> {
+  async track(payload: TrackBuilderArgs & { profile?: Profile }): Promise<EventEmissionResult> {
     return await this.sendExperienceEventWithResult(
       'track',
       [payload],
@@ -204,9 +201,7 @@ abstract class CoreStatefulEventEmitter
    * await core.trackView({ componentId: 'entry-123', sticky: true })
    * ```
    */
-  async trackView(
-    payload: ViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<EventEmissionResult> {
+  async trackView(payload: ViewBuilderArgs & { profile?: Profile }): Promise<EventEmissionResult> {
     if (this.getRuntimeResetToken() === undefined) return { accepted: false }
     const optimizationContext = this.getEventOptimizationContext(payload.optimizationContextId)
     if (!this.hasConsent('trackView')) {

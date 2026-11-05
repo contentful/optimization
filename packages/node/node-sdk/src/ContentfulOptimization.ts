@@ -78,7 +78,7 @@ export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'event
  * const requestOptimization = sdk.forRequest({
  *   consent: true,
  *   locale: 'fr-CA',
- *   profile: { id: 'profile-id' },
+ *   profileId: 'profile-id',
  * })
  *
  * const { accepted, data } = await requestOptimization.page()

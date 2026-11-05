@@ -304,7 +304,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
     )
 
     expect(forRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } }),
+      expect.objectContaining({ profileId: 'f0837d7dc6344c36a3a0a06c4cde754b' }),
     )
   })
 

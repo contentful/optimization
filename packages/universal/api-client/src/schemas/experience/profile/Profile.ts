@@ -4,7 +4,7 @@ import { Traits } from '../event/properties/Traits'
 import { SessionStatistics } from './properties'
 
 /**
- * Zod schema describing a full user profile as received from the Experience API.
+ * Zod schema describing a user profile returned by the Experience API and sent to Insights.
  *
  * @remarks
  * Represents the server-side view of a profile, including identifiers,
@@ -68,33 +68,3 @@ export const Profile = z.object({
  * @public
  */
 export type Profile = z.infer<typeof Profile>
-
-/**
- * Zod schema describing a partial profile payload used for sending events
- * to the Experience & Insights APIs.
- *
- * @remarks
- * This schema enforces the presence of an `id` field and allows additional
- * JSON-serializable properties via `z.catchall`.
- *
- * @public
- */
-export const PartialProfile = z.catchall(
-  z.object({
-    /**
-     * Identifier of the profile.
-     *
-     * @remarks
-     * Used to associate events with an existing profile.
-     */
-    id: z.string(),
-  }),
-  z.json(),
-)
-
-/**
- * TypeScript type inferred from {@link PartialProfile}.
- *
- * @public
- */
-export type PartialProfile = z.infer<typeof PartialProfile>

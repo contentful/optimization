@@ -58,6 +58,9 @@ hydration mode, and managed-entry prefetch for a subtree. Use the bound `Optimiz
 roots because it adds initial page-event wiring through `routeKey`, `buildPagePayload`, or
 `initialPagePayload`. Do not pass those page-event props to `OptimizationProvider`.
 
+For manual server and Edge requests, pass `profileId` for Experience continuity or a full
+`Profile` through `profile` for Insights delivery.
+
 ## Request location
 
 Set `api.location` in the normal App Router, Pages Router, server, or Edge SDK configuration.

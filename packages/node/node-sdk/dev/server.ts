@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ContentfulOptimization from '../src'
-import type { PartialProfile, Profile, SelectedOptimization } from '../src/api-schemas'
+import type { Profile, SelectedOptimization } from '../src/api-schemas'
 import { isMergeTagEntry, isRichTextDocument } from '../src/api-schemas'
 
 /* eslint-disable @typescript-eslint/naming-convention -- standardized var names */
@@ -179,12 +179,9 @@ async function getRequestOptimizationData({
   profile: Profile | undefined
   selectedOptimizations: SelectedOptimization[] | undefined
 }> {
-  const requestProfile: PartialProfile | undefined =
-    typeof profileId === 'string' ? { id: profileId } : undefined
-
   const requestOptimization = sdk.forRequest({
     consent: { events: consent === true, persistence: consent === true },
-    profile: requestProfile,
+    profileId,
   })
   let eventResult = await requestOptimization.page()
 

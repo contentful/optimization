@@ -134,14 +134,16 @@ or browser-storage state across requests. Bind each incoming request's inputs wi
 before emitting events.
 
 The object returned by `forRequest()` is request-local. It retains the profile, consent, locale,
-page context, and request options passed at construction for that object's lifecycle. Experience API
-responses from `page()`, `identify()`, `track()`, `screen()`, and sticky `trackView()` update that
-request-local profile, so later calls on the same request object can use the updated profile. Do not
-reuse a request object across independent HTTP requests.
+page context, and request options passed at construction for that object's lifecycle. Bind an ID
+through `profileId` or a full `Profile` snapshot through `profile`. Experience API responses from
+`page()`, `identify()`, `track()`, `screen()`, and sticky `trackView()` update that request-local
+profile, so later calls on the same request object can use it. Do not reuse a request object across
+independent HTTP requests.
 
 In practice, the application must supply:
 
-- the current profile ID, usually from `ANONYMOUS_ID_COOKIE` (`ctfl-opt-aid`) or a session
+- the current profile ID, usually from `ANONYMOUS_ID_COOKIE` (`ctfl-opt-aid`) or a session,
+  or a full profile snapshot for Insights delivery
 - the application policy decision for whether the server can call the SDK
 - page context such as `path`, `url`, `referrer`, `query`, and locale
 - user agent and optional IP override when server-side evaluation needs client request metadata
@@ -184,15 +186,15 @@ For a construction example, see
 
 Direct request event methods use two API paths with different semantics:
 
-| Path           | Methods                                                                     | Purpose                                                                 | Profile behavior                                                                        |
-| -------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns accepted/data event results. | Uses the profile ID bound with `forRequest()`. If absent, the API can create a profile. |
-| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends fire-and-forget Analytics interaction events.                     | Requires a request-bound profile because there is no ambient SDK state.                 |
+| Path           | Methods                                                                     | Purpose                                                                 | Profile behavior                                                                          |
+| -------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns accepted/data event results. | Uses the profile ID bound with `forRequest()`. If absent, the API can create a profile.   |
+| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends Analytics interaction events.                                     | Requires a complete request-bound profile snapshot because there is no ambient SDK state. |
 
-Sticky entry views are the exception that touches both paths. In Node, `trackView({ sticky: true })`
-sends a view event through Experience first, then sends the paired Insights event using the profile
-returned by the Experience response. Non-sticky `trackView()` only uses Insights and therefore
-requires a request-bound profile ID.
+Sticky entry views touch both paths. In Node, `trackView({ sticky: true })` sends a view event
+through Experience first, then sends the paired Insights event using the response profile.
+Non-sticky `trackView()` and other Insights-only calls require a full `Profile` supplied through
+`forRequest({ profile })` or returned by an Experience call on the same request client.
 
 The interaction wire event types are:
 
@@ -238,7 +240,7 @@ const requestOptimization = optimization.forRequest({
     },
     userAgent: req.get('user-agent') ?? 'node-server',
   },
-  profile: profileId ? { id: profileId } : undefined,
+  profileId,
 })
 
 const pageResult = await requestOptimization.page()
@@ -457,8 +459,8 @@ delivery. Choose one of these patterns before enabling interaction tracking:
   page response populates browser profile state.
 - **Use a first-party collection endpoint.** If you do not want the browser to hold the full
   profile, custom browser code can send interaction observations to your server, and the server can
-  call the Node SDK with the request's profile ID. This is a manual tracking architecture, not the
-  Web SDK auto-tracking path.
+  call the Node SDK with a full profile snapshot held by the server. This manual tracking
+  architecture requires application-owned browser observation.
 
 In Next.js server-rendered integrations, `initialPageEvent="skip"` intentionally avoids the initial
 browser Experience API `page()` request when the server or edge helper already accepted that page
@@ -541,8 +543,8 @@ server SDK evaluates the updated profile and renders a new response.
 The exact framework primitive is less important than the ownership boundary. If a framework can run
 the same React module on both the server and the browser, do not put personalization and tracking
 concerns in that shared module. Keep server SDK calls in server-only code, keep browser SDK calls in
-client-only code, and exchange only durable handoff data such as the profile ID and rendered
-tracking attributes.
+client-only code, and exchange the profile ID for Experience continuity, the full profile when
+browser Insights delivery needs it, and rendered tracking attributes.
 
 ## Server-only interaction tracking
 
@@ -594,12 +596,12 @@ A manual solution needs to implement at least these areas:
 There are two common manual transport choices:
 
 - **Direct browser ingestion.** Browser code constructs Insights API batches and sends them to the
-  Insights API. This requires the browser to build all payloads correctly and hold the profile data
-  needed for event association.
+  Insights API. This requires the browser to build all payloads correctly and hold a full profile
+  snapshot for event association.
 - **First-party event endpoint.** Browser code posts small interaction observations to an
-  application endpoint. The server validates consent and identity, then calls `trackView()`,
-  `trackClick()`, or `trackHover()` through the Node SDK. This keeps API details server-side but
-  still requires custom browser observation logic.
+  application endpoint. The server validates consent and identity, binds a full profile snapshot,
+  then calls `trackView()`, `trackClick()`, or `trackHover()` through the Node SDK. API details stay
+  server-side; browser observation remains application-owned.
 
 The manual endpoint option can be appropriate for strict data-exposure policies, but it is not a
 small replacement for the Web SDK. It moves the transport and policy boundary to the server while
@@ -641,7 +643,8 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 - Decide which events are server facts and which require browser observation.
 - Gate every Node SDK event with the application consent policy before calling the SDK.
 - Persist the returned `profile.id` when consent allows continuity.
-- Pass `{ profile: { id } }` into stateless Node calls when a profile ID exists.
+- Pass `{ profileId }` into stateless Experience calls when a profile ID exists; bind a
+  complete profile snapshot for Insights-only calls.
 - Render `data-ctfl-entry-id` with the resolved entry ID, not only the baseline entry ID.
 - Render `data-ctfl-optimization-id`, `data-ctfl-sticky`, and `data-ctfl-variant-index` when an
   entry is an optimized variant.

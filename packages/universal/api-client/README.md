@@ -193,7 +193,8 @@ For how these inputs affect profile continuity across later server and browser r
 
 ### Insights API
 
-Insights API methods are scoped to `client.insights` and send analytics event batches:
+Insights API methods are scoped to `client.insights` and send event batches with a full `Profile`
+returned by the Experience API:
 
 ```ts
 await client.insights.sendBatchEvents([
@@ -206,6 +207,9 @@ await client.insights.sendBatchEvents([
 
 Insights endpoints do not return response data. For last-chance browser lifecycle delivery, pass a
 per-call `beacon` sender that receives the request URL and already serialized body.
+
+A `true` result means Beacon queue acceptance or a successful HTTP response when using fetch.
+Beacon acceptance does not confirm service delivery; neither result proves Analytics persistence.
 
 ### Schema entry point
 

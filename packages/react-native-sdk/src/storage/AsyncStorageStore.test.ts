@@ -1,3 +1,4 @@
+import type { Profile } from '@contentful/optimization-core/api-schemas'
 import {
   ANONYMOUS_ID_KEY,
   CHANGES_CACHE_KEY,
@@ -8,6 +9,7 @@ import {
   SELECTED_OPTIMIZATIONS_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
+import { profile as profileFixture } from '../../../universal/core-sdk/src/test/fixtures/profile'
 
 interface AsyncStorageStoreInstance {
   initializeConsentState: () => Promise<void>
@@ -16,7 +18,7 @@ interface AsyncStorageStoreInstance {
   readonly changes: unknown
   consent: boolean | undefined
   persistenceConsent: boolean | undefined
-  readonly profile: unknown
+  readonly profile: Profile | undefined
   readonly selectedOptimizations: unknown
   clearProfileContinuity: () => Promise<void>
   drainPersistence: () => Promise<void>
@@ -26,7 +28,7 @@ interface AsyncStorageStoreInstance {
   }) => Promise<void>
   writeProfileContinuity: (state: {
     changes: unknown
-    profile: { id?: string } | undefined
+    profile: Profile | undefined
     selectedOptimizations: unknown
   }) => Promise<void>
 }
@@ -235,7 +237,7 @@ describe('AsyncStorageStore', () => {
 
     cache.set(ANONYMOUS_ID_KEY, 'f0837d7dc6344c36a3a0a06c4cde754b')
     cache.set(CHANGES_CACHE_KEY, [])
-    cache.set(PROFILE_CACHE_KEY, {})
+    cache.set(PROFILE_CACHE_KEY, profileFixture)
     cache.set(SELECTED_OPTIMIZATIONS_CACHE_KEY, [])
     cache.set(CONSENT_KEY, 'accepted')
     cache.set(PERSISTENCE_CONSENT_KEY, 'accepted')
@@ -258,7 +260,10 @@ describe('AsyncStorageStore', () => {
 
   it('batches profile-continuity writes through AsyncStorage.setMany', async () => {
     const store = await getStore()
-    const profile = { id: 'f0837d7dc6344c36a3a0a06c4cde754b' }
+    const profile: Profile = {
+      ...profileFixture,
+      id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    }
 
     await store.writeProfileContinuity({
       changes: [],
@@ -286,7 +291,7 @@ describe('AsyncStorageStore', () => {
 
     const write = store.writeProfileContinuity({
       changes: [],
-      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+      profile: profileFixture,
       selectedOptimizations: [],
     })
     const clear = store.clearProfileContinuity()

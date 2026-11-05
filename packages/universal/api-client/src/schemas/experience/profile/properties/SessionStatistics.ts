@@ -12,9 +12,9 @@ import { Page } from '../../event/properties'
  */
 export const SessionStatistics = z.object({
   /**
-   * Unique identifier for this session statistics record.
+   * Session identifier, when supplied by the Experience API.
    */
-  id: z.string(),
+  id: z.optional(z.string()),
 
   /**
    * Indicates whether the visitor has been seen before.
