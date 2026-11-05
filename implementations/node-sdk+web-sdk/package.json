@@ -41,7 +41,7 @@
     "@types/qs": "6.15.1",
     "@types/supertest": "6.0.3",
     "@rstest/core": "0.12.4",
-    "@rstest/coverage-istanbul": "0.12.3",
+    "@rstest/coverage-istanbul": "0.12.5",
     "@types/cookie-parser": "1.4.10",
     "dotenv": "17.4.2",
     "pm2": "7.0.4",
