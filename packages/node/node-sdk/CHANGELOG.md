@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.2.1](https://github.com/contentful/optimization/compare/optimization-node-v2.2.0...optimization-node-v2.2.1) (2026-11-06)
+
+### Bug Fixes
+
+- **api-client:** align event and profile schemas with the Experience API [NT-4509] ([#585](https://github.com/contentful/optimization/issues/585)) ([7aaadd8](https://github.com/contentful/optimization/commit/7aaadd8220ece4cf9a48c4a400e811103ebe6b51))
+- **api-client:** standardize profile contracts for Insights ([#583](https://github.com/contentful/optimization/issues/583)) ([b5240b0](https://github.com/contentful/optimization/commit/b5240b04092e6ace0489831939dfd57702618c1d))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.2.1
+
 ## [2.2.0](https://github.com/contentful/optimization/compare/optimization-node-v2.1.1...optimization-node-v2.2.0) (2026-11-04)
 
 ### Features
