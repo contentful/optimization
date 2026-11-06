@@ -107,9 +107,11 @@ profile-changing events:
 - **Storage availability** - Browser localStorage, readable cookies, AsyncStorage, UserDefaults, or
   SharedPreferences must be available for relaunch or client-server handoff continuity. Storage
   failure does not change the Experience API source of truth, but it can break local durability.
-- **Preview and preflight mode** - Preview and preflight flows can evaluate profile state without
-  storing normal profile mutations. Do not use them as the durability path for a profile ID you
-  intend to continue.
+- **Request preview** - A private request handoff prepares its initial Experience events and uses
+  the per-request `preflight: true` mutation option to evaluate profile state for server rendering
+  without storing those mutations. The handoff carries the prepared events to the browser, where
+  the normal queue admits them for commitment. The Experience API supplies the profile ID; the SDK
+  does not create a placeholder identity when preview cannot return one.
 - **Offline behavior** - Stateful clients can queue Experience events while offline, but no newer
   profile data is available until a request succeeds.
 - **Configured defaults** - `defaults.profile`, `defaults.selectedOptimizations`,
@@ -322,7 +324,7 @@ const profileId = req.cookies[ANONYMOUS_ID_COOKIE]
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
-  profileId,
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 
 const { accepted, data: optimizationData } = await requestOptimization.page({
@@ -334,9 +336,11 @@ For the difference between the application Contentful locale and the SDK Experie
 see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
-The Node SDK passes the ID to the Experience API as `profileId`. A bound `Profile` snapshot
-supplies its ID in preference to `profileId`. If the ID is absent, the API can create a profile and
-return the new `profile.id`.
+The Node SDK passes `profile.id` to the Experience API as `profileId`. Bind either `{ id }` or a
+full `Profile` through the same `profile` input. If the ID is absent, the API can create a profile
+and return its `profile.id`. The request client retains the input unchanged at binding; its
+`profile` getter adopts the full profile from an Experience response. Complete-profile validation
+happens when an admitted Insights method needs the snapshot, rather than at binding.
 
 Insights-only methods such as non-sticky `trackView()`, `trackClick()`, `trackHover()`, and
 `trackFlagView()` require a full profile supplied to `forRequest({ profile })` or returned by an
@@ -366,9 +370,13 @@ Consent policy belongs to the application layer on the server. A conservative se
 - When consent is revoked, clear the stored profile ID and stop sending events until consent is
   granted again.
 
-If the server uses `preflight: true`, the Experience API evaluates a profile state without storing
-the mutation. Use that for preview or evaluation flows, not as the normal continuity path for a
-profile ID you intend to persist.
+For private server-rendered handoffs, request preview is the rendering step, not the commitment
+step. The server prepares the initial event batch and previews it with the Experience API's
+per-request `preflight: true` option. The browser later admits that same prepared batch to its normal
+Experience queue. When the API returns a profile ID and persistence consent allows it, the
+application can persist that API-issued ID independently of event commitment. If preview fails
+before an ID is available, the handoff can still carry its prepared batch without an ID; the browser
+can submit it through the API's profile-creation path.
 
 ## Browser-side mechanics
 
@@ -480,27 +488,31 @@ seed or override browser identity through the shared cookie, localStorage, `defa
 `getAnonymousId`, not by trying to pass a one-off `profile` object to every stateful call.
 
 Insights events in the browser use the current full `Profile` signal. If no profile exists, the
-Insights queue logs a warning and skips delivery.
+Insights queue logs a warning and skips delivery. A shared cookie or handoff profile ID alone does
+not supply that full snapshot; hydrate the preview profile or wait for a browser Experience response.
 
 ## Hybrid request lifecycle
 
 A Node and Web SDK application usually follows this lifecycle:
 
 1. **First server request.** The request has no `ctfl-opt-aid` cookie. If the application's consent
-   policy permits the server event, the server calls `page()` or `identify()` without a profile ID.
-   The Experience API creates or evaluates a profile.
+   policy permits the server event, a paired server/browser page uses `prepareRequestHandoff()`
+   without a profile ID. The Experience API previews the prepared events and returns an evaluated
+   profile when preview succeeds. A standalone server path uses `page()` or `identify()` directly.
 2. **Server response.** The server persists the returned `profile.id` in `ctfl-opt-aid` with
    `path: '/'` and a readable cookie policy for browser code when the application's persistence
    consent policy permits durable continuity.
 3. **Browser initialization.** The Web SDK reads the cookie only when persistence consent resolves
    to `true`. If localStorage has a different anonymous ID or cached profile, the SDK clears the old
    profile-continuity state and adopts the cookie ID.
-4. **Browser events.** Browser `page()`, router events, `identify()`, `track()`, and sticky
-   `trackView()` calls update the same Experience API profile.
+4. **Browser events.** The browser hydrates the matching handoff and admits its prepared events
+   through `hydrateAndTrackCurrentPage()`. Later browser `page()`, router events, `identify()`,
+   `track()`, and sticky `trackView()` calls update the same Experience API profile. Queue admission
+   does not confirm HTTP delivery.
 5. **Browser persistence.** Each Experience response updates browser signals. It updates
    localStorage and the `ctfl-opt-aid` cookie only when persistence consent is `true`.
-6. **Later server request.** The server reads the same cookie and passes `{ profileId }` into
-   the next stateless Experience call.
+6. **Later server request.** The server reads the same cookie and binds `{ profile: { id } }` with
+   `forRequest()` before the next stateless Experience call.
 
 The `node-sdk+web-sdk` reference implementation demonstrates this flow by setting
 `ANONYMOUS_ID_COOKIE` on the server and verifying that the browser localStorage anonymous ID matches
@@ -512,8 +524,10 @@ the cookie.
 application's authentication session. The user ID comes from your application identity system, while
 the profile ID continues to select the Experience API profile being updated.
 
-On the server, pass the current anonymous profile ID into the request-bound client. If the page view
-must be attributed to the known user, call `identify()` before `page()` on that same client:
+On the server, pass the current anonymous profile ID into the request-bound client. For a paired
+server/browser page, include the known user's identify input in `prepareRequestHandoff()`'s
+`initialEvents` before its final page event. On a standalone server path, call `identify()` before
+`page()` on that same client when the page view must be attributed to the known user:
 
 ```ts
 const appLocale = getAppLocale(req)
@@ -521,7 +535,7 @@ const profileId = anonymousId
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
-  profileId,
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 
 const identifyResult = await requestOptimization.identify({
@@ -540,7 +554,7 @@ the last Experience response for the request. The request-bound client updates i
 after each accepted Experience response, so the later `page()` call uses the profile returned by
 `identify()`. If `identify()` and `page()` happen in different request-bound clients, bind the
 returned `profile` into the later client with `forRequest({ profile })`, or persist `profile.id` and
-bind `{ profileId: profile.id }` on the later request. Do not pass a profile into `page()`.
+bind `{ profile: { id: profile.id } }` on the later request. Do not pass a profile into `page()`.
 
 If the request arrived anonymous but the response must include identified traits, render from the
 `identify()` response or from a later `page()` response that used the identified request-bound
@@ -572,17 +586,17 @@ cookie or session value in the same user flow.
 
 The following cases are common sources of profile-sync bugs:
 
-| Case                                     | What happens                                                                                                   | Mitigation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ctfl-opt-aid` is `HttpOnly`             | The server can read it, but the Web SDK cannot adopt it.                                                       | Use a readable cookie for hybrid Node and Web SDK continuity.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Cookie domain or path mismatch           | The browser and server use different profile IDs or no shared ID.                                              | Set `path: '/'` and a domain that covers the pages that initialize the Web SDK.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Cookie differs from localStorage         | The Web SDK clears cached profile-continuity data and adopts the cookie ID when persistence consent is `true`. | Treat this as expected when the server changes identity.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| Cookie changes after SDK construction    | The running Web SDK does not continuously watch cookies.                                                       | Reinitialize intentionally after teardown or update identity through SDK event flows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Multiple browser tabs                    | Tabs share storage, but in-memory signals are per runtime and do not auto-sync from storage events.            | Let each tab refresh state through Experience events or reload-sensitive application flows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Offline browser Experience events        | Events queue locally and no new profile data is available until a successful flush.                            | Design UI so cached selections are acceptable while offline.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Missing browser profile for Insights     | Insights delivery is skipped because stateful Insights events use the current profile signal.                  | Ensure an Experience call has returned a profile before relying on Insights-only tracking. For direct Web SDK initialization, bootstrap a valid `defaults.profile` when the server already evaluated the profile. For private App Router rendering, use the request root or provider so the SDK supplies the request handoff. For top-level App Router selection or manual paths, pass the explicit handoff. For Pages Router, pass `pageProps.contentfulOptimization.handoff` through the bound root or provider. For React Web and manual Next.js provider or root handoff, use the `handoff` prop. |
-| Server uses `preflight` for normal flows | The API evaluates without storing the mutation, which breaks durable profile continuity expectations.          | Reserve `preflight` for preview or non-persistent evaluation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Full profile serialized unnecessarily    | More profile data reaches the browser than the UI needs.                                                       | Share only the profile ID unless hydration or browser Insights delivery needs full profile data, changes, or selections.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Case                                                      | What happens                                                                                                        | Mitigation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ctfl-opt-aid` is `HttpOnly`                              | The server can read it, but the Web SDK cannot adopt it.                                                            | Use a readable cookie for hybrid Node and Web SDK continuity.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Cookie domain or path mismatch                            | The browser and server use different profile IDs or no shared ID.                                                   | Set `path: '/'` and a domain that covers the pages that initialize the Web SDK.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Cookie differs from localStorage                          | The Web SDK clears cached profile-continuity data and adopts the cookie ID when persistence consent is `true`.      | Treat this as expected when the server changes identity.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Cookie changes after SDK construction                     | The running Web SDK does not continuously watch cookies.                                                            | Reinitialize intentionally after teardown or update identity through SDK event flows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Multiple browser tabs                                     | Tabs share storage, but in-memory signals are per runtime and do not auto-sync from storage events.                 | Let each tab refresh state through Experience events or reload-sensitive application flows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Offline browser Experience events                         | Events queue locally and no new profile data is available until a successful flush.                                 | Design UI so cached selections are acceptable while offline.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Missing browser profile for Insights                      | Insights delivery is skipped because stateful Insights events use the current profile signal.                       | Ensure an Experience call has returned a profile before relying on Insights-only tracking. For direct Web SDK initialization, bootstrap a valid `defaults.profile` when the server already evaluated the profile. For private App Router rendering, use the request root or provider so the SDK supplies the request handoff. For top-level App Router selection or manual paths, pass the explicit handoff. For Pages Router, pass `pageProps.contentfulOptimization.handoff` through the bound root or provider. For React Web and manual Next.js provider or root handoff, use the `handoff` prop. |
+| Server preview succeeds but browser commitment is pending | The rendered profile data comes from preview; the prepared events remain uncommitted until the browser admits them. | Keep the prepared request handoff with the matching rendered page and let the browser's normal Experience queue own admission and delivery.                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Full profile serialized unnecessarily                     | More profile data reaches the browser than the UI needs.                                                            | Share only the profile ID unless hydration or browser Insights delivery needs full profile data, changes, or selections.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ## Implementation checklist
 
@@ -595,9 +609,10 @@ Use this checklist when implementing a hybrid Node and browser profile flow:
   not write response cookies themselves.
 - Use `path: '/'`, an appropriate domain, and a browser-readable cookie policy when the Web SDK must
   continue the same profile.
-- Pass `{ profileId }` into Node SDK Experience calls when a cookie or session ID exists.
-- Call `identify()` before `page()` on the same Node request-bound client when the page view must be
-  attributed to a known user.
+- Bind `{ profile: { id } }` with `forRequest()` when a cookie or session ID exists.
+- For a paired page, prepare the initial identify and page events with `prepareRequestHandoff()`
+  and pass the replay to the browser. On a standalone server path, call `identify()` before `page()`
+  on the same Node request-bound client when the page view must be attributed to a known user.
 - Let the Web SDK initialize once per browser runtime so it can reconcile cookie and localStorage
   state.
 - Confirm persistence consent resolves to `true` before expecting the Web SDK to load persisted

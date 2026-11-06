@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename)
 dotenv.config({ path: path.resolve(__dirname, '.env') })
 
 const isCI = Boolean(process.env.CI)
+const APP_URL = 'http://localhost:3000'
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -27,7 +28,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL: APP_URL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -74,10 +75,24 @@ export default defineConfig({
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'pnpm --filter e2e serve',
-  //   url: 'http://localhost',
-  //   reuseExistingServer: !isCI,
-  // },
+  webServer: [
+    {
+      name: 'Mocks',
+      command: 'pnpm --dir ../.. serve:mocks',
+      url: 'http://localhost:8000/health',
+      reuseExistingServer: true,
+      timeout: 120_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      name: 'App',
+      command: 'pnpm serve:e2e',
+      url: `${APP_URL}/health`,
+      reuseExistingServer: true,
+      timeout: 120_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  ],
 })

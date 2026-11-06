@@ -131,7 +131,7 @@ describe('Queue lifecycle ownership', () => {
     experienceRequestState.value = { status: 'idle' }
     response.reject(new Error('Old request failed after teardown'))
 
-    await expect(sending).resolves.toBeUndefined()
+    await expect(sending).resolves.toEqual({ accepted: true })
     expect(experienceRequestState.value).toEqual({ status: 'idle' })
   })
 })

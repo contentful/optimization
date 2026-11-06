@@ -139,7 +139,6 @@ Common `api` options:
 | `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
 | `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request             |
 | `location`          | No        | API fallback                               | Default location for single-profile Experience API mutations |
-| `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it             |
 
 Pass `api.location` to the normal root or provider configuration, or to
 `ContentfulOptimization.initialize()` for app-owned SDK initialization:

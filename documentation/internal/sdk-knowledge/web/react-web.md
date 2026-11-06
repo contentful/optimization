@@ -22,7 +22,7 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
 | `@contentful/optimization-react-web/router/next-app`        | Next.js App Router auto page tracker (React-Web-only setups)                                                                                                                                 | react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker                                                                                                                                                                                                                                                                                                |
 | `@contentful/optimization-react-web/api-schemas`            | Type guards `isMergeTagEntry`, `isRichTextDocument`                                                                                                                                          | react-web-sdk#api-schemas.ts; core-sdk#contentful/typeGuards.ts#isMergeTagEntry; core-sdk#contentful/typeGuards.ts#isRichTextDocument                                                                                                                                                                                                                   |
 | `@contentful/optimization-core/entry-source`                | Framework-adapter primitives for managed fetch: `prefetchManagedEntries`, `createOptimizedEntryLoadingEntry`, `getOptimizedEntrySourceKey`, `OptimizedEntrySourceController` + handoff types | core-sdk#entry-source.ts; core-sdk#OptimizedEntrySourceController.ts#prefetchManagedEntries; core-sdk#OptimizedEntrySourceController.ts#createOptimizedEntryLoadingEntry; core-sdk#managed-entry-key.ts#getOptimizedEntrySourceKey; core-sdk#OptimizedEntrySourceController.ts#OptimizedEntrySourceController; core-sdk#CoreBase.ts#ManagedEntryHandoff |
-| `@contentful/optimization-react-web/handoff`                | Pass-through Web handoff types and content hydration helper                                                                                                                                  | react-web-sdk#handoff.ts; web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff                                                                                                                                                                                                                                  |
+| `@contentful/optimization-react-web/handoff`                | Pass-through Web handoff types and content hydration helper                                                                                                                                  | react-web-sdk#handoff.ts; web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff                                                                                                                                                                                                                         |
 | `@contentful/optimization-react-web/analytics`              | Pass-through analytics-only Web runtime helpers                                                                                                                                              | react-web-sdk#analytics.ts; web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff                                                                                                                                                                                                       |
 | `@contentful/optimization-react-web/tracking-attributes`    | Pass-through server/static tracking-attribute resolver                                                                                                                                       | react-web-sdk#tracking-attributes.ts; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes                                                                                                                                                                                                                  |
 | `@contentful/optimization-react-web/logger`                 | `createScopedLogger`                                                                                                                                                                         | react-web-sdk#logger.ts; api-client#lib/logger/Logger.ts#createScopedLogger                                                                                                                                                                                                                                                                             |
@@ -38,12 +38,16 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
   Passing replacement `api` or `api.location` props through the root/provider after mounting does
   not reconfigure the live SDK's default; this follows the
   [Web initialization contract](./web.md#setup--initialization-and-binding).
-  source: react-web-sdk#root/OptimizationRoot.tsx#DefaultOptimizationRoot; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; kb:web/web.md
+  source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; kb:web/web.md
 - Configure by passing props directly to `OptimizationRoot`; mount it exactly once around the subtree
   that uses the SDK. It composes `OptimizationProvider` + `LiveUpdatesProvider`, creates the Web SDK
-  instance after React commits, and destroys it on unmount.
+  instance after React commits, and destroys it on unmount. Route and handoff changes retain the same
+  provider, live SDK, and descendant component lifetimes. The initial render captures whether to run
+  `beforeInitialPage`; an initial prepared replay bypasses that callback for the retained root
+  lifetime, and later routes use replay admission or ordinary page tracking through the same runtime.
   source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot
-- An owned root with `beforeInitialPage` resolves its watchdog before mounting the provider.
+- An owned root that selects `beforeInitialPage` on its initial render resolves its watchdog before
+  mounting the provider.
   Omission uses 3,000 ms, and positive finite configured values are accepted. `0`, negative values,
   `NaN`, and either infinity synchronously throw
   `TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')`; the provider,
@@ -90,12 +94,10 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
   `ContentfulOptimization is already initialized`.
   source: web-sdk#ContentfulOptimization.ts#ContentfulOptimization
 - Analytics-only root: `OptimizationAnalyticsRoot` initializes a narrow analytics runtime after
-  commit, hydrates an analytics-only handoff in a layout effect, emits or skips the initial route
-  through the handoff's `initialPageEvent`, and renders children without providing content
-  resolution context. A skipped initial route remains skipped across React StrictMode effect replay;
-  after the route key changes, later hydrations emit route changes through the analytics runtime.
-  Unmounts and newer hydrations cancel in-flight analytics hydration before it can apply state, warn,
-  or track the page.
+  commit, hydrates an analytics-only handoff in a layout effect, and admits matching replay or an
+  ordinary page for its route. It renders children without providing content resolution context.
+  Repeated initialization shares current replay admission; a later route can emit through the same
+  analytics runtime. Unmounts and newer hydrations cancel stale state apply and page tracking.
   source: react-web-sdk#root/OptimizationAnalyticsRoot.tsx#OptimizationAnalyticsRoot; react-web-sdk#root/OptimizationAnalyticsRoot.tsx#initializeAnalyticsRuntime; web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff
 - `onStatesReady` receives live SDK states during provider setup after the owned/injected SDK exists
   and, when a handoff is present, after live SDK hydration. With `onStatesReady` supplied, the
@@ -114,8 +116,8 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
 | `OptimizationProvider`                              | provider  | root                             | `sdk={optimization}` (injected) OR config; `onStatesReady?`, `handoff?`, `hydration?`, `prefetchManagedEntries?`                                             | always renders children                                                                                                                                                                                                                                                                                    | react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationHandoffProps                                                                                                                              |
 | `LiveUpdatesProvider`                               | provider  | root                             | required for `OptimizedEntry`/`useOptimizedEntry`/`useLiveUpdates` when composing providers by hand                                                          | element                                                                                                                                                                                                                                                                                                    | react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; react-web-sdk#hooks/useLiveUpdates.ts#useLiveUpdates                                                                                                                                                    |
 | `OptimizedEntry`                                    | component | root                             | Manual `baselineEntry`, flat `entryId` + `entryQuery`, or object descriptor under `managedEntry`                                                             | element or `null`                                                                                                                                                                                                                                                                                          | react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry; react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntrySourceProps                                                                                                                                 |
-| `ReactRouterAutoPageTracker`                        | component | `/router/react-router`           | `getPagePayload?`, `pagePayload?` (no `initialPageEvent`)                                                                                                    | `null`                                                                                                                                                                                                                                                                                                     | react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker                                                                                                                                                                                                            |
-| next-pages / next-app tracker                       | component | `/router/next-pages` or next-app | also accept `initialPageEvent`                                                                                                                               | `null`                                                                                                                                                                                                                                                                                                     | react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker                                                                                                                                                      |
+| `ReactRouterAutoPageTracker`                        | component | `/router/react-router`           | Router page tracking                                                                                                                                         | `null`                                                                                                                                                                                                                                                                                                     | react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker                                                                                                                                                                                                            |
+| next-pages / next-app tracker                       | component | `/router/next-pages` or next-app | Can consume a matching request handoff                                                                                                                       | `null`                                                                                                                                                                                                                                                                                                     | react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker                                                                                                                                                      |
 | `useOptimizationContext`                            | hook      | root                             | —                                                                                                                                                            | `{ sdk, error }` (`sdk` seeded, defined from 1st render; `error` on init fail)                                                                                                                                                                                                                             | react-web-sdk#hooks/useOptimization.ts#useOptimizationContext; react-web-sdk#context/OptimizationContext.tsx#OptimizationContextValue                                                                                                                                       |
 | `useOptimization`                                   | hook      | root                             | —                                                                                                                                                            | SDK instance; **throws** if unavailable / no provider                                                                                                                                                                                                                                                      | react-web-sdk#hooks/useOptimization.ts#useOptimization                                                                                                                                                                                                                      |
 | `useOptimizedEntry`                                 | hook      | root                             | Same `baselineEntry`, flat ID, or `managedEntry` object-descriptor source model                                                                              | `{ canOptimize, baselineEntry, entry, error, isLoading, isPresentationReady, isResolved, metadata, resolvedData, selectedOptimization, selectedOptimizations }` (`error` is `Error \| undefined`; `entry`/`baselineEntry`/`metadata`/`selectedOptimization(s)` `undefined` while managed fetch unresolved) | react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntry; react-web-sdk#optimized-entry/useOptimizedEntry.ts#UseOptimizedEntryResult                                                                                                                            |
@@ -191,10 +193,10 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
 
 ## Events & tracking
 
-- Page events: auto-page trackers emit on navigation; each dedupes consecutive route keys incl.
-  Strict Mode double effects. Mount ONE tracker per router tree. React Router / TanStack trackers do
-  NOT take `initialPageEvent`; only next-pages / next-app trackers do (React-Web-only Next setups).
-  source: react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker; react-web-sdk#router/tanstack-router.tsx#TanStackRouterAutoPageTracker; react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage
+- Page events: auto-page trackers emit on navigation; each dedupes consecutive accepted route keys
+  including Strict Mode effect replay. Mount one tracker per router tree. Trackers with a handoff
+  delegate initialization to the Web SDK and use ordinary page tracking after admission.
+  source: react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker; react-web-sdk#router/tanstack-router.tsx#TanStackRouterAutoPageTracker; react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; web-sdk#ContentfulOptimization.ts#trackCurrentPage
 - A config-owned provider creates the plain Web runtime, so manual page calls inherit its current
   browser page provider. Built-in React Router, TanStack Router, Next.js Pages Router, and Next.js App
   Router trackers additionally seed page-event properties with their route-derived absolute URL,
@@ -209,33 +211,40 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   the hooks and browser location agree. `NextAppAutoPageTracker` consumes those inputs and passes
   them to the shared auto-page emitter for its initial and later page behavior.
   source: react-web-sdk#router/next-app.tsx#useNextAppAutoPageInputs; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker
-- Initial page event is auto-emitted on mount, not only on navigation: the shared emitter
-  `useAutoPageEmitter` defaults `initialPageEvent` to `'emit'` and calls `sdk.trackCurrentPage()` in a
-  mount effect, so the first route emits its `page` event as soon as the tracker mounts. Trackers that
-  do not expose `initialPageEvent` (React Router / TanStack) always emit the initial page; only the
-  next-pages / next-app trackers can pass `'skip'` to suppress it. With the `['identify','page']`
-  pre-consent allow-list this initial `page` is admitted before any explicit consent call.
-  source: react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; kb:shared/concepts.md
-- Without `beforeInitialPage`, `OptimizationRoot` emits a handoff-owned initial page event only when
-  it has a route key and either `buildPagePayload` or `initialPagePayload`. For
-  `initialPageEvent: 'skip'`, it can mark the initial route accepted with the initial route key even
-  without a payload builder. If `initialPageEvent: 'emit'` lacks a route key or page payload source,
-  it warns and skips browser emission.
-  source: react-web-sdk#root/OptimizationRoot.tsx#resolveInitialPageEmitterProps; react-web-sdk#root/OptimizationRoot.tsx#shouldWarnMissingInitialPagePayload; react-web-sdk#root/OptimizationRoot.tsx#MissingInitialPagePayloadWarning; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+- The shared emitter attempts the initial route after the live SDK is ready. Without a handoff it
+  uses ordinary current-page tracking when a payload builder exists. With a handoff it hydrates and
+  admits a matching replay, even without a payload builder; an absent or mismatched replay uses the
+  builder when available and otherwise builds an empty page payload. Each mounted emitter remembers
+  its accepted handoff by the prepared page's message ID, or by object identity for state-only
+  handoffs. Later visits with that handoff use ordinary page tracking; rejected admission remains
+  retryable, and a distinct preparation can initialize. The Web SDK owns consent admission and route
+  deduplication.
+  source: react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#trackCurrentPage
+- A plain `OptimizationRoot` enables its initial page emitter only when a handoff is present. Supplying
+  a matching replay or an explicit root payload enables that emitter. Without either, the child
+  tracker owns fallback page construction, including its custom payload properties. Supplying
+  `routeKey` and `buildPagePayload` without a handoff does not emit a page by itself; a mounted
+  auto-page tracker owns ordinary initial and later route events. A root that initially selects
+  `beforeInitialPage` gates later emissions on its callback/direct-page sequence or matching replay takeover.
+  source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
 - A root with `beforeInitialPage` invokes the callback only after its owned runtime is live, once per
   retained root lifetime, with receiver-safe bound `identify`, `screen`, and `track` delegates. It
-  awaits only returned work or the watchdog, then reads the latest route and payload builder for one
-  direct page attempt. A successfully applied same-route handoff can skip that attempt; a failed
-  handoff or changed route emits. After the attempt settles, including rejection or
-  `{ accepted: false }`, readiness activates the existing emitter with one non-emitting `skip` mark
-  for the attempted route. This root owns the page sequence for its subtree; a separate auto-page
+  awaits returned work or the watchdog, then reads the latest route and payload builder for one
+  direct page attempt. A matching replay arriving while the callback is pending releases readiness
+  and starts replay admission through the same SDK without waiting for callback completion or the watchdog.
+  Callback work continues, but its eventual settlement or rejection cannot emit the superseded
+  direct page or duplicate replay. This takeover applies only before the direct page attempt starts.
+  A root initially supplied a prepared replay uses the normal handoff path instead of this
+  callback sequence. After the direct attempt settles, including rejection or
+  `{ accepted: false }`, readiness becomes true while the emitter suppresses a repeat for
+  the attempted route until a later route change. This root owns the page sequence for its subtree; a separate auto-page
   tracker is a second page owner.
-  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#createBeforeInitialPageClient; react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#createBeforeInitialPageClient; react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence; react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
 - A route change after the direct page attempt starts neither cancels that attempt nor starts a
   competing page attempt. The root settles and marks the captured attempted route before enabling
   later page emission; a route observed only during the in-flight attempt is not emitted, while a
   route change after readiness emits normally.
-  source: react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+  source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
 - `getPagePayload` receives `{ context, routeKey, isInitialEmission }`; React Router `context` has
   `pathname`. It returns `AutoPagePayload | undefined`, the argument shape accepted by `sdk.page()`.
   Put application-specific route values under `properties` rather than returning arbitrary
@@ -294,7 +303,7 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   path through the read-only snapshot, then hydrates the live SDK with `hydrateOptimizationHandoff`.
   Provider always renders children (never withheld/unmounted). The provider does NOT `destroy()` an
   instance it did not create (`ownsInstance:false`).
-  source: react-web-sdk#provider/OptimizationProvider.tsx#injectedSdkBacksInitialRender; react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#presentation/optimizationRootRuntime.ts#OptimizationRootSdkBinding; web-sdk#presentation/optimizationRootRuntime.ts#disposeOptimizationRootSdkBinding
+  source: react-web-sdk#provider/OptimizationProvider.tsx#injectedSdkBacksInitialRender; react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; web-sdk#presentation/optimizationRootRuntime.ts#OptimizationRootSdkBinding; web-sdk#presentation/optimizationRootRuntime.ts#disposeOptimizationRootSdkBinding
 - Owned/config `OptimizationRoot` path always seeds a snapshot runtime initially.
   source: react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime; web-sdk#runtime.ts#createWebSnapshotRuntime
 - Handoff-backed initial render validates cache safety before the snapshot runtime consumes
@@ -332,19 +341,17 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   all-locale payloads: see
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
   source: react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry; concept:entry-personalization-and-variant-resolution
-- A callback throw, returned-work rejection, or watchdog expiry is reported through `onError` when
-  supplied and logged otherwise. While the root remains mounted on the same runtime, the direct page
-  is still attempted. A throwing `onError` and page rejection are caught and logged; page rejection
+- Before matching replay takeover, a callback throw, returned-work rejection, or watchdog expiry is reported through `onError` when
+  supplied and logged otherwise. While the root remains mounted on the same runtime and the callback
+  has not been superseded by matching replay, the direct page is still attempted. A throwing `onError` and page rejection are caught and logged; page rejection
   and `{ accepted: false }` both release readiness. The watchdog does not cancel callback work or
   requests, and fire-and-forget work is not awaited. If the root unmounts or its live owned runtime
   is no longer current, this sequence suppresses only unsent local page/readiness continuation; it
   does not cancel callback or page work it already started.
-  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence
+  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#OptimizationPageSequence
 - If owned SDK construction succeeds but initial handoff hydration fails, the provider retains the
-  live runtime and publishes the error. A root with `beforeInitialPage` treats that handoff as
-  unapplied and uses an emitting direct page attempt. This retention applies only to the
-  owned-runtime path.
-  source: react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence
+  live runtime and publishes the error. This retention applies only to the owned-runtime path.
+  source: react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider
 - On SDK **initialization failure**, `useOptimizationContext().error` is set; `OptimizedEntry`
   throws rather than rendering baseline, so it must render under an ancestor that handles `error`
   (an unguarded subtree crashes).

@@ -209,11 +209,6 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     (async (options) => {
       const { routeKey } = options
 
-      if (options.initialPageEvent === 'skip') {
-        acceptedRouteKey = routeKey
-        return { accepted: true }
-      }
-
       if (!hasConsent('page') || acceptedRouteKey === routeKey || inFlightRouteKey === routeKey) {
         return { accepted: false }
       }
@@ -297,6 +292,13 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       return undefined
     },
     trackCurrentPage,
+    hydrateAndTrackCurrentPage: async (
+      ...[_handoff, options]: Parameters<OptimizationSdk['hydrateAndTrackCurrentPage']>
+    ) =>
+      await trackCurrentPage({
+        ...options,
+        buildPayload: options.buildPayload ?? (() => ({})),
+      }),
     trackView: async () => {
       await Promise.resolve()
       return { accepted: true }

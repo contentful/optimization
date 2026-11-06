@@ -58,9 +58,10 @@ per-visitor state between requests. Package source root: `packages/node/node-sdk
   - `contentful?: ContentfulConfig` (managed entry fetching) — same shape/semantics as the web
     family; see [`../shared/concepts.md`](../shared/concepts.md#entry-source-boundary-managed-or-manual).
     source: core-sdk#CoreBase.ts#ContentfulConfig
-- `forRequest()` creates the request-local event client. It validates supplied profile snapshots;
-  scalar `profileId` supplies Experience identity until a response provides a profile.
-  source: core-sdk#CoreStateless.ts#forRequest; core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest
+- `forRequest()` creates the request-local event client and retains the supplied `profile` input
+  unchanged, without complete-profile validation at binding. Experience calls use its `id` for
+  continuity; ordinary responses and handoff previews can publish a full profile to the client.
+  source: core-sdk#CoreStateless.ts#forRequest; core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.types.ts#CoreStatelessForRequestOptions
 
 ## Components & hooks
 
@@ -109,15 +110,21 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   receives the handoff. Request handoffs must use `private-request` cache metadata; the helper throws
   a `TypeError` for `public-permutation` or `static` cache metadata before returning a handoff.
   source: node-sdk#handoff.ts#createRequestHandoffFromData; core-sdk#handoff.ts#assertOptimizationCacheSafety; core-sdk#handoff.ts#OptimizationHandoff
+- The request-bound `prepareRequestHandoff()` prepares the initial identify/track and page events,
+  then previews them through a per-request Experience API mutation with `preflight: true`. Preview
+  failure retains a replay without selected state; blocked page consent or invalid inputs produce
+  no replay. The browser must commit a prepared replay separately. The preview returns an API-issued
+  profile ID even for a first request; no SDK-created ID is reserved.
+  source: core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff; core-sdk#CoreStatelessRequest.ts#buildHandoffEvents
 
 ## Identifier ownership
 
-| Identifier                             | Owner  | Notes                                                                                                                                                                                                                                                    | source                                                                                                                            |
-| -------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `ctfl-opt-aid` (`ANONYMOUS_ID_COOKIE`) | reader | The SDK exports the constant but manages NO cookies in Node; the app reads/writes/clears it and passes the id via `forRequest({ profileId })`. Value === `'ctfl-opt-aid'`. Keep non-`HttpOnly` in a hybrid Node+Web app so browser SDK code can read it. | core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; node-sdk#constants.ts; core-sdk#CoreStatelessRequest.ts#CoreStatelessForRequestOptions |
-| request `profile` / `profileId`        | reader | The current profile's ID takes precedence over the initial scalar ID. Experience responses update the request-local profile.                                                                                                                             | core-sdk#CoreStatelessRequest.ts#profileId; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent                           |
-| request `consent` decision             | reader | App reads its own CMP/cookie/session; SDK only receives the per-request decision.                                                                                                                                                                        | core-sdk#CoreStatelessRequest.ts#CoreStatelessRequestConsent                                                                      |
-| env/config values                      | reader | SDK config is framework-agnostic; app owns the env-var convention (e.g. `PUBLIC_...`, `process.env`).                                                                                                                                                    | extern:app owns server runtime config values                                                                                      |
+| Identifier                             | Owner  | Notes                                                                                                                                                                                                                                                          | source                                                                                                                                  |
+| -------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `ctfl-opt-aid` (`ANONYMOUS_ID_COOKIE`) | reader | The SDK exports the constant but manages NO cookies in Node; the app reads/writes/clears it and passes the id via `forRequest({ profile: { id } })`. Value === `'ctfl-opt-aid'`. Keep non-`HttpOnly` in a hybrid Node+Web app so browser SDK code can read it. | core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; node-sdk#constants.ts; core-sdk#CoreStatelessRequest.types.ts#CoreStatelessForRequestOptions |
+| request `profile`                      | reader | The getter returns the supplied input until an ordinary Experience response or handoff preview publishes a full profile. Experience requests use the current profile's ID.                                                                                     | core-sdk#CoreStatelessRequest.ts#profile; core-sdk#CoreStatelessRequest.ts#publishExperienceData                                        |
+| request `consent` decision             | reader | App reads its own CMP/cookie/session; SDK only receives the per-request decision.                                                                                                                                                                              | core-sdk#CoreStatelessRequest.types.ts#CoreStatelessRequestConsent                                                                      |
+| env/config values                      | reader | SDK config is framework-agnostic; app owns the env-var convention (e.g. `PUBLIC_...`, `process.env`).                                                                                                                                                          | extern:app owns server runtime config values                                                                                            |
 
 ## Events & tracking
 
@@ -126,15 +133,17 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `track({ event, properties? })` (`event` required) → return `EventEmissionResult`
   `{ accepted, data? }` where `data` is the accepted Experience-response `OptimizationData` payload
   (see [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload)). Being stateless,
-  the request client does not apply it to any signals; instead accepted `page()`/`identify()` update
-  this request client's `profile` getter and cached `selectedOptimizations` for the rest of the request.
+  the request client does not apply it to any signals. Experience responses update this request
+  client's `profile` getter and cached `selectedOptimizations` only if its profile revision has not
+  advanced while the call was pending; superseded responses still return their accepted data.
   source: core-sdk#CoreStatelessRequest.ts#page; core-sdk#CoreStatelessRequest.ts#identify; core-sdk#CoreStatelessRequest.ts#screen; core-sdk#CoreStatelessRequest.ts#track; core-sdk#events/EventEmissionResult.ts#EventEmissionResult; api-client#schemas/experience/ExperienceResponse.ts#OptimizationData
 - Insights methods: `trackView(payload)` returns `EventEmissionResult`; `trackClick`, `trackHover`,
   `trackFlagView` return `void`. `trackView({ componentId, viewId, viewDurationMs, experienceId?, variantIndex?, sticky? })`.
   source: core-sdk#CoreStatelessRequest.ts#trackView; core-sdk#CoreStatelessRequest.ts#trackClick; core-sdk#CoreStatelessRequest.ts#trackHover; core-sdk#CoreStatelessRequest.ts#trackFlagView; core-sdk#events/EventBuilder.ts#ViewBuilderArgs
 - Sticky `trackView` sends an Experience view first and uses its response profile for Insights.
-  Other Insights methods require the current request-bound profile.
-  source: core-sdk#CoreStatelessRequest.ts#trackView; core-sdk#CoreStatelessRequest.ts#sendAllowedInsightsEvent
+  Other admitted Insights methods validate the current request-bound snapshot with
+  `requireInsightsProfile()` and require a complete `Profile`; `{ id }` alone does not supply it.
+  source: core-sdk#CoreStatelessRequest.ts#trackView; core-sdk#CoreStatelessRequest.ts#requireInsightsProfile; core-sdk#CoreStatelessRequest.ts#sendAllowedInsightsEvent
 - `getFlag()` never emits a flag view. To report a flag exposure, call request-bound `trackFlagView`
   (admitted when request event consent is `true` OR `'flag'`/`'component'` is allow-listed; requires a
   bound profile). Node's default allow-list does NOT include `'flag'`/`'component'`.
@@ -145,7 +154,7 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `allowedEventTypes: []` blocks them until request consent is `true`. Event-type wire strings:
   `identify`, `page`, `screen`, `track`, `component` (view/flag view), `component_click`,
   `component_hover`; `flag` is a consent selector only.
-  source: core-sdk#CoreStatelessRequest.ts#hasConsent; core-sdk#CoreStatelessRequest.ts#withRequestEventConsent; core-sdk#events/EventType.ts#AllowedEventType; node-sdk#ContentfulOptimization.ts#DEFAULT_NODE_ALLOWED_EVENT_TYPES
+  source: core-sdk#CoreStatelessRequest.ts#hasConsent; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent; core-sdk#events/EventType.ts#AllowedEventType; node-sdk#ContentfulOptimization.ts#DEFAULT_NODE_ALLOWED_EVENT_TYPES
 - Blocked events do NOT throw: Experience methods return `{ accepted: false }`, Insights methods
   return without sending; `onEventBlocked({ reason: 'consent', method, args })` fires for diagnostics.
   source: core-sdk#CoreStatelessRequest.ts#sendExperienceEvent; core-sdk#CoreStatelessRequest.ts#reportBlockedEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent
@@ -175,10 +184,9 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `{ events?, persistence? }` (`CoreStatelessRequestConsent`). `events` gates event emission;
   `persistence === true` sets the request client's `canPersistProfile` flag the app checks before
   persisting the returned `profile.id`. A boolean sets both axes.
-  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequestConsent; core-sdk#CoreStatelessRequest.ts#canPersistProfile
+  source: core-sdk#CoreStatelessRequest.types.ts#CoreStatelessRequestConsent; core-sdk#CoreStatelessRequest.ts#canPersistProfile
 - The SDK stores nothing between requests: no consent cookie, no profile cookie, no CMP record. The
-  app owns all persistence; the SDK reads the per-request consent, profile snapshot, and scalar
-  identity. General
+  app owns all persistence; the SDK reads the per-request consent and `profile` input. General
   consent-vs-persistence model: see
   [`../shared/concepts.md`](../shared/concepts.md#consent--persistence).
   source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest
@@ -186,16 +194,17 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
 ## Version / runtime quirks
 
 - Stateless per request: construct the SDK once, call `forRequest()` per incoming request, then call
-  event methods / entry fetches on that request client. Successful Experience responses update the
-  request's profile snapshot and cached selected optimizations for subsequent calls.
-  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent
+  event methods / entry fetches on that request client. Its cached profile and selections update
+  from ordinary Experience responses and handoff previews under the shared
+  [response publication contract](../shared/concepts.md#experience-response-payload).
+  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#publishExperienceData; kb:shared/concepts.md
 - Locale precedence: when `forRequest()` receives both a top-level `locale` and
   `experienceOptions.locale`, the top-level request `locale` wins — the constructor rewrites
   `experienceOptions.locale` (and `eventContext.locale`) to the normalized request locale. Per-event
   arguments override that event-context default, including through the request `eventBuilder`.
   source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#withEventContext; core-sdk#locale.ts#normalizeExplicitLocale
 - Request-scoped API options: `experienceOptions` (`CoreStatelessRequestOptions`: `ip`, `locale`,
-  `plainText`, `preflight`) and `insightsOptions` (`CoreStatelessInsightsOptions`: `beacon`) apply only
+  `plainText`, `location`) and `insightsOptions` (`CoreStatelessInsightsOptions`: `beacon`) apply only
   to that request's calls.
   source: core-sdk#CoreStateless.ts#CoreStatelessRequestOptions; core-sdk#CoreStateless.ts#CoreStatelessInsightsOptions
 - SDK config is framework-agnostic; store the instance in a module-level singleton. No browser live
@@ -218,9 +227,10 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   matching selection / broken variant link / all-locale payload: the resolver returns the baseline
   entry. Shared model: see [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
   source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
-- Consent-blocked events return without sending. Invalid supplied profiles fail at binding;
-  admitted Insights calls without a profile throw a method-specific error.
-  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#requireInsightsProfile; core-sdk#CoreStatelessRequest.ts#hasConsent
+- Consent-blocked events return without sending and do not require a complete profile. Binding
+  retains the profile input unchanged. Admitted Insights calls without a valid complete profile
+  throw a method-specific error; the Insights batch is also validated before transport.
+  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#requireInsightsProfile; core-sdk#CoreStatelessRequest.ts#hasConsent; core-sdk#CoreStatelessRequest.ts#sendAllowedInsightsEvent
 - Validation: `pnpm implementation:run -- node-sdk typecheck`; reference implementations exercise
   `page()`, `identify()`, `resolveOptimizedEntry()`, `getMergeTagValue()`, and `ANONYMOUS_ID_COOKIE`
   cookie sharing.

@@ -1,6 +1,13 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Locator,
+  type Page,
+  type Route,
+} from '@playwright/test'
 import { CUSTOMER_SEGMENTS, PAGES } from '../src/fixtures'
-import { runIf, runIfImplementation } from './utils'
+import { CONSENT_COOKIE, PROFILE_COOKIE, implementation, runIf, runIfImplementation } from './utils'
 
 const newVisitorSegment = CUSTOMER_SEGMENTS['new-visitor']
 const baselineSegment = CUSTOMER_SEGMENTS.baseline
@@ -8,85 +15,6 @@ const publicPermutationSegments = [newVisitorSegment, baselineSegment] as const
 
 type CustomerSegment = (typeof CUSTOMER_SEGMENTS)[keyof typeof CUSTOMER_SEGMENTS]
 type CustomerSegmentSelection = CustomerSegment['selectedOptimizations'][number]
-
-interface PublicCacheMetadata {
-  readonly key: string
-  readonly scope: 'public-permutation'
-  readonly tags?: readonly string[]
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null
-}
-
-function isPublicCacheMetadata(value: unknown): value is PublicCacheMetadata {
-  if (!isRecord(value)) return false
-  const { key, scope, tags } = value
-
-  return (
-    typeof key === 'string' &&
-    scope === 'public-permutation' &&
-    (tags === undefined || (Array.isArray(tags) && tags.every((tag) => typeof tag === 'string')))
-  )
-}
-
-function readPublicCacheMetadata(payload: unknown): PublicCacheMetadata {
-  if (!isRecord(payload) || !isPublicCacheMetadata(payload.cache)) {
-    throw new Error('Edge runtime selection response did not include public cache metadata.')
-  }
-
-  return payload.cache
-}
-
-interface EdgeRuntimePayload {
-  readonly runtime: {
-    readonly isEdgeRuntime: true
-    readonly witness: 'edge-runtime'
-  }
-}
-
-function expectPublicCacheMiddlewareRewrite({
-  cacheKey,
-  path,
-  responseHeaders,
-}: {
-  readonly cacheKey: string
-  readonly path: string
-  readonly responseHeaders: Readonly<Record<string, string | undefined>>
-}): void {
-  const rewriteHeader = responseHeaders['x-middleware-rewrite']
-  expect(rewriteHeader).toBeTruthy()
-
-  const rewriteUrl = new URL(rewriteHeader ?? '/', 'http://middleware.invalid')
-  const requestedUrl = new URL(path, rewriteUrl.origin)
-  expect(rewriteUrl.pathname).toBe(requestedUrl.pathname)
-  expect(rewriteUrl.searchParams.get('ctfl-opt-cache-key')).toBe(cacheKey)
-}
-
-async function expectRawHiddenUntilReadyHtml(page: Page, html: string): Promise<void> {
-  const snapshot = await page.evaluate((rawHtml) => {
-    const doc = new DOMParser().parseFromString(rawHtml, 'text/html')
-    const content = doc.querySelector('[data-testid="content-hidden-until-ready"]')
-    const loadingTarget = content?.closest('[data-ctfl-loading-layout-target="true"]')
-
-    return {
-      hasContent: content !== null,
-      hasRoute: doc.querySelector('[data-testid="hidden-until-ready-route"]') !== null,
-      isHiddenByLoadingTarget:
-        loadingTarget instanceof HTMLElement && loadingTarget.style.visibility === 'hidden',
-      isHiddenByStreamedSegment: content?.closest('[hidden]') !== null,
-    }
-  }, html)
-
-  expect(snapshot.hasRoute).toBe(true)
-
-  if (!snapshot.hasContent) {
-    expect(snapshot.hasContent).toBe(false)
-    return
-  }
-
-  expect(snapshot.isHiddenByLoadingTarget || snapshot.isHiddenByStreamedSegment).toBe(true)
-}
 
 async function expectPageTwoSelectedVariant(page: Page): Promise<void> {
   const host = page.locator(`[data-ctfl-baseline-id="${PAGES.pageTwo.auto}"]`).first()
@@ -96,41 +24,23 @@ async function expectPageTwoSelectedVariant(page: Page): Promise<void> {
 }
 
 async function expectRawSelectedHandoffHtml({
-  cacheKeyTestId,
-  expectedCacheControl,
   path,
   request,
   routeTestId,
   segment = newVisitorSegment,
 }: {
-  readonly cacheKeyTestId: string
-  readonly expectedCacheControl?: string
   readonly path: string
   readonly request: APIRequestContext
   readonly routeTestId: string
   readonly segment?: CustomerSegment
-}): Promise<{ readonly cacheMetadata: PublicCacheMetadata; readonly html: string }> {
+}): Promise<void> {
   const response = await request.get(path)
-  const responseHeaders = response.headers()
   const html = await response.text()
-  const cacheKey = readHtmlTestIdText(html, cacheKeyTestId)
-  const cacheMetadata = {
-    key: cacheKey,
-    scope: 'public-permutation',
-  } satisfies PublicCacheMetadata
 
   expect(response.ok()).toBe(true)
-  if (expectedCacheControl !== undefined) {
-    expect(responseHeaders['cache-control']).toContain(expectedCacheControl)
-  }
-  expectPublicCacheMiddlewareRewrite({ cacheKey, path, responseHeaders })
   expect(html).toContain(`data-testid="${routeTestId}"`)
-  expect(html).toContain(`data-testid="${cacheKeyTestId}"`)
   expect(html).toContain(segment.resolvedEntryText)
   expectSelectedEntryMarkup(html, segment)
-  expectComputedPublicCacheMetadata(cacheMetadata, segment)
-
-  return { cacheMetadata, html }
 }
 
 function findSelectedOptimization(segment: CustomerSegment): CustomerSegmentSelection | undefined {
@@ -174,56 +84,9 @@ async function expectPublicPermutationHost(host: Locator, segment: CustomerSegme
   )
 }
 
-function expectComputedPublicCacheMetadata(
-  cacheMetadata: PublicCacheMetadata,
-  segment: CustomerSegment = newVisitorSegment,
-  expectedTags?: readonly string[],
-): void {
-  const selectedOptimization = findSelectedOptimization(segment)
-
-  expect(cacheMetadata.scope).toBe('public-permutation')
-  if (expectedTags !== undefined) expect(cacheMetadata.tags).toEqual(expectedTags)
-  expect(cacheMetadata.key).toContain(`permutation=${segment.slug}`)
-  expect(cacheMetadata.key).toContain(`version=${segment.cacheVersion}`)
-  expect(cacheMetadata.key).toContain('ctfl-opt-cache:v1')
-  expect(cacheMetadata.key).toContain('scope=public-permutation')
-  expect(cacheMetadata.key).toContain(`locale=${segment.locale}`)
-  expect(cacheMetadata.key).toContain(`entries=${segment.baselineEntryId}`)
-
-  if (selectedOptimization === undefined) {
-    expect(cacheMetadata.key).toContain('selection=ctfl-opt-selection:v1:empty')
-    expect(cacheMetadata.key).not.toContain('experience=')
-    expect(cacheMetadata.key).not.toContain('variants=')
-    return
-  }
-
-  expect(cacheMetadata.key).toContain(`experience=${selectedOptimization.experienceId}`)
-  expect(cacheMetadata.key).toContain(`variants=${segment.baselineEntryId}=`)
-  expect(cacheMetadata.key).toContain(segment.variantEntryId)
-}
-
-function readHtmlTestIdText(html: string, testId: string): string {
-  const match = new RegExp(`data-testid="${testId}"[^>]*>([^<]+)<`).exec(html)
-  expect(match?.[1]).toBeTruthy()
-  return (match?.[1] ?? '').replaceAll('&amp;', '&')
-}
-
-function expectEdgeRuntime(
-  response: { headers: () => Record<string, string> },
-  payload: unknown,
-): void {
-  expect(response.headers()['x-edge-runtime-witness']).toBe('edge-runtime')
-  expect(payload).toMatchObject({
-    runtime: {
-      isEdgeRuntime: true,
-      witness: 'edge-runtime',
-    },
-  } satisfies EdgeRuntimePayload)
-}
-
-test.describe('Next.js handoff routes', () => {
+test.describe('Next.js request handoff routes', () => {
   runIf('SSR')
-  runIfImplementation('nextjs-sdk_app-router')
+  runIfImplementation('nextjs-sdk_app-router', 'nextjs-sdk_pages-router')
 
   test('renders personalized initial SSR and preserves it through hydration', async ({
     page,
@@ -244,9 +107,7 @@ test.describe('Next.js handoff routes', () => {
     await expectPageTwoSelectedVariant(page)
   })
 
-  test('renders the page-only request entry after preserved-layout navigation', async ({
-    page,
-  }) => {
+  test('renders the page-only request entry after navigation', async ({ page }) => {
     await page.goto(PAGES.home.path)
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
@@ -257,79 +118,205 @@ test.describe('Next.js handoff routes', () => {
     await expectPageTwoSelectedVariant(page)
   })
 
-  test('uses forwarded request context without duplicating the initial browser page event', async ({
-    page,
-  }) => {
+  test('commits one initial browser page while preserving the server render', async ({ page }) => {
+    const delivery = page.waitForResponse(
+      (response) =>
+        response.url().includes('/experience/') &&
+        response.request().method() === 'POST' &&
+        response.ok(),
+    )
     await page.goto(PAGES.home.path)
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-
-    await expect(page.locator('[data-testid^="event-page-"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid^="event-page-"]')).toHaveCount(1)
+    await delivery
   })
 
+  test('keeps personalized SSR visible while browser delivery is delayed and fails', async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
+    let release = (): void => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let held = false
+    let failed = false
+    const routeHandler = async (route: Route): Promise<void> => {
+      if (held || route.request().method() !== 'POST') {
+        await route.continue()
+        return
+      }
+      held = true
+      await gate
+      await route.abort('failed')
+      failed = true
+    }
+    await page.route('**/experience/**', routeHandler)
+
+    try {
+      await page.goto(PAGES.pageTwo.path, { waitUntil: 'domcontentloaded' })
+      await expect.poll(() => held).toBe(true)
+      await expect(page.getByTestId('page-two-view')).toBeVisible()
+      const selectedContent = page.getByTestId(`entry-text-${PAGES.pageTwo.auto}`)
+      await expect(selectedContent).toContainText(newVisitorSegment.resolvedEntryText)
+
+      release()
+      await expect.poll(() => failed).toBe(true)
+      await expect(selectedContent).toContainText(newVisitorSegment.resolvedEntryText)
+    } finally {
+      release()
+      await page.unroute('**/experience/**', routeHandler)
+    }
+  })
+})
+
+test.describe('Next.js public permutation handoff routes', () => {
+  runIf('SSR')
+  runIfImplementation('nextjs-sdk_app-router', 'nextjs-sdk_pages-router')
+
   for (const segment of publicPermutationSegments) {
-    test(`renders a customer-owned ${segment.slug} public permutation handoff with a cache key`, async ({
+    test(`renders a customer-owned ${segment.slug} public permutation after hydration`, async ({
       page,
       request,
     }) => {
-      const { cacheMetadata } = await expectRawSelectedHandoffHtml({
-        cacheKeyTestId: 'selection-cache-key',
-        expectedCacheControl: 's-maxage=60',
-        path: `/selection-handoff/${segment.slug}`,
+      const path = `/selection-handoff/${segment.slug}`
+      const routeTestId =
+        implementation === 'nextjs-sdk_pages-router'
+          ? 'pages-selection-handoff-route'
+          : 'selection-handoff-route'
+      const entryTextTestId =
+        implementation === 'nextjs-sdk_pages-router'
+          ? `entry-text-pages-selection-${segment.baselineEntryId}`
+          : `entry-text-${segment.baselineEntryId}`
+      await expectRawSelectedHandoffHtml({
+        path,
         request,
-        routeTestId: 'selection-handoff-route',
+        routeTestId,
         segment,
       })
 
-      const response = await page.goto(`/selection-handoff/${segment.slug}`)
+      await page.goto(path)
       await page.waitForLoadState('domcontentloaded')
 
-      expect(response?.headers()['cache-control']).toContain('s-maxage=60')
-      await expect(page.getByTestId('selection-handoff-route')).toBeVisible()
-      await expect(page.getByTestId('selection-cache-key')).toHaveText(cacheMetadata.key)
+      await expect(page.getByTestId(routeTestId)).toBeVisible()
+      await expect(page.getByTestId(entryTextTestId)).toContainText(segment.resolvedEntryText)
 
       const host = page.locator(`[data-ctfl-baseline-id="${segment.baselineEntryId}"]`).first()
       await expectPublicPermutationHost(host, segment)
     })
   }
+})
+
+test.describe('Next.js App Router-only handoff routes', () => {
+  runIf('SSR')
+  runIfImplementation('nextjs-sdk_app-router')
+
+  for (const { linkTestId, path, routeTestId } of [
+    {
+      linkTestId: 'link-selection-handoff',
+      path: '/selection-handoff/new-visitor',
+      routeTestId: 'selection-handoff-route',
+    },
+    {
+      linkTestId: 'link-analytics-only',
+      path: '/analytics-only/new-visitor',
+      routeTestId: 'analytics-only-route',
+    },
+  ]) {
+    test(`preserves consented profile continuity through ${path}`, async ({ context, page }) => {
+      const browserErrors: string[] = []
+      page.on('pageerror', (error) => browserErrors.push(error.message))
+      page.on('console', (message) => {
+        if (message.type() === 'error') browserErrors.push(message.text())
+      })
+
+      await page.goto('/')
+      await page.getByTestId('consent-button').click()
+      await expect(page.getByTestId('consent-status')).toHaveText('Yes')
+      await page.getByTestId('identify-button').click()
+      await expect(page.getByTestId('identified-status')).toHaveText('Yes')
+
+      const getProfileId = async (): Promise<string | undefined> =>
+        (await context.cookies()).find(({ name }) => name === PROFILE_COOKIE)?.value
+      await expect.poll(getProfileId).toBeTruthy()
+      const profileId = await getProfileId()
+      if (profileId === undefined) throw new Error('The identified visitor has no profile ID.')
+
+      await page.getByTestId(linkTestId).click()
+      await expect(page).toHaveURL(path)
+      await expect(page.getByTestId(routeTestId)).toContainText(newVisitorSegment.resolvedEntryText)
+      await expect.poll(getProfileId).toBe(profileId)
+
+      await page.reload()
+      await expect(page.getByTestId(routeTestId)).toContainText(newVisitorSegment.resolvedEntryText)
+      await expect.poll(getProfileId).toBe(profileId)
+
+      await page.getByTestId('link-home').click()
+      await expect(page.getByTestId('consent-status')).toHaveText('Yes')
+      await expect(page.getByTestId('identified-status')).toHaveText('Yes')
+      await expect.poll(getProfileId).toBe(profileId)
+      expect(browserErrors).toEqual([])
+    })
+  }
+
+  test('public handoff routes do not persist a profile without consent', async ({
+    context,
+    page,
+  }) => {
+    await page.goto('/')
+    await expect(page.getByTestId('consent-status')).toHaveText('No')
+
+    for (const { path, routeTestId } of [
+      { path: '/selection-handoff/new-visitor', routeTestId: 'selection-handoff-route' },
+      { path: '/analytics-only/new-visitor', routeTestId: 'analytics-only-route' },
+    ]) {
+      await page.goto(path)
+      await expect(page).toHaveURL(path)
+      await expect(page.getByTestId(routeTestId)).toBeVisible()
+      await page.waitForLoadState('networkidle')
+      expect((await context.cookies()).some(({ name }) => name === PROFILE_COOKIE)).toBe(false)
+    }
+  })
 
   test('hydrates analytics-only server markup without browser content resolution', async ({
     page,
     request,
   }) => {
-    const { cacheMetadata } = await expectRawSelectedHandoffHtml({
-      cacheKeyTestId: 'analytics-cache-key',
-      expectedCacheControl: 's-maxage=60',
+    await expectRawSelectedHandoffHtml({
       path: `/analytics-only/${newVisitorSegment.slug}`,
       request,
       routeTestId: 'analytics-only-route',
     })
 
     const clientContentfulRequests: string[] = []
-    const clientExperienceRequests: string[] = []
     await page.route('**/contentful/**', async (route) => {
       clientContentfulRequests.push(route.request().url())
       await route.continue()
     })
-    await page.route('**/experience/**', async (route) => {
-      clientExperienceRequests.push(route.request().url())
-      await route.continue()
-    })
+    const delivery = page.waitForResponse(
+      (response) =>
+        response.url().includes('/experience/') &&
+        response.request().method() === 'POST' &&
+        response.ok(),
+    )
 
-    const response = await page.goto(`/analytics-only/${newVisitorSegment.slug}`)
+    await page.goto(`/analytics-only/${newVisitorSegment.slug}`)
     await page.waitForLoadState('networkidle')
 
-    expect(response?.headers()['cache-control']).toContain('s-maxage=60')
     await expect(page.getByTestId('analytics-only-route')).toBeVisible()
-    await expect(page.getByTestId('analytics-cache-key')).toHaveText(cacheMetadata.key)
     await expect(page.getByTestId('analytics-only-sidebar')).toBeVisible()
     await expect(page.getByTestId('analytics-events-container')).toHaveCount(0)
 
     const host = page.getByTestId(`analytics-entry-${newVisitorSegment.baselineEntryId}`)
     await expectPublicPermutationHost(host, newVisitorSegment)
+    await expect(
+      page.getByTestId(`entry-text-analytics-${newVisitorSegment.baselineEntryId}`),
+    ).toContainText(newVisitorSegment.resolvedEntryText)
     expect(clientContentfulRequests).toEqual([])
-    expect(clientExperienceRequests.length).toBeGreaterThan(0)
-    expect(clientExperienceRequests.every((url) => url.includes('/profiles'))).toBe(true)
+    await delivery
   })
 
   test('renders the client-only hidden-until-ready route with a query string', async ({
@@ -341,11 +328,12 @@ test.describe('Next.js handoff routes', () => {
     const rawHtml = await rawResponse.text()
 
     expect(rawResponse.ok()).toBe(true)
-    await expectRawHiddenUntilReadyHtml(page, rawHtml)
+    expect(rawHtml).toContain('data-testid="hidden-until-ready-route"')
 
     await page.goto(path)
     await page.waitForLoadState('domcontentloaded')
 
+    await expect(page).toHaveURL(path)
     await expect(page.getByTestId('hidden-until-ready-route')).toBeVisible()
     await expect(page.getByTestId('content-hidden-until-ready')).toBeVisible()
   })
@@ -369,113 +357,4 @@ test.describe('Next.js handoff routes', () => {
       newVisitorSegment.resolvedEntryText,
     )
   })
-})
-
-test.describe('Next.js Edge runtime handoff routes', () => {
-  runIf('EDGE')
-  runIfImplementation('nextjs-sdk_app-router_edge-runtime')
-
-  test('creates a request handoff with private request cache scope', async ({ request }) => {
-    const response = await request.get('/edge-request')
-    const payload: unknown = await response.json()
-
-    expect(response.ok()).toBe(true)
-    expectEdgeRuntime(response, payload)
-    expect(response.headers()['cache-control']).toBe('private, no-store')
-    expect(response.headers()['x-optimization-cache-scope']).toBe('private-request')
-    expect(payload).toMatchObject({
-      accepted: true,
-      cache: { scope: 'private-request' },
-      hydration: 'preserve-server',
-      initialPageEvent: 'skip',
-    })
-  })
-
-  for (const segment of publicPermutationSegments) {
-    test(`creates a ${segment.slug} public permutation handoff with customer-owned cache metadata`, async ({
-      request,
-    }) => {
-      const response = await request.get(`/edge-selection/${segment.slug}`)
-      const payload: unknown = await response.json()
-      const cacheMetadata = readPublicCacheMetadata(payload)
-      const cacheTags = [`ctfl-opt-segment:${segment.slug}:v${segment.cacheVersion}`]
-
-      expect(response.ok()).toBe(true)
-      expectEdgeRuntime(response, payload)
-      expect(response.headers()['x-optimization-cache-scope']).toBe('public-permutation')
-      expect(response.headers()['x-optimization-cache-key']).toBe(cacheMetadata.key)
-      expectComputedPublicCacheMetadata(cacheMetadata, segment, cacheTags)
-
-      if (segment.selectedOptimizations.length === 0) {
-        expect(payload).toMatchObject({
-          cache: {
-            key: cacheMetadata.key,
-            scope: 'public-permutation',
-            tags: cacheTags,
-          },
-          selectedOptimizations: [],
-        })
-        return
-      }
-
-      const selectedOptimization = findSelectedOptimization(segment)
-      if (selectedOptimization === undefined) {
-        throw new Error(`Expected segment "${segment.slug}" to include a selected optimization.`)
-      }
-
-      expect(payload).toMatchObject({
-        cache: {
-          key: cacheMetadata.key,
-          scope: 'public-permutation',
-          tags: cacheTags,
-        },
-        selectedOptimizations: [
-          expect.objectContaining({
-            experienceId: selectedOptimization.experienceId,
-            variantIndex: selectedOptimization.variantIndex,
-          }),
-        ],
-      })
-    })
-  }
-})
-
-test.describe('Next.js Pages Router public permutation handoff routes', () => {
-  runIf('SSR')
-  runIfImplementation('nextjs-sdk_pages-router')
-
-  for (const segment of publicPermutationSegments) {
-    test(`renders an ISR ${segment.slug} public permutation handoff and preserves it after hydration`, async ({
-      page,
-      request,
-    }) => {
-      const path = `/selection-handoff/${segment.slug}`
-      const response = await request.get(path)
-      const html = await response.text()
-
-      expect(response.ok()).toBe(true)
-      expect(response.headers()['cache-control']).toContain('s-maxage=60')
-      expect(html).toContain('data-testid="pages-selection-handoff-route"')
-      expect(html).toContain('data-testid="pages-selection-cache-key"')
-      expect(html).toContain(`permutation=${segment.slug}`)
-      expect(html).toContain(`version=${segment.cacheVersion}`)
-      expect(html).toContain(segment.resolvedEntryText)
-      expectSelectedEntryMarkup(html, segment)
-
-      const rawCacheKey = readHtmlTestIdText(html, 'pages-selection-cache-key')
-
-      const hydrationResponse = await page.goto(path)
-      await page.waitForLoadState('domcontentloaded')
-
-      expect(hydrationResponse?.headers()['cache-control']).toContain('s-maxage=60')
-      await expect(page.getByTestId('pages-selection-handoff-route')).toBeVisible()
-      await expect(page.getByTestId('pages-selection-cache-key')).toHaveText(rawCacheKey)
-      await expect(
-        page.getByTestId(`entry-text-pages-selection-${segment.baselineEntryId}`),
-      ).toContainText(segment.resolvedEntryText)
-
-      const host = page.getByTestId(`pages-selection-entry-${segment.baselineEntryId}`)
-      await expectPublicPermutationHost(host, segment)
-    })
-  }
 })

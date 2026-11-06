@@ -27,16 +27,18 @@ Use this implementation when you need a hybrid SSR/browser example. It demonstra
 SDK server flow, a stateful Web SDK browser flow, consent-aware cookie-based profile continuity
 between them, and local mock API usage for end-to-end validation.
 
-On the server side, the stateless Node SDK is created once at module load. Each request binds
-request-scoped options with `sdk.forRequest(...)`, then calls stateless event methods on the
-returned request object. The demo stores application-owned consent in a server-readable cookie and
-writes the shared anonymous ID cookie only when consent permits profile continuity. When app consent
-is missing or denied, the server clears the shared anonymous ID cookie, skips Node SDK event calls,
-and lets the browser render baseline entries.
+On the server side, the stateless Node SDK is created once at module load. With application consent,
+each request binds its request context with `sdk.forRequest(...)` and calls
+`prepareRequestHandoff()`. The Experience API previews the prepared events and returns data for SSR;
+the handoff carries the event batch for the browser Web SDK to admit to its normal Experience queue.
+This keeps the server preview from committing the page or profile changes. The reference stores
+application-owned consent in a server-readable cookie and writes the shared anonymous ID cookie only
+when persistence consent allows profile continuity. The ID comes from the Experience API; the SDK
+does not manufacture one. When app consent is missing or denied, the server clears the shared
+anonymous ID cookie, makes no Optimization request, and renders baseline entries.
 
-The goal of this reference implementation is to illustrate the usage of cookie-based communication
-in both the Node and Web SDKs, which is an important component of many server-side/client-side
-hybrid SSR and ESR solutions.
+This reference implementation illustrates cookie-based communication between the Node and Web SDKs
+in hybrid SSR and ESR solutions.
 
 > [!NOTE]
 >

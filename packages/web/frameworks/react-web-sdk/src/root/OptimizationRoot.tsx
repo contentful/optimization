@@ -1,7 +1,4 @@
-import type {
-  TrackCurrentPageOptions,
-  TrackCurrentPageSkipOptions,
-} from '@contentful/optimization-web'
+import type { TrackCurrentPageOptions } from '@contentful/optimization-web'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import {
   useCallback,
@@ -50,132 +47,12 @@ export type OptimizationRootProps = OptimizationProviderConfigProps &
   OptimizationRootCommonProps &
   (OptimizationRootWithoutBeforeInitialPageProps | OptimizationRootWithBeforeInitialPageProps)
 
-type DefaultOptimizationRootProps = OptimizationProviderConfigProps &
-  OptimizationRootCommonProps &
-  OptimizationRootWithoutBeforeInitialPageProps
-
-type BeforeInitialPageOptimizationRootProps = OptimizationProviderConfigProps &
-  OptimizationRootCommonProps &
-  OptimizationRootWithBeforeInitialPageProps & {
-    readonly maxWaitMs: number
-  }
+interface InitialPageSequence {
+  readonly beforeInitialPage: BeforeInitialPageOptions
+  readonly maxWaitMs: number
+}
 
 const logger = createScopedLogger('React:OptimizationRoot')
-
-function InitialHandoffPageEmitter({
-  buildPagePayload,
-  handoff,
-  routeKey,
-}: {
-  readonly buildPagePayload?: TrackCurrentPageOptions['buildPayload']
-  readonly handoff: ContentOptimizationHandoff
-  readonly routeKey: string
-}): null {
-  useAutoPageEmitter({
-    buildPayload: buildPagePayload,
-    enabled: true,
-    initialPageEvent: handoff.initialPageEvent,
-    routeKey,
-  })
-
-  return null
-}
-
-type InitialHandoffPageEmitterProps = Parameters<typeof InitialHandoffPageEmitter>[0]
-
-function MissingInitialPagePayloadWarning(): null {
-  useEffect(() => {
-    logger.warn(
-      'OptimizationRoot handoff requested initial page emission without routeKey and buildPagePayload; skipping initial page event.',
-    )
-  }, [])
-
-  return null
-}
-
-function resolveInitialPageEmitterProps({
-  buildPagePayload,
-  handoff,
-  initialPagePayload,
-  initialRouteKey,
-  routeKey,
-}: {
-  readonly buildPagePayload?: TrackCurrentPageOptions['buildPayload']
-  readonly handoff?: ContentOptimizationHandoff
-  readonly initialPagePayload?: AutoPagePayload
-  readonly initialRouteKey?: string
-  readonly routeKey?: string
-}): InitialHandoffPageEmitterProps | undefined {
-  if (handoff === undefined) return undefined
-
-  const resolvedBuildPagePayload =
-    buildPagePayload ?? (initialPagePayload === undefined ? undefined : () => initialPagePayload)
-
-  if (routeKey !== undefined && resolvedBuildPagePayload !== undefined) {
-    return { buildPagePayload: resolvedBuildPagePayload, handoff, routeKey }
-  }
-
-  if (
-    handoff.initialPageEvent === 'skip' &&
-    initialRouteKey !== undefined &&
-    resolvedBuildPagePayload === undefined
-  ) {
-    return { handoff, routeKey: initialRouteKey }
-  }
-
-  return undefined
-}
-
-function shouldWarnMissingInitialPagePayload({
-  buildPagePayload,
-  handoff,
-  initialPagePayload,
-  routeKey,
-}: {
-  readonly buildPagePayload?: TrackCurrentPageOptions['buildPayload']
-  readonly handoff?: ContentOptimizationHandoff
-  readonly initialPagePayload?: AutoPagePayload
-  readonly routeKey?: string
-}): boolean {
-  return (
-    handoff?.initialPageEvent === 'emit' &&
-    (routeKey === undefined || (buildPagePayload === undefined && initialPagePayload === undefined))
-  )
-}
-
-function DefaultOptimizationRoot({
-  buildPagePayload,
-  children,
-  handoff,
-  initialPagePayload,
-  liveUpdates = false,
-  routeKey,
-  ...providerProps
-}: DefaultOptimizationRootProps): ReactElement {
-  const initialRouteKey = useRef<string | undefined>(undefined)
-  initialRouteKey.current ??= routeKey
-  const initialPageEmitterProps = resolveInitialPageEmitterProps({
-    buildPagePayload,
-    handoff,
-    initialPagePayload,
-    initialRouteKey: initialRouteKey.current,
-    routeKey,
-  })
-  const shouldWarnMissingPayload = shouldWarnMissingInitialPagePayload({
-    buildPagePayload,
-    handoff,
-    initialPagePayload,
-    routeKey,
-  })
-
-  return (
-    <OptimizationProvider {...providerProps} handoff={handoff}>
-      {shouldWarnMissingPayload ? <MissingInitialPagePayloadWarning /> : null}
-      {initialPageEmitterProps ? <InitialHandoffPageEmitter {...initialPageEmitterProps} /> : null}
-      <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{children}</LiveUpdatesProvider>
-    </OptimizationProvider>
-  )
-}
 
 interface BeforeInitialPageSequenceState {
   readonly emitterRouteKey: string
@@ -194,44 +71,42 @@ function logInitialPageError(error: unknown): void {
   }
 }
 
-function BeforeInitialPageSequence({
+function OptimizationPageSequence({
   buildPagePayload,
   children,
+  enabled,
   handoff,
-  beforeInitialPage,
-  initialRouteKey,
-  maxWaitMs,
+  initialSequence,
   routeKey,
 }: PropsWithChildren<{
-  readonly buildPagePayload: TrackCurrentPageOptions['buildPayload']
+  readonly buildPagePayload?: TrackCurrentPageOptions['buildPayload']
+  readonly enabled: boolean
   readonly handoff?: ContentOptimizationHandoff
-  readonly beforeInitialPage: BeforeInitialPageOptions
-  readonly initialRouteKey: string
-  readonly maxWaitMs: number
+  readonly initialSequence?: InitialPageSequence
   readonly routeKey: string
 }>): ReactElement {
-  const { error, isLive, sdk } = useOptimizationContext()
+  const { isLive, sdk } = useOptimizationContext()
   const [sequenceState, setSequenceState] = useState<BeforeInitialPageSequenceState>({
-    emitterRouteKey: initialRouteKey,
-    isReady: false,
+    emitterRouteKey: routeKey,
+    isReady: initialSequence === undefined,
   })
   const buildPagePayloadRef = useRef(buildPagePayload)
   const currentRuntimeRef = useRef(sdk)
   const currentRuntimeIsLiveRef = useRef(isLive === true)
-  const initialHandoffRef = useRef(handoff)
-  const beforeInitialPageRef = useRef(beforeInitialPage)
-  const initialMaxWaitMsRef = useRef(maxWaitMs)
+  const initialAttemptedRouteKeyRef = useRef<string | undefined>(undefined)
   const lastObservedRouteKeyRef = useRef(routeKey)
   const mountedRef = useRef(false)
   const routeKeyRef = useRef(routeKey)
   const sequenceStartedRef = useRef(false)
+  const callbackSupersededRef = useRef(false)
+  const supersedeCallbackRef = useRef<(() => void) | undefined>(undefined)
   buildPagePayloadRef.current = buildPagePayload
   currentRuntimeRef.current = sdk
   currentRuntimeIsLiveRef.current = isLive === true
   routeKeyRef.current = routeKey
 
   const buildLatestPagePayload = useCallback<TrackCurrentPageOptions['buildPayload']>(
-    (metadata) => buildPagePayloadRef.current(metadata),
+    (metadata) => buildPagePayloadRef.current?.(metadata) ?? {},
     [],
   )
 
@@ -244,41 +119,42 @@ function BeforeInitialPageSequence({
   }, [])
 
   useEffect(() => {
-    if (sequenceStartedRef.current || !isLive || sdk === undefined) return
+    if (initialSequence === undefined || sequenceStartedRef.current || !isLive || sdk === undefined)
+      return
 
     sequenceStartedRef.current = true
     const sequenceRuntime = sdk
+    const { promise: callbackSuperseded, resolve } = Promise.withResolvers<undefined>()
+    supersedeCallbackRef.current = () => {
+      callbackSupersededRef.current = true
+      resolve(undefined)
+    }
     const isCurrentRuntime = (): boolean =>
       mountedRef.current &&
+      !callbackSupersededRef.current &&
       currentRuntimeIsLiveRef.current &&
       currentRuntimeRef.current === sequenceRuntime
 
     void (async () => {
       await runBeforeInitialPage(
         sequenceRuntime,
-        beforeInitialPageRef.current,
-        initialMaxWaitMsRef.current,
+        {
+          ...initialSequence.beforeInitialPage,
+          run: async (client) =>
+            await Promise.race([initialSequence.beforeInitialPage.run(client), callbackSuperseded]),
+        },
+        initialSequence.maxWaitMs,
       )
 
       if (!isCurrentRuntime()) return
 
       const { current: attemptedRouteKey } = routeKeyRef
-      const { current: initialHandoff } = initialHandoffRef
-      const canSkipDirectPage =
-        initialHandoff !== undefined &&
-        error === undefined &&
-        initialHandoff.initialPageEvent === 'skip' &&
-        attemptedRouteKey === initialRouteKey
-      const pageOptions: TrackCurrentPageOptions | TrackCurrentPageSkipOptions = canSkipDirectPage
-        ? { initialPageEvent: 'skip', routeKey: attemptedRouteKey }
-        : {
-            buildPayload: buildPagePayloadRef.current,
-            initialPageEvent: 'emit',
-            routeKey: attemptedRouteKey,
-          }
-
+      initialAttemptedRouteKeyRef.current = attemptedRouteKey
       try {
-        await sequenceRuntime.trackCurrentPage(pageOptions)
+        await sequenceRuntime.trackCurrentPage({
+          buildPayload: buildPagePayloadRef.current ?? buildLatestPagePayload,
+          routeKey: attemptedRouteKey,
+        })
       } catch (pageError: unknown) {
         logInitialPageError(pageError)
       }
@@ -289,19 +165,38 @@ function BeforeInitialPageSequence({
       lastObservedRouteKeyRef.current = currentRouteKey
       setSequenceState({ emitterRouteKey: attemptedRouteKey, isReady: true })
     })()
-  }, [error, initialRouteKey, isLive, sdk])
+  }, [buildLatestPagePayload, initialSequence, isLive, sdk])
+
+  useEffect(() => {
+    if (
+      handoff?.replay?.routeKey !== routeKey ||
+      sequenceState.isReady ||
+      initialAttemptedRouteKeyRef.current !== undefined
+    )
+      return
+
+    supersedeCallbackRef.current?.()
+    lastObservedRouteKeyRef.current = routeKey
+    setSequenceState({ emitterRouteKey: routeKey, isReady: true })
+  }, [handoff, routeKey, sequenceState.isReady])
 
   useAutoPageEmitter({
-    buildPayload: buildLatestPagePayload,
-    enabled: sequenceState.isReady,
-    initialPageEvent: 'skip',
-    routeKey: sequenceState.emitterRouteKey,
+    buildPayload: initialSequence === undefined ? buildPagePayload : buildLatestPagePayload,
+    enabled:
+      enabled &&
+      sequenceState.isReady &&
+      (initialSequence === undefined ||
+        (sequenceState.emitterRouteKey === routeKey &&
+          sequenceState.emitterRouteKey !== initialAttemptedRouteKeyRef.current)),
+    handoff,
+    routeKey: initialSequence === undefined ? routeKey : sequenceState.emitterRouteKey,
   })
 
   useEffect(() => {
     if (!sequenceState.isReady || lastObservedRouteKeyRef.current === routeKey) return
 
     lastObservedRouteKeyRef.current = routeKey
+    initialAttemptedRouteKeyRef.current = undefined
     setSequenceState({ emitterRouteKey: routeKey, isReady: true })
   }, [routeKey, sequenceState.isReady])
 
@@ -312,40 +207,56 @@ function BeforeInitialPageSequence({
   )
 }
 
-function BeforeInitialPageOptimizationRoot({
+function shouldEmitRootPage(
+  routeKey: string | undefined,
+  buildPayload: TrackCurrentPageOptions['buildPayload'] | undefined,
+  beforeInitialPage: BeforeInitialPageOptions | undefined,
+  handoff: ContentOptimizationHandoff | undefined,
+): boolean {
+  return (
+    routeKey !== undefined &&
+    (beforeInitialPage !== undefined || handoff !== undefined) &&
+    (handoff?.replay?.routeKey === routeKey || buildPayload !== undefined)
+  )
+}
+
+export function OptimizationRoot({
   buildPagePayload,
   children,
   handoff,
   beforeInitialPage,
+  initialPagePayload,
   liveUpdates = false,
-  maxWaitMs,
   routeKey,
   ...providerProps
-}: BeforeInitialPageOptimizationRootProps): ReactElement {
-  const initialRouteKey = useRef(routeKey)
+}: OptimizationRootProps): ReactElement {
+  const [initialSequence] = useState<InitialPageSequence | undefined>(() =>
+    beforeInitialPage === undefined || handoff?.replay !== undefined
+      ? undefined
+      : {
+          beforeInitialPage,
+          maxWaitMs: resolveBeforeInitialPageMaxWaitMs(beforeInitialPage.maxWaitMs),
+        },
+  )
+  const currentRouteKey =
+    routeKey ??
+    (typeof window === 'undefined'
+      ? undefined
+      : `${window.location.pathname}${window.location.search}`)
+  const buildPayload =
+    buildPagePayload ?? (initialPagePayload === undefined ? undefined : () => initialPagePayload)
 
   return (
-    <OptimizationProvider {...providerProps} handoff={handoff}>
-      <BeforeInitialPageSequence
-        buildPagePayload={buildPagePayload}
+    <OptimizationProvider {...providerProps} handoff={handoff} routeKey={currentRouteKey}>
+      <OptimizationPageSequence
+        buildPagePayload={buildPayload}
+        enabled={shouldEmitRootPage(currentRouteKey, buildPayload, beforeInitialPage, handoff)}
         handoff={handoff}
-        beforeInitialPage={beforeInitialPage}
-        initialRouteKey={initialRouteKey.current}
-        maxWaitMs={maxWaitMs}
-        routeKey={routeKey}
+        initialSequence={initialSequence}
+        routeKey={currentRouteKey ?? '/'}
       >
         <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{children}</LiveUpdatesProvider>
-      </BeforeInitialPageSequence>
+      </OptimizationPageSequence>
     </OptimizationProvider>
   )
-}
-
-export function OptimizationRoot(props: OptimizationRootProps): ReactElement {
-  if (props.beforeInitialPage === undefined) {
-    return <DefaultOptimizationRoot {...props} />
-  }
-
-  const maxWaitMs = resolveBeforeInitialPageMaxWaitMs(props.beforeInitialPage.maxWaitMs)
-
-  return <BeforeInitialPageOptimizationRoot {...props} maxWaitMs={maxWaitMs} />
 }

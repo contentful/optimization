@@ -21,7 +21,7 @@
 #   ./scripts/run-dev-dashboard.sh --clean      # Clean build first
 #
 # Prerequisites:
-#   - Node.js >= 18
+#   - Node.js version from .nvmrc
 #   - pnpm
 #   - Watchman (recommended)
 #   - For iOS: Xcode with iOS simulator, CocoaPods
@@ -42,7 +42,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RN_PACKAGE_DIR="$(cd "$DEV_DIR/.." && pwd)"
-ROOT_DIR="$(cd "$RN_PACKAGE_DIR/../../.." && pwd)"
+ROOT_DIR="$(cd "$RN_PACKAGE_DIR/../.." && pwd)"
 
 LOG_DIR="${DEV_DIR}/logs"
 MOCK_SERVER_LOG="${LOG_DIR}/mock-server.log"
@@ -94,7 +94,7 @@ Examples:
   $(basename "$0") --clean --ios    # Clean iOS build and run
 
 Prerequisites:
-  - Node.js >= 18
+  - Node.js version from .nvmrc
   - pnpm
   - Watchman (brew install watchman)
   - For iOS: Xcode with iOS simulator, CocoaPods
@@ -121,38 +121,25 @@ log_step() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
+stop_process_tree() {
+    local pid="$1"
+    local child
+    for child in $(pgrep -P "$pid" || true); do
+        stop_process_tree "$child"
+    done
+    kill "$pid" 2>/dev/null || true
+}
+
 cleanup() {
-    log_info "Cleaning up background processes..."
-    
-    # Stop Metro bundler and its children
+    log_info "Stopping only the processes started by this launcher..."
     if [[ -n "$METRO_PID" ]]; then
-        log_info "Stopping Metro bundler (PID: $METRO_PID) and its process group..."
-        pkill -P "$METRO_PID" 2>/dev/null || true
-        kill "$METRO_PID" 2>/dev/null || true
+        stop_process_tree "$METRO_PID"
         wait "$METRO_PID" 2>/dev/null || true
     fi
-    
-    # Kill any remaining processes on Metro port
-    if lsof -ti:"${METRO_PORT}" > /dev/null 2>&1; then
-        log_info "Killing any remaining processes on Metro port ${METRO_PORT}..."
-        lsof -ti:"${METRO_PORT}" | xargs kill -9 2>/dev/null || true
-    fi
-    
-    # Stop mock server and its children
     if [[ -n "$MOCK_SERVER_PID" ]]; then
-        log_info "Stopping mock server (PID: $MOCK_SERVER_PID) and its process group..."
-        pkill -P "$MOCK_SERVER_PID" 2>/dev/null || true
-        kill "$MOCK_SERVER_PID" 2>/dev/null || true
+        stop_process_tree "$MOCK_SERVER_PID"
         wait "$MOCK_SERVER_PID" 2>/dev/null || true
     fi
-    
-    # Kill any remaining processes on mock server port
-    if lsof -ti:"${MOCK_SERVER_PORT}" > /dev/null 2>&1; then
-        log_info "Killing any remaining processes on mock server port ${MOCK_SERVER_PORT}..."
-        lsof -ti:"${MOCK_SERVER_PORT}" | xargs kill -9 2>/dev/null || true
-    fi
-    
-    log_info "Cleanup complete"
 }
 
 trap cleanup EXIT INT TERM
@@ -173,7 +160,7 @@ wait_for_port() {
         
         echo -n "."
         sleep 1
-        ((attempt++))
+        attempt=$((attempt + 1))
     done
     
     echo ""
@@ -184,16 +171,12 @@ wait_for_port() {
 create_env_file() {
     log_step "Creating .env File"
     
-    cat > "${DEV_DIR}/.env" << EOF
-PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/experience/
-PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/insights/
-PUBLIC_CONTENTFUL_TOKEN=${PUBLIC_CONTENTFUL_TOKEN:-test-token}
-PUBLIC_CONTENTFUL_ENVIRONMENT=${PUBLIC_CONTENTFUL_ENVIRONMENT:-master}
-PUBLIC_CONTENTFUL_SPACE_ID=${PUBLIC_CONTENTFUL_SPACE_ID:-test-space}
-PUBLIC_CONTENTFUL_CDA_HOST=localhost:${MOCK_SERVER_PORT}
-PUBLIC_CONTENTFUL_BASE_PATH=/contentful/
-EOF
-    
+    if [[ -f "${DEV_DIR}/.env" ]]; then
+        log_info "Keeping the existing .env"
+        return 0
+    fi
+    cp "${DEV_DIR}/.env.example" "${DEV_DIR}/.env"
+
     log_info ".env file created at ${DEV_DIR}/.env"
 }
 
@@ -201,6 +184,10 @@ install_dependencies() {
     log_step "Installing Dependencies"
     
     cd "$ROOT_DIR"
+    if [[ -d "${ROOT_DIR}/node_modules" ]]; then
+        log_info "Workspace dependencies already exist"
+        return 0
+    fi
     log_info "Running pnpm install..."
     pnpm install
     log_info "Dependencies installed"
@@ -211,17 +198,19 @@ start_mock_server() {
     
     mkdir -p "$LOG_DIR"
     
-    # Kill existing process on port
     if lsof -ti:"${MOCK_SERVER_PORT}" > /dev/null 2>&1; then
-        log_warn "Port ${MOCK_SERVER_PORT} is already in use. Killing existing process..."
-        lsof -ti:"${MOCK_SERVER_PORT}" | xargs kill -9 2>/dev/null || true
-        sleep 1
+        if curl --fail --silent "http://localhost:${MOCK_SERVER_PORT}/health" > /dev/null; then
+            log_info "Reusing the existing mock server"
+            return 0
+        fi
+        log_error "Mock server port ${MOCK_SERVER_PORT} is occupied by another service"
+        exit 1
     fi
-    
+
     cd "$ROOT_DIR"
     log_info "Starting mock server on port ${MOCK_SERVER_PORT}..."
     
-    PORT="${MOCK_SERVER_PORT}" pnpm --dir "$ROOT_DIR" serve:mocks 2>&1 | tee "$MOCK_SERVER_LOG" &
+    PORT="${MOCK_SERVER_PORT}" pnpm --dir "$ROOT_DIR" serve:mocks > "$MOCK_SERVER_LOG" 2>&1 &
     MOCK_SERVER_PID=$!
     
     log_info "Mock server started with PID: $MOCK_SERVER_PID"
@@ -233,36 +222,38 @@ start_mock_server() {
     fi
 }
 
+run_native_cli() {
+    MOCK_SERVER_PORT="$MOCK_SERVER_PORT" \
+    pnpm --dir "$RN_PACKAGE_DIR" exec bash -c 'cd "$1"; shift; exec react-native "$@"' -- "$DEV_DIR" "$@"
+}
+
 start_metro() {
     log_step "Starting Metro Bundler"
     
     mkdir -p "$LOG_DIR"
     
-    # Kill existing process on port
     if lsof -ti:"${METRO_PORT}" > /dev/null 2>&1; then
-        log_warn "Port ${METRO_PORT} is already in use. Killing existing process..."
-        lsof -ti:"${METRO_PORT}" | xargs kill -9 2>/dev/null || true
-        sleep 1
+        if [[ "$(curl --fail --silent "http://localhost:${METRO_PORT}/status")" == "packager-status:running" ]]; then
+            log_info "Reusing the existing Metro bundler"
+            return 0
+        fi
+        log_error "Metro port ${METRO_PORT} is occupied by another service"
+        exit 1
     fi
-    
+
     cd "$DEV_DIR"
     log_info "Starting Metro bundler on port ${METRO_PORT}..."
     
-    npx react-native start --port "$METRO_PORT" --config "$DEV_DIR/metro.config.js" 2>&1 | tee "$METRO_LOG" &
+    run_native_cli start --port "$METRO_PORT" --config "$DEV_DIR/metro.config.cjs" > "$METRO_LOG" 2>&1 &
     METRO_PID=$!
     
     log_info "Metro bundler started with PID: $METRO_PID"
     
-    # Wait for Metro to initialize
-    log_info "Waiting for Metro bundler to initialize..."
-    sleep 10
-    
-    if ! kill -0 "$METRO_PID" 2>/dev/null; then
-        log_error "Metro bundler failed to start. Check logs at: $METRO_LOG"
+    if ! wait_for_port "${METRO_PORT}" "Metro" 30; then
         cat "$METRO_LOG"
         exit 1
     fi
-    
+
     log_info "Metro bundler is running"
 }
 
@@ -272,18 +263,11 @@ setup_ios() {
     cd "$DEV_DIR/ios"
     
     if [[ "$CLEAN_BUILD" == true ]]; then
-        log_info "Cleaning iOS build..."
-        rm -rf ~/Library/Developer/Xcode/DerivedData 2>/dev/null || true
-        rm -rf Pods Podfile.lock build 2>/dev/null || true
-        # Clean CocoaPods cache to fix "null byte" errors
-        pod cache clean --all 2>/dev/null || true
+        log_info "Cleaning this harness's iOS build..."
+        xcodebuild -workspace ReactNativeApp.xcworkspace -scheme ReactNativeApp clean
     fi
-    
+
     log_info "Installing CocoaPods..."
-    # Clean existing pods to avoid null byte issues in monorepos
-    if [[ "$CLEAN_BUILD" == true ]]; then
-        rm -rf Pods Podfile.lock 2>/dev/null || true
-    fi
     pod install --repo-update
     
     log_info "iOS setup complete"
@@ -321,10 +305,10 @@ run_app() {
     
     if [[ "$PLATFORM" == "ios" ]]; then
         log_info "Building and launching iOS app..."
-        npx react-native run-ios --no-packager --port "$METRO_PORT"
+        run_native_cli run-ios --no-packager --port "$METRO_PORT"
     else
         log_info "Building and launching Android app..."
-        npx react-native run-android --no-packager --port "$METRO_PORT"
+        run_native_cli run-android --no-packager --port "$METRO_PORT"
     fi
 }
 
@@ -356,7 +340,11 @@ wait_forever() {
     log_info "Press Ctrl+C to stop all servers and exit"
     
     # Wait for Metro process (it will run until killed)
-    wait "$METRO_PID" 2>/dev/null || true
+    if [[ -n "$METRO_PID" ]]; then
+        wait "$METRO_PID" 2>/dev/null || true
+    else
+        while true; do sleep 1; done
+    fi
 }
 
 # =============================================================================
@@ -423,10 +411,12 @@ main() {
     
     install_dependencies
 
-    if [[ "$PLATFORM" == "ios" ]]; then
-        setup_ios
-    else
-        setup_android
+    if [[ "$START_APP" == true ]]; then
+        if [[ "$PLATFORM" == "ios" ]]; then
+            setup_ios
+        else
+            setup_android
+        fi
     fi
     
     start_mock_server
