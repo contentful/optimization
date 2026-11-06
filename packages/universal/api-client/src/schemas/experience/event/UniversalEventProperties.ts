@@ -24,13 +24,19 @@ export const UniversalEventContext = z.object({
 
   /**
    * GDPR-related consent information.
+   *
+   * @remarks
+   * Optional and informational: the Experience and Insights APIs do not read it.
+   * Consent is enforced by the SDK before events are sent.
    */
-  gdpr: z.object({
-    /**
-     * Indicates whether the user has given consent.
-     */
-    isConsentGiven: z.boolean(),
-  }),
+  gdpr: z.optional(
+    z.object({
+      /**
+       * Indicates whether the user has given consent.
+       */
+      isConsentGiven: z.boolean(),
+    }),
+  ),
 
   /**
    * Analytics library metadata.
@@ -39,8 +45,10 @@ export const UniversalEventContext = z.object({
 
   /**
    * Locale identifier of the event (e.g., `"en-US"`).
+   *
+   * @defaultValue `"en-US"`
    */
-  locale: z.string(),
+  locale: z.optional(z.prefault(z.string(), 'en-US')),
 
   /**
    * Optional geo-location information associated with the event.
@@ -86,6 +94,15 @@ export const UniversalEventProperties = z.object({
   }),
 
   /**
+   * Anonymous identifier of the visitor, if the caller supplies one.
+   *
+   * @remarks
+   * Optional. The Experience API profile endpoints derive it from the request
+   * route, and batch ingestion requires it (see {@link BatchExperienceEvent}).
+   */
+  anonymousId: z.optional(z.string()),
+
+  /**
    * Unique identifier for this message.
    *
    * @remarks
@@ -97,25 +114,25 @@ export const UniversalEventProperties = z.object({
    * Timestamp when the event originally occurred.
    *
    * @remarks
-   * ISO 8601 datetime string.
+   * Any date string the Experience API can parse; the SDK sends ISO 8601.
    */
-  originalTimestamp: z.iso.datetime(),
+  originalTimestamp: z.string(),
 
   /**
    * Timestamp when the event payload was sent.
    *
    * @remarks
-   * ISO 8601 datetime string.
+   * Any date string the Experience API can parse; the SDK sends ISO 8601.
    */
-  sentAt: z.iso.datetime(),
+  sentAt: z.string(),
 
   /**
    * Timestamp when the event was recorded or processed.
    *
    * @remarks
-   * ISO 8601 datetime string.
+   * Any date string the Experience API can parse; the SDK sends ISO 8601.
    */
-  timestamp: z.iso.datetime(),
+  timestamp: z.string(),
 
   /**
    * Identifier of the authenticated user, if known.

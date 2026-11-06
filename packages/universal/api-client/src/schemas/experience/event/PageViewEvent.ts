@@ -10,8 +10,13 @@ import { Page } from './properties'
 export const PageEventContext = z.extend(UniversalEventContext, {
   /**
    * Page context for events that occur within a web page.
+   *
+   * @remarks
+   * Optional, as the Experience API defaults it to an empty page. The Experience API
+   * reads the session landing page and page-based audience rules from it, so send it
+   * whenever the page is known.
    */
-  page: Page,
+  page: z.optional(Page),
 })
 
 /**
@@ -48,8 +53,11 @@ export const PageViewEvent = z.extend(UniversalEventProperties, {
 
   /**
    * Page-level properties such as URL, path, and referrer.
+   *
+   * @remarks
+   * `title` is required here, as the Experience API rejects page events without it.
    */
-  properties: Page,
+  properties: z.extend(Page, { title: z.string() }),
 
   /**
    * Override the context property of {@link UniversalEventProperties}

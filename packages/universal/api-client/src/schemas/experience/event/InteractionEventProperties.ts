@@ -12,8 +12,12 @@ export const InteractionEventProperties = z.extend(UniversalEventProperties, {
    *
    * - `'Entry'` — A content entry.
    * - `'Variable'` — A Custom Flag or other variable-backed optimization target.
+   *
+   * @remarks
+   * Optional in the schema, as the Experience and Insights APIs accept events without
+   * it. The SDK always sends it.
    */
-  componentType: z.union([z.literal('Entry'), z.literal('Variable')]),
+  componentType: z.optional(z.union([z.literal('Entry'), z.literal('Variable')])),
 
   /**
    * Contentful entry ID or flag key corresponding to the interaction.
@@ -33,8 +37,10 @@ export const InteractionEventProperties = z.extend(UniversalEventProperties, {
    *
    * @remarks
    * Typically corresponds to the index of the selected optimization entry.
+   * Optional in the schema, as the Experience and Insights APIs accept events
+   * without it. The SDK always sends it.
    */
-  variantIndex: z.number(),
+  variantIndex: z.optional(z.number()),
 })
 
 /**

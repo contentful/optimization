@@ -1,5 +1,5 @@
 import * as z from 'zod/mini'
-import { Dictionary } from './Dictionary'
+import { Query } from './Query'
 
 /**
  * Zod schema describing Web page-level properties for events.
@@ -19,8 +19,10 @@ export const Page = z.catchall(
 
     /**
      * Parsed query parameters for the page.
+     *
+     * @see {@link Query}
      */
-    query: Dictionary,
+    query: Query,
 
     /**
      * Referrer URL that led to the current page.

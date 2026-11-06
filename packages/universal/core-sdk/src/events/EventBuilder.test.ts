@@ -83,7 +83,7 @@ describe('EventBuilder.buildScreenView', () => {
   it('marks GDPR consent as false when no event consent getter is configured', () => {
     const event = builder.buildScreenView({ name: 'Home', properties: {} })
 
-    expect(event.context.gdpr.isConsentGiven).toBe(false)
+    expect(event.context.gdpr?.isConsentGiven).toBe(false)
   })
 
   it('uses the configured event consent getter for GDPR context', () => {
@@ -93,7 +93,7 @@ describe('EventBuilder.buildScreenView', () => {
       getConsent: () => false,
     }).buildScreenView({ name: 'Home', properties: {} })
 
-    expect(event.context.gdpr.isConsentGiven).toBe(false)
+    expect(event.context.gdpr?.isConsentGiven).toBe(false)
   })
 })
 

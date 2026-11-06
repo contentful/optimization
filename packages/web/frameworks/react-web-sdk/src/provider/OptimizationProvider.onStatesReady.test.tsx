@@ -56,6 +56,7 @@ function createPageEvent(): EventPayload {
     query: {},
     referrer: '',
     search: '',
+    title: '',
     url: 'http://localhost/',
   }
 
