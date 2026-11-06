@@ -91,7 +91,7 @@ async function renderRequest(
     },
     locale: appLocale,
     eventContext: { locale: appLocale },
-    profileId,
+    profile: profileId === undefined ? undefined : { id: profileId },
   })
 
   const { accepted, data } = await requestOptimization.page()
@@ -206,6 +206,7 @@ import type { Request } from 'express'
 
 app.get('/products/:slug', async (req, res) => {
   const appLocale = getAppLocale(req)
+  const profileId = req.cookies.profileId
   const requestOptimization = optimization.forRequest({
     consent: {
       events: appPolicyAllowsOptimizationEvent(req),
@@ -215,7 +216,7 @@ app.get('/products/:slug', async (req, res) => {
     eventContext: {
       locale: appLocale,
     },
-    profileId: req.cookies.profileId,
+    profile: profileId === undefined ? undefined : { id: profileId },
   })
   const { accepted, data: optimizationData } = await requestOptimization.page({
     properties: { path: req.path },
@@ -248,7 +249,10 @@ stateless event methods.
 
 In stateless runtimes, non-sticky `trackView`, `trackClick`, `trackHover`, and `trackFlagView`
 require a full `Profile` supplied through `forRequest({ profile })` or returned by an Experience
-call on the same request client. Use `profileId` for Experience API continuity.
+call on the same request client. Use `profile: { id }` for Experience API continuity.
+The request client retains the supplied `profile` unchanged at binding and exposes it through
+`requestOptimization.profile`; an Experience response updates it with a full profile. Complete
+profile validation happens when an admitted Insights method needs that snapshot.
 
 The profile ID must come from an Experience API response or application storage populated from that
 response. The SDK does not create profile IDs.

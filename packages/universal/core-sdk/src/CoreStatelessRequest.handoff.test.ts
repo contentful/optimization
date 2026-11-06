@@ -21,7 +21,7 @@ describe('request handoff preparation', () => {
     })
     const request = core.forRequest({
       consent: { events: true, persistence: true },
-      profileId: 'continuation',
+      profile: { id: 'continuation' },
       locale: 'de-DE',
       eventContext: { userAgent: 'server-agent' },
       experienceOptions: { plainText: false, ip: '203.0.113.10' },
@@ -130,13 +130,12 @@ describe('request handoff preparation', () => {
         .mockRejectedValue(new Error('preview unavailable'))
       const request = core.forRequest({
         consent: { events: true, persistence: true },
-        profileId,
+        profile: profileId === undefined ? undefined : { id: profileId },
       })
       const result = await request.prepareRequestHandoff({ routeKey: '/landing' })
       expect(result.data).toBeUndefined()
       expect(result.handoff.profileId).toBe(profileId)
-      expect(request.profile).toBeUndefined()
-      expect(request.profileId).toBe(profileId)
+      expect(request.profile).toEqual(profileId === undefined ? undefined : { id: profileId })
       expect(result.handoff.replay?.events).toHaveLength(1)
       expect(preview).toHaveBeenCalledWith(
         { profileId, events: result.handoff.replay?.events },
@@ -148,7 +147,7 @@ describe('request handoff preparation', () => {
   it('uses the API response profile for later request operations without rewriting linked response data', async () => {
     const core = new CoreStateless({ spaceId: 'key_123' })
     const preview = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue(DATA)
-    const request = core.forRequest({ consent: true, profileId: 'continuation' })
+    const request = core.forRequest({ consent: true, profile: { id: 'continuation' } })
     const first = await request.prepareRequestHandoff({ routeKey: '/one' })
     const second = await request.prepareRequestHandoff({ routeKey: '/two' })
     expect(first.handoff.profileId).toBe('continuation')
@@ -185,7 +184,9 @@ describe('request handoff preparation', () => {
       ],
     })
     expect(handoff.replay?.events.map(({ type }) => type)).toEqual(['track', 'page'])
-    expect(handoff.replay?.events.every((event) => !event.context.gdpr.isConsentGiven)).toBe(true)
+    expect(
+      handoff.replay?.events.every((event) => event.context.gdpr?.isConsentGiven === false),
+    ).toBe(true)
     expect(preview).toHaveBeenCalledTimes(1)
   })
 
@@ -232,7 +233,7 @@ describe('request handoff preparation', () => {
   it('rejects invalid route/event inputs before preview', async () => {
     const core = new CoreStateless({ spaceId: 'key_123' })
     const preview = rs.spyOn(core.api.experience, 'upsertProfile')
-    const request = core.forRequest({ consent: true, profileId: 'continuation' })
+    const request = core.forRequest({ consent: true, profile: { id: 'continuation' } })
     const invalid: unknown = await Reflect.apply(request.prepareRequestHandoff, request, [
       { routeKey: '/', initialEvents: [{ type: 'page' }] },
     ])

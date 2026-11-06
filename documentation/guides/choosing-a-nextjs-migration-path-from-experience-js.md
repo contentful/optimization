@@ -117,7 +117,7 @@ prepared events to its queue. The tracker handles routes without a handoff and l
 Legacy continuity commonly used `ntaid`. Target Web, React Web, and Next.js browser/framework SDKs
 use `ctfl-opt-aid` for the SDK-owned anonymous profile cookie. In a manual Node/Web hybrid, the Node
 SDK only exports the `ANONYMOUS_ID_COOKIE` constant; app code must read, write, and clear that
-cookie and pass the profile ID through `forRequest({ profileId })`. Decide whether migration resets
+cookie and pass the profile ID through `forRequest({ profile: { id } })`, omitting `profile` when no ID exists. Decide whether migration resets
 visitor identity or whether the app reads the legacy cookie and writes the target continuity value
 as a one-time operational handoff.
 

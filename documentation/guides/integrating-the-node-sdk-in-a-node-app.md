@@ -415,12 +415,13 @@ building top to bottom, treat them as `undefined`/no-ops until you reach that se
 **Copy this:**
 
 ```ts
+const profileId = getProfileIdFromRequest(req)
 const requestOptimization = optimization.forRequest({
   // Default-on policy: events can be sent and profile continuity can be persisted.
   consent: { events: true, persistence: true },
   locale: appLocale,
   eventContext: getRequestContext(req, appLocale),
-  profileId: getProfileIdFromRequest(req),
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 ```
 
@@ -436,12 +437,13 @@ function appPolicyAllowsOptimizationEvent(req: Request): boolean {
 }
 
 const allowed = appPolicyAllowsOptimizationEvent(req)
+const profileId = getProfileIdFromRequest(req)
 const requestOptimization = optimization.forRequest({
   // Use the same request decision for event delivery and app-owned profile persistence.
   consent: { events: allowed, persistence: allowed },
   locale: appLocale,
   eventContext: getRequestContext(req, appLocale),
-  profileId: getProfileIdFromRequest(req),
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 ```
 
@@ -487,11 +489,12 @@ app.get('/', async (req, res) => {
   const appLocale = getAppLocale(req)
   const allowed = appPolicyAllowsOptimizationEvent(req)
   // Bind request data before calling stateless event methods.
+  const profileId = getProfileIdFromRequest(req)
   const requestOptimization = optimization.forRequest({
     consent: { events: allowed, persistence: allowed },
     locale: appLocale,
     eventContext: getRequestContext(req, appLocale),
-    profileId: getProfileIdFromRequest(req),
+    profile: profileId === undefined ? undefined : { id: profileId },
   })
 
   // page() performs event delivery and returns request-local optimization data.
@@ -523,7 +526,7 @@ The Node SDK does not choose the identity key or fetch traits for you.
 
 1. Read the known user ID from authentication middleware, a session, a JWT, or an upstream account
    service.
-2. Bind the current anonymous profile ID, if one exists, with `forRequest({ profileId })`.
+2. Bind the current anonymous profile ID, if one exists, with `forRequest({ profile: { id } })`.
 3. Call `identify()` when the user is known and your consent policy permits that event.
 4. Render from the response object that best matches the user state for the current response.
 
@@ -564,7 +567,11 @@ state you want on the page.
 **Integration category:** Common but policy-dependent
 
 The Node SDK is stateless, so it does not remember a visitor between requests. Persist only the
-profile ID that your consent policy allows, then pass it back through `forRequest({ profileId })`.
+profile ID that your consent policy allows, then pass it back through `forRequest({ profile: { id } })`.
+Omit `profile` when no ID exists. You can optionally bind a complete `Profile` snapshot instead;
+`requestOptimization.profile` retains the supplied input until an Experience response replaces it
+with a full profile. Binding does not validate the full snapshot; admitted Insights methods validate
+it before delivery.
 
 1. Choose an application session or first-party cookie for profile continuity.
 2. Install cookie parsing middleware or use your framework's existing cookie/session reader.
@@ -690,11 +697,12 @@ const optimization = new ContentfulOptimization({
 
 app.get('/article/:slug', async (req, res) => {
   const appLocale = getAppLocale(req)
+  const profileId = getProfileIdFromRequest(req)
   const requestOptimization = optimization.forRequest({
     consent: { events: true, persistence: true },
     locale: appLocale,
     eventContext: getRequestContext(req, appLocale),
-    profileId: getProfileIdFromRequest(req),
+    profile: profileId === undefined ? undefined : { id: profileId },
   })
   // Evaluate the request before resolving entry variants for this response.
   const pageResult = await requestOptimization.page()
@@ -1150,13 +1158,14 @@ const optimization = new ContentfulOptimization({
   },
 })
 
+const profileId = getProfileIdFromRequest(req)
 const requestOptimization = optimization.forRequest({
   consent: { events: false, persistence: false },
   eventContext: getRequestContext(req, appLocale),
   // Advanced Experience API options stay request-scoped in stateless runtimes.
   experienceOptions: { location: { countryCode: 'FR', city: 'Paris' } },
   locale: appLocale,
-  profileId: getProfileIdFromRequest(req),
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 
 const pageResult = await requestOptimization.page()
@@ -1260,8 +1269,8 @@ Before releasing a Node SDK integration, verify these points:
 | Entry always resolves to the baseline                            | No variant applies, no `selectedOptimizations` passed, the entry is not optimized, or an all-locale payload | Author a variant that targets you, confirm an accepted `page()`/`identify()` ran first, fetch one `locale` with enough `include`          |
 | The variant never appears even though it is authored             | The request does not match the experience's audience, or resolution ran without the request's selections    | Target all visitors for a first test or force the variant with the preview panel; pass `selectedOptimizations` or use the bound helper    |
 | `page()` returns `{ accepted: false }`                           | Event consent is not granted and the event type is not allow-listed                                         | Bind `consent.events: true` for the request, or confirm `allowedEventTypes` permits `page`; inspect `onEventBlocked`                      |
-| Insights interaction throws a profile error                      | An Insights-only call ran without a request-bound profile                                                   | Bind a full `Profile` with `forRequest({ profile })` or use the snapshot returned by an Experience call on the same client                |
-| Profile does not stay consistent across requests                 | The returned `profile.id` is not persisted, or `canPersistProfile` was `false`                              | Persist the ID only when `requestOptimization.canPersistProfile` is `true`, then read it back into `forRequest({ profileId })`            |
+| Insights interaction throws a profile error                      | An Insights-only call ran without a complete request-bound profile                                          | Bind a full `Profile` with `forRequest({ profile })` or use the snapshot returned by an Experience call on the same client                |
+| Profile does not stay consistent across requests                 | The returned `profile.id` is not persisted, or `canPersistProfile` was `false`                              | Persist the ID only when `requestOptimization.canPersistProfile` is `true`, then read it back into `forRequest({ profile: { id } })`      |
 | Hybrid browser sessions start with a different anonymous profile | Server and browser do not share the same readable anonymous-id cookie                                       | Verify the `ctfl-opt-aid` cookie path and same-site settings, and that it is not `HttpOnly` so browser SDK code can read it               |
 | Merge tags render the fallback for every visitor                 | No matching profile value, or the profile locale and entry locale differ                                    | Confirm `getMergeTagValue()` receives the request `profile`, and pass one `APP_LOCALE` to both the CDA fetch and `forRequest({ locale })` |
 | Personalized output leaks between visitors                       | A `page()`/`identify()` response or merge-tag-rendered entry was shared through a cache                     | Cache only raw Contentful payloads; clone before request transforms; never memoize event-method responses                                 |

@@ -135,7 +135,7 @@ before emitting events.
 
 The object returned by `forRequest()` is request-local. It retains the profile, consent, locale,
 page context, and request options passed at construction for that object's lifecycle. Bind an ID
-through `profileId` or a full `Profile` snapshot through `profile`. Experience API responses from
+as `profile: { id }` or a full `Profile` snapshot through the same `profile` input. Experience API responses from
 `page()`, `identify()`, `track()`, `screen()`, and sticky `trackView()` update that request-local
 profile, so later calls on the same request object can use it. Do not reuse a request object across
 independent HTTP requests.
@@ -195,6 +195,8 @@ Sticky entry views touch both paths. In Node, `trackView({ sticky: true })` send
 through Experience first, then sends the paired Insights event using the response profile.
 Non-sticky `trackView()` and other Insights-only calls require a full `Profile` supplied through
 `forRequest({ profile })` or returned by an Experience call on the same request client.
+Binding retains the supplied input unchanged without validating the complete snapshot. Admitted
+Insights methods validate it before delivery; an ID-only input does not satisfy that requirement.
 
 The interaction wire event types are:
 
@@ -240,7 +242,7 @@ const requestOptimization = optimization.forRequest({
     },
     userAgent: req.get('user-agent') ?? 'node-server',
   },
-  profileId,
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 
 const pageResult = await requestOptimization.page()
@@ -644,7 +646,7 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 - Decide which events are server facts and which require browser observation.
 - Gate every Node SDK event with the application consent policy before calling the SDK.
 - Persist the returned `profile.id` when consent allows continuity.
-- Pass `{ profileId }` into stateless Experience calls when a profile ID exists; bind a
+- Bind `{ profile: { id } }` with `forRequest()` when a profile ID exists; bind a
   complete profile snapshot for Insights-only calls.
 - Render `data-ctfl-entry-id` with the resolved entry ID, not only the baseline entry ID.
 - Render `data-ctfl-optimization-id`, `data-ctfl-sticky`, and `data-ctfl-variant-index` when an

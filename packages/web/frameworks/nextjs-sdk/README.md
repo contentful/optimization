@@ -58,8 +58,9 @@ hydration mode, and managed-entry prefetch for a subtree. Use the bound `Optimiz
 roots because it adds initial page-event wiring through `routeKey`, `buildPagePayload`, or
 `initialPagePayload`. Do not pass those page-event props to `OptimizationProvider`.
 
-For manual server and Edge requests, pass `profileId` for Experience continuity or a full
-`Profile` through `profile` for Insights delivery.
+For manual server and Edge requests, pass `profile: { id }` for Experience continuity or a full
+`Profile` through `profile` for Insights delivery. When `profile` is omitted, the adapter binds the
+anonymous ID cookie as `{ id }`. Experience responses update the request client with a full profile.
 
 ## Request location
 

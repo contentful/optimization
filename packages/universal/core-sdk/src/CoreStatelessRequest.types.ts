@@ -49,10 +49,8 @@ export interface CoreStatelessForRequestOptions {
    * SDK-managed Contentful entry fetching when no Contentful query locale is configured.
    */
   locale?: string
-  /** Complete profile already known for the request, or populated by an Experience API response. */
-  profile?: Profile
-  /** Profile ID for Experience API continuity when no complete profile is available. */
-  profileId?: string
+  /** An ID for Experience continuity or a complete profile snapshot for Insights delivery. */
+  profile?: Pick<Profile, 'id'> | Profile
   /** Universal event context shared by event calls made through this request object. */
   eventContext?: UniversalEventBuilderArgs
   /** Experience API options shared by Experience calls made through this request object. */

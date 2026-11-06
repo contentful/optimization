@@ -175,7 +175,7 @@ async function getProfile(
     consent: { events: true, persistence: true },
     eventContext: args,
     locale: APP_LOCALE,
-    profileId: anonymousId,
+    profile: anonymousId === undefined ? undefined : { id: anonymousId },
   })
 
   const { data, handoff } = await requestOptimization.prepareRequestHandoff({

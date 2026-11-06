@@ -61,8 +61,8 @@ handoff.
 
 Create one `ContentfulOptimization` instance per process and call `forRequest()` for each incoming
 request. Event methods live on the request-bound client, not on the singleton. The minimum legal
-shape is `forRequest({ consent })`; a migration request usually adds `locale`, `profileId`, and
-`eventContext`. `locale` selects the request locale, `profileId` carries the app-owned anonymous
+shape is `forRequest({ consent })`; a migration request usually adds `locale`, `profile`, and
+`eventContext`. `locale` selects the request locale, `profile: { id }` carries the app-owned anonymous
 profile ID, and `eventContext` carries URL, user-agent, referrer, query, and other page data the SDK
 cannot infer from your server framework.
 
@@ -78,7 +78,7 @@ guide so the adapter owns request state, provider handoff, page-event dedupe, an
 For a manual Node/Web hybrid, the app owns the profile cookie. The Node SDK exports
 `ANONYMOUS_ID_COOKIE` from `@contentful/optimization-node/constants`, and its value is
 `ctfl-opt-aid`, but Node does not read, write, or clear cookies for you. Read the cookie from the
-incoming request and pass it as `forRequest({ profileId })`. On a paired page, call
+incoming request and pass it as `forRequest({ profile: { id } })`, omitting `profile` when no ID exists. On a paired page, call
 `prepareRequestHandoff({ routeKey, initialEvents, page })` with the pathname and search used by the
 browser. The request previews those events with per-request `preflight: true`; its returned `data`
 can select useful server-rendered content, and its `handoff` carries the prepared replay. Serialize

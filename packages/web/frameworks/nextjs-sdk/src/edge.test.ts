@@ -134,7 +134,7 @@ describe('Next.js Edge runtime helpers', () => {
           userAgent: 'test-agent',
         }),
         locale: 'en-US',
-        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
+        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
       }),
     )
 
@@ -150,40 +150,133 @@ describe('Next.js Edge runtime helpers', () => {
     expect(response.headers.get('set-cookie')).toContain('SameSite=Lax')
   })
 
-  it('retains a replay and configured browser-readable cookie during preview failure', async () => {
-    const { preview } = mockEdgeRequestPreview()
-    preview.mockRejectedValue(new Error('Preview unavailable'))
+  it.each(['cookie', 'explicit'] as const)(
+    'retains a replay and configured browser-readable cookie during preview failure (%s ID)',
+    async (source) => {
+      const { preview } = mockEdgeRequestPreview()
+      preview.mockRejectedValue(new Error('Preview unavailable'))
+      const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
+        ...SDK_CONFIG,
+        consent: { server: true },
+        cookie: {
+          domain: 'example.com',
+          path: '/products',
+          expires: 1,
+          secure: true,
+          sameSite: 'strict',
+        },
+      })
+      const result = await createEdgeRequestHandoff({
+        hydration: 'analytics-only',
+        profile: source === 'explicit' ? { id: 'known-api-id' } : undefined,
+        request: new Request('https://example.com/products', {
+          headers: { cookie: `ctfl-opt-aid=${source === 'cookie' ? 'known-api-id' : 'cookie-id'}` },
+        }),
+      })
+      const response = new Response('Server rendered content', {
+        headers: { 'set-cookie': 'app-cookie=1; Path=/' },
+      })
+      result.persist(response)
+      expect(result.data).toBeUndefined()
+      expect(result.requestOptimization.profile).toEqual({ id: 'known-api-id' })
+      expect(preview).toHaveBeenCalledWith(
+        expect.objectContaining({ profileId: 'known-api-id' }),
+        expect.objectContaining({ preflight: true }),
+      )
+      expect(result.handoff).toMatchObject({
+        profileId: 'known-api-id',
+        replay: { routeKey: '/products', events: [expect.objectContaining({ type: 'page' })] },
+      })
+      expect(response.headers.get('set-cookie')).toContain('app-cookie=1')
+      expect(response.headers.get('set-cookie')).toContain(
+        'ctfl-opt-aid=known-api-id; Max-Age=86400; Domain=example.com; Path=/products; Secure; SameSite=Strict',
+      )
+      expect(response.headers.get('set-cookie')).not.toContain('HttpOnly')
+    },
+  )
+
+  it.each([OPTIMIZATION_DATA.profile, { id: 'explicit-id' }])(
+    'prefers an explicit profile over the cookie and publishes the preview profile (%j)',
+    async (profile) => {
+      const { forRequest, preview } = mockEdgeRequestPreview()
+      const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
+        ...SDK_CONFIG,
+        consent: { server: true },
+      })
+
+      const result = await createEdgeRequestHandoff({
+        hydration: 'preserve-server',
+        profile,
+        request: new Request('https://example.com/products', {
+          headers: { cookie: 'ctfl-opt-aid=cookie-id' },
+        }),
+      })
+
+      expect(forRequest).toHaveBeenCalledWith(expect.objectContaining({ profile }))
+      expect(forRequest.mock.calls[0]?.[0]).not.toHaveProperty('profileId')
+      expect(preview).toHaveBeenCalledWith(
+        expect.objectContaining({ profileId: profile.id }),
+        expect.objectContaining({ preflight: true }),
+      )
+      expect(result.requestOptimization.profile).toEqual(OPTIMIZATION_DATA.profile)
+      expect(result.handoff.profileId).toBe(profile.id)
+    },
+  )
+
+  it.each([true, false])(
+    'retains ID-only continuity when event consent blocks preview (persistence: %s)',
+    async (persistence) => {
+      const { preview } = mockEdgeRequestPreview()
+      const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
+        ...SDK_CONFIG,
+        allowedEventTypes: [],
+        consent: { server: { events: false, persistence } },
+      })
+
+      const result = await createEdgeRequestHandoff({
+        hydration: 'analytics-only',
+        profile: { id: 'known-api-id' },
+        request: new Request('https://example.com/products'),
+      })
+      const response = new Response('Server rendered content')
+      result.persist(response)
+
+      expect(preview).not.toHaveBeenCalled()
+      expect(result.data).toBeUndefined()
+      expect(result.requestOptimization.profile).toEqual({ id: 'known-api-id' })
+      expect(result.handoff.profileId).toBe('known-api-id')
+      expect(result.handoff.replay).toBeUndefined()
+      expect(result.handoff.state).toBeUndefined()
+      if (persistence) {
+        expect(response.headers.get('set-cookie')).toContain('ctfl-opt-aid=known-api-id;')
+      } else {
+        expect(response.headers.get('set-cookie')).toContain('ctfl-opt-aid=; Max-Age=0;')
+      }
+    },
+  )
+
+  it('ignores an empty anonymous ID cookie', async () => {
+    const { forRequest, preview } = mockEdgeRequestPreview()
     const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
       ...SDK_CONFIG,
-      consent: { server: true },
-      cookie: {
-        domain: 'example.com',
-        path: '/products',
-        expires: 1,
-        secure: true,
-        sameSite: 'strict',
-      },
+      allowedEventTypes: [],
+      consent: { server: { events: false, persistence: true } },
     })
+
     const result = await createEdgeRequestHandoff({
       hydration: 'analytics-only',
       request: new Request('https://example.com/products', {
-        headers: { cookie: 'ctfl-opt-aid=known-api-id' },
+        headers: { cookie: 'ctfl-opt-aid=' },
       }),
     })
-    const response = new Response('Server rendered content', {
-      headers: { 'set-cookie': 'app-cookie=1; Path=/' },
-    })
+    const response = new Response('Server rendered content')
     result.persist(response)
-    expect(result.data).toBeUndefined()
-    expect(result.handoff).toMatchObject({
-      profileId: 'known-api-id',
-      replay: { routeKey: '/products', events: [expect.objectContaining({ type: 'page' })] },
-    })
-    expect(response.headers.get('set-cookie')).toContain('app-cookie=1')
-    expect(response.headers.get('set-cookie')).toContain(
-      'ctfl-opt-aid=known-api-id; Max-Age=86400; Domain=example.com; Path=/products; Secure; SameSite=Strict',
-    )
-    expect(response.headers.get('set-cookie')).not.toContain('HttpOnly')
+
+    expect(forRequest).toHaveBeenCalledWith(expect.objectContaining({ profile: undefined }))
+    expect(preview).not.toHaveBeenCalled()
+    expect(result.requestOptimization.profile).toBeUndefined()
+    expect(result.handoff.profileId).toBeUndefined()
+    expect(response.headers.get('set-cookie')).toBeNull()
   })
 
   it('reads anonymous ID from framework cookie snapshots', async () => {
@@ -206,7 +299,7 @@ describe('Next.js Edge runtime helpers', () => {
     })
 
     expect(forRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ profileId: 'a19c3f54d2b84e37a93f6d1c0e5b7284' }),
+      expect.objectContaining({ profile: { id: 'a19c3f54d2b84e37a93f6d1c0e5b7284' } }),
     )
   })
 

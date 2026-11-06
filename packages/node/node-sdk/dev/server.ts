@@ -185,7 +185,7 @@ async function getRequestOptimizationData({
 }> {
   const requestOptimization = sdk.forRequest({
     consent: { events: consent === true, persistence: consent === true },
-    profileId,
+    profile: profileId === undefined ? undefined : { id: profileId },
   })
   let eventResult = await requestOptimization.page()
 
@@ -223,7 +223,7 @@ app.get('/__handoff', limiter, async (req, res) => {
   const profileId = cookie?.trim().slice(ANONYMOUS_ID_COOKIE.length + 1)
   const request = sdk.forRequest({
     consent: true,
-    profileId,
+    profile: profileId === undefined ? undefined : { id: profileId },
     eventContext: { page, userAgent: req.get('user-agent') },
   })
   const { handoff, data } = await request.prepareRequestHandoff({

@@ -61,8 +61,12 @@ const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
 const STICKY_TRACK_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackView() could not derive a complete profile from the sticky Experience response.'
 
-const requireInsightsProfile = (profile: Profile | undefined, errorMessage: string): Profile => {
-  if (profile !== undefined) return profile
+const requireInsightsProfile = (
+  profile: CoreStatelessForRequestOptions['profile'],
+  errorMessage: string,
+): Profile => {
+  const result = Profile.safeParse(profile)
+  if (result.success) return result.data
 
   throw new Error(errorMessage)
 }
@@ -76,8 +80,7 @@ type RequestExperienceMethod = 'identify' | 'page' | 'screen' | 'track'
  */
 export class CoreStatelessRequest {
   private readonly core: CoreStateless
-  private currentProfile: Profile | undefined
-  private readonly initialProfileId: string | undefined
+  private currentProfile: CoreStatelessForRequestOptions['profile']
   private currentSelectedOptimizations: OptimizationData['selectedOptimizations'] | undefined
   private profileRevision = 0
   private readonly requestEventConsent: boolean | undefined
@@ -104,22 +107,12 @@ export class CoreStatelessRequest {
   }
 
   constructor(core: CoreStateless, options: CoreStatelessForRequestOptions) {
-    const {
-      consent,
-      eventContext,
-      experienceOptions,
-      insightsOptions,
-      locale,
-      profile,
-      profileId,
-    } = options
+    const { consent, eventContext, experienceOptions, insightsOptions, locale, profile } = options
     const isBooleanConsent = typeof consent === 'boolean'
     const requestLocale = normalizeExplicitLocale(locale)
 
     this.core = core
-    this.currentProfile =
-      profile === undefined ? undefined : parseWithFriendlyError(Profile, profile)
-    this.initialProfileId = profileId
+    this.currentProfile = profile
     this.requestLocale = requestLocale
     this.requestEventConsent = isBooleanConsent ? consent : consent.events
     this.canPersistProfile = (isBooleanConsent ? consent : consent.persistence) === true
@@ -146,13 +139,8 @@ export class CoreStatelessRequest {
    * A profile ID returned by a preview can continue the browser request without implying that the
    * preview committed profile state.
    */
-  get profile(): Profile | undefined {
+  get profile(): CoreStatelessForRequestOptions['profile'] {
     return this.currentProfile
-  }
-
-  /** Current profile identity; a complete profile takes precedence over the initial ID. */
-  get profileId(): string | undefined {
-    return this.currentProfile?.id ?? this.initialProfileId
   }
 
   /**
@@ -170,7 +158,8 @@ export class CoreStatelessRequest {
     initialEvents,
     page,
   }: PrepareRequestHandoffOptions): Promise<PrepareRequestHandoffResult> {
-    const { profileId, profileRevision } = this
+    const profileId = this.currentProfile?.id
+    const { profileRevision } = this
     const handoff: OptimizationHandoff = { cache: { scope: 'private-request' }, profileId }
     if (!this.hasConsent('page')) {
       this.reportBlockedEvent('page', [page])
@@ -517,7 +506,7 @@ export class CoreStatelessRequest {
       : consentedEvent
     const result = await this.core.api.experience.upsertProfile(
       {
-        profileId: this.profileId,
+        profileId: this.currentProfile?.id,
         events: [validEvent],
       },
       this.experienceOptions,
