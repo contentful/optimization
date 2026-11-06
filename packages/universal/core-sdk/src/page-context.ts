@@ -14,14 +14,12 @@ export interface CreatePageContextFromUrlOptions {
  * @public
  */
 export function createQueryFromSearchParams(searchParams: URLSearchParams): Query {
-  const query: Query = {}
-
-  for (const key of new Set(searchParams.keys())) {
-    const values = searchParams.getAll(key)
-    query[key] = values.length === 1 ? (values[0] ?? '') : values
-  }
-
-  return query
+  return Object.fromEntries(
+    [...new Set(searchParams.keys())].map((key) => {
+      const values = searchParams.getAll(key)
+      return [key, values.length === 1 ? (values[0] ?? '') : values]
+    }),
+  )
 }
 
 export function createPageContextFromUrl(

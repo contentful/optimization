@@ -97,11 +97,13 @@ describe('createNextjsOptimizationContextHandler', () => {
     expect(get).not.toHaveBeenCalled()
   })
 
-  it('leaves identity absent when no API-issued ID is known', async () => {
+  it.each([undefined, ''])('leaves identity absent when the cookie is %j', async (cookieId) => {
     const sdk = configureNextjsServerOptimization(sdkConfig)
     const upsert = rs.spyOn(sdk.api.experience, 'upsertProfile')
     const response = await createNextjsOptimizationContextHandler({ consent: true, sdk })(
-      new NextRequest('https://example.com/products'),
+      new NextRequest('https://example.com/products', {
+        headers: cookieId === undefined ? undefined : { cookie: `ctfl-opt-aid=${cookieId}` },
+      }),
     )
     expect(response.cookies.get('ctfl-opt-aid')).toBeUndefined()
     expect(upsert).not.toHaveBeenCalled()
@@ -146,7 +148,9 @@ describe('createNextjsOptimizationContextHandler', () => {
     headers.set('cookie', `consent=yes; ctfl-opt-aid=${profileId}`)
     const prior = NextResponse.next({ request: { headers } })
     const response = await createNextjsOptimizationContextHandler({ consent, sdk })(request, prior)
-    expect(forRequest).toHaveBeenCalledWith(expect.objectContaining({ consent: true, profileId }))
+    expect(forRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ consent: true, profile: { id: profileId } }),
+    )
     expect(response.cookies.get('ctfl-opt-aid')?.value).toBe(profileId)
     expect(response.headers.get('x-middleware-request-cookie')).toBe(headers.get('cookie'))
   })
@@ -162,7 +166,7 @@ describe('createNextjsOptimizationContextHandler', () => {
       request,
       prior,
     )
-    expect(forRequest).toHaveBeenCalledWith(expect.objectContaining({ profileId: undefined }))
+    expect(forRequest).toHaveBeenCalledWith(expect.objectContaining({ profile: undefined }))
     expect(response.cookies.get('ctfl-opt-aid')).toBeUndefined()
   })
 

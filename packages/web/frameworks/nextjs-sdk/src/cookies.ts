@@ -84,7 +84,7 @@ function resolveAnonymousIdCookie(
       readonly options: NextjsAnonymousIdCookieOptions
     }
   | undefined {
-  const profileId = data?.profile.id ?? requestOptimization.profileId
+  const profileId = data?.profile.id ?? requestOptimization.profile?.id
   const options: NextjsAnonymousIdCookieOptions = { path: '/', sameSite: 'lax', ...cookieOptions }
   if (requestOptimization.canPersistProfile) {
     return profileId ? { name: anonymousIdCookieName, value: profileId, options } : undefined

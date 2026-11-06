@@ -324,7 +324,7 @@ const profileId = req.cookies[ANONYMOUS_ID_COOKIE]
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
-  profileId,
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 
 const { accepted, data: optimizationData } = await requestOptimization.page({
@@ -336,9 +336,11 @@ For the difference between the application Contentful locale and the SDK Experie
 see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
-The Node SDK passes the ID to the Experience API as `profileId`. A bound `Profile` snapshot
-supplies its ID in preference to `profileId`. If the ID is absent, the API can create a profile and
-return the new `profile.id`.
+The Node SDK passes `profile.id` to the Experience API as `profileId`. Bind either `{ id }` or a
+full `Profile` through the same `profile` input. If the ID is absent, the API can create a profile
+and return its `profile.id`. The request client retains the input unchanged at binding; its
+`profile` getter adopts the full profile from an Experience response. Complete-profile validation
+happens when an admitted Insights method needs the snapshot, rather than at binding.
 
 Insights-only methods such as non-sticky `trackView()`, `trackClick()`, `trackHover()`, and
 `trackFlagView()` require a full profile supplied to `forRequest({ profile })` or returned by an
@@ -509,8 +511,8 @@ A Node and Web SDK application usually follows this lifecycle:
    does not confirm HTTP delivery.
 5. **Browser persistence.** Each Experience response updates browser signals. It updates
    localStorage and the `ctfl-opt-aid` cookie only when persistence consent is `true`.
-6. **Later server request.** The server reads the same cookie and passes `{ profileId }` into
-   the next stateless Experience call.
+6. **Later server request.** The server reads the same cookie and binds `{ profile: { id } }` with
+   `forRequest()` before the next stateless Experience call.
 
 The `node-sdk+web-sdk` reference implementation demonstrates this flow by setting
 `ANONYMOUS_ID_COOKIE` on the server and verifying that the browser localStorage anonymous ID matches
@@ -533,7 +535,7 @@ const profileId = anonymousId
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
-  profileId,
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 
 const identifyResult = await requestOptimization.identify({
@@ -552,7 +554,7 @@ the last Experience response for the request. The request-bound client updates i
 after each accepted Experience response, so the later `page()` call uses the profile returned by
 `identify()`. If `identify()` and `page()` happen in different request-bound clients, bind the
 returned `profile` into the later client with `forRequest({ profile })`, or persist `profile.id` and
-bind `{ profileId: profile.id }` on the later request. Do not pass a profile into `page()`.
+bind `{ profile: { id: profile.id } }` on the later request. Do not pass a profile into `page()`.
 
 If the request arrived anonymous but the response must include identified traits, render from the
 `identify()` response or from a later `page()` response that used the identified request-bound
@@ -607,7 +609,7 @@ Use this checklist when implementing a hybrid Node and browser profile flow:
   not write response cookies themselves.
 - Use `path: '/'`, an appropriate domain, and a browser-readable cookie policy when the Web SDK must
   continue the same profile.
-- Pass `{ profileId }` into Node SDK Experience calls when a cookie or session ID exists.
+- Bind `{ profile: { id } }` with `forRequest()` when a cookie or session ID exists.
 - For a paired page, prepare the initial identify and page events with `prepareRequestHandoff()`
   and pass the replay to the browser. On a standalone server path, call `identify()` before `page()`
   on the same Node request-bound client when the page view must be attributed to a known user.

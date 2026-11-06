@@ -829,7 +829,7 @@ describe('Next.js App Router binding', () => {
           }),
           userAgent: 'app-router-agent',
         }),
-        profileId: 'incoming-id',
+        profile: { id: 'incoming-id' },
       }),
     )
     expect(preview).toHaveBeenCalledTimes(1)

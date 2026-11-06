@@ -136,16 +136,16 @@ dependencies; each carries a symbol-anchored source pointer.
   with default allowed event types `['identify', 'page']` and event-builder library version from
   `OPTIMIZATION_NEXTJS_SDK_VERSION` unless caller library config overrides it.
   `createEdgeRequestHandoff(options)` reads cookies from a Next cookie reader or the raw `cookie`
-  header, resolves server consent with cookies and headers, uses a complete supplied profile, an explicit `profileId`, or the
-  anonymous-id cookie for continuity, in that order, builds page context from
+  header, resolves server consent with cookies and headers, uses the supplied `profile` input
+  or binds the anonymous-id cookie as `{ id }` when that input is omitted, builds page context from
   URL/referrer/user-agent, and prepares a replay plus preview state. `persist(response)` appends an
   anonymous-id `Set-Cookie` when persistence permits it, including after preview failure when a
   known cookie profile ID exists.
   source: `nextjs-sdk#edge.ts#configureNextjsEdgeOptimization`; `nextjs-sdk#edge.ts#createEdgeOptimizationRuntime`; `nextjs-sdk#constants.ts#OPTIMIZATION_NEXTJS_SDK_VERSION`; `nextjs-sdk#edge.ts#createEdgeRequestSnapshot`; `nextjs-sdk#edge.ts#createEdgeRequestContext`; `nextjs-sdk#edge.ts#persistEdgeAnonymousId`; `core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff`
 - Manual `/server` flow: `configureNextjsServerOptimization(config)` creates the long-lived
   stateless server runtime; `bindNextjsOptimizationRequest(sdk, options)` binds consent,
-  request/page context, locale, and profile continuity to one request; a complete supplied profile
-  takes precedence over scalar IDs. `createNextjsRequestHandoff()`
+  request/page context, locale, and profile continuity to one request; the supplied `profile` input
+  takes precedence over the anonymous-id cookie, which otherwise binds as `{ id }`. `createNextjsRequestHandoff()`
   previews the prepared initial batch and returns a browser handoff for later commitment.
   `getServerTrackingAttributes(baselineEntry, resolvedData)` maps a manual resolution to the
   `data-ctfl-*` attributes browser interaction tracking consumes.

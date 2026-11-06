@@ -323,7 +323,7 @@ describe('Next.js server helpers', () => {
       expect.objectContaining({
         consent: { events: true, persistence: true },
         locale: 'en-US',
-        profileId: 'anonymous-id',
+        profile: { id: 'anonymous-id' },
       }),
     )
   })
@@ -347,7 +347,7 @@ describe('Next.js server helpers', () => {
 
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'top-level-anonymous-id',
+        profile: { id: 'top-level-anonymous-id' },
       }),
     )
   })
@@ -371,9 +371,52 @@ describe('Next.js server helpers', () => {
 
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'request-anonymous-id',
+        profile: { id: 'request-anonymous-id' },
       }),
     )
+  })
+
+  it.each([optimizationData.profile, { id: 'explicit-id' }])(
+    'prefers an explicit profile over anonymous ID cookies (%j)',
+    (profile) => {
+      const sdk = configureNextjsServerOptimization(sdkConfig)
+      const forRequest = rs.spyOn(sdk, 'forRequest')
+
+      const requestOptimization = bindNextjsOptimizationRequest(sdk, {
+        consent: true,
+        cookies: { get: () => ({ value: 'cookie-id' }) },
+        profile,
+      })
+
+      expect(forRequest).toHaveBeenCalledWith(expect.objectContaining({ profile }))
+      expect(forRequest.mock.calls[0]?.[0]).not.toHaveProperty('profileId')
+      expect(requestOptimization.profile).toBe(profile)
+    },
+  )
+
+  it('ignores an empty anonymous ID cookie', () => {
+    const sdk = configureNextjsServerOptimization(sdkConfig)
+    const requestOptimization = bindNextjsOptimizationRequest(sdk, {
+      consent: true,
+      cookies: { get: () => ({ value: '' }) },
+    })
+
+    expect(requestOptimization.profile).toBeUndefined()
+  })
+
+  it('falls back to request cookies when the top-level anonymous ID cookie is empty', () => {
+    const sdk = configureNextjsServerOptimization(sdkConfig)
+    const requestOptimization = bindNextjsOptimizationRequest(sdk, {
+      consent: true,
+      cookies: { get: () => ({ value: '' }) },
+      request: {
+        cookies: { get: () => ({ value: 'request-id' }) },
+        headers: new Headers(),
+        url: 'https://example.com/',
+      },
+    })
+
+    expect(requestOptimization.profile).toEqual({ id: 'request-id' })
   })
 
   it('calls page through the request-bound Node SDK', async () => {

@@ -102,7 +102,7 @@ async function bindRequestIdentity(
   )?.value
   return options.sdk.forRequest({
     consent,
-    profileId: profileId === '' ? undefined : profileId,
+    profile: profileId ? { id: profileId } : undefined,
     locale: options.locale,
   })
 }

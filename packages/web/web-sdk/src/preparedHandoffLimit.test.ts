@@ -35,7 +35,9 @@ describe('browser prepared handoff limit', () => {
         ]
         if (scenario === 'invalid schema')
           events = [
-            { ...sdk.eventBuilder.buildTrack({ event: 'campaign' }), originalTimestamp: 'invalid' },
+            Object.assign(sdk.eventBuilder.buildTrack({ event: 'campaign' }), {
+              originalTimestamp: 123,
+            }),
             sdk.eventBuilder.buildPageView(),
           ]
         if (scenario === 'invalid order')

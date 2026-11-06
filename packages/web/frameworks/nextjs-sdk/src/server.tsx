@@ -2,8 +2,9 @@ import ContentfulOptimizationRuntime, {
   createRequestHandoffFromData,
   type OptimizationNodeConfig,
 } from '@contentful/optimization-node'
-import type { OptimizationData, Profile } from '@contentful/optimization-node/api-schemas'
+import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import type {
+  CoreStatelessForRequestOptions,
   CoreStatelessInsightsOptions,
   CoreStatelessRequest,
   CoreStatelessRequestConsent,
@@ -109,10 +110,8 @@ export interface BindNextjsOptimizationRequestOptions {
   readonly locale?: string
   /** Explicit page context, which takes precedence over page context derived from `request`. */
   readonly page?: NextjsPageContextInput
-  /** Complete profile snapshot; takes precedence over `profileId`. */
-  readonly profile?: Profile
-  /** Personalization identity only; falls back to the anonymous ID cookie when omitted. */
-  readonly profileId?: string
+  /** Complete profile or personalization ID; falls back to the anonymous ID cookie when omitted. */
+  readonly profile?: CoreStatelessForRequestOptions['profile']
   /** Incoming request used to derive page context and read cookies when `cookies` is omitted. */
   readonly request?: NextjsRequestLike
 }
@@ -303,8 +302,7 @@ export function bindNextjsOptimizationRequest(
     experienceOptions: options.experienceOptions,
     insightsOptions: options.insightsOptions,
     locale: options.locale,
-    profile: options.profile,
-    profileId: options.profileId ?? anonymousId,
+    profile: options.profile ?? (anonymousId === undefined ? undefined : { id: anonymousId }),
   })
 }
 
