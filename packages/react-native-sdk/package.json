@@ -1,7 +1,7 @@
 {
   "name": "@contentful/optimization-react-native",
   "description": "React Native SDK for Contentful Optimization",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.3](https://github.com/contentful/optimization/compare/optimization-react-native-v2.1.2...optimization-react-native-v2.1.3) (2026-11-06)
+
+### Bug Fixes
+
+- **api-client:** standardize profile contracts for Insights ([#583](https://github.com/contentful/optimization/issues/583)) ([b5240b0](https://github.com/contentful/optimization/commit/b5240b04092e6ace0489831939dfd57702618c1d))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.2.1
+
 ## [2.1.2](https://github.com/contentful/optimization/compare/optimization-react-native-v2.1.1...optimization-react-native-v2.1.2) (2026-11-04)
 
 ### Bug Fixes

@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.3](https://github.com/contentful/optimization/compare/optimization-web-v2.1.2...optimization-web-v2.1.3) (2026-11-06)
+
+### Bug Fixes
+
+- **api-client:** align event and profile schemas with the Experience API [NT-4509] ([#585](https://github.com/contentful/optimization/issues/585)) ([7aaadd8](https://github.com/contentful/optimization/commit/7aaadd8220ece4cf9a48c4a400e811103ebe6b51))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.2.1
+
 ## [2.1.2](https://github.com/contentful/optimization/compare/optimization-web-v2.1.1...optimization-web-v2.1.2) (2026-11-04)
 
 ### Bug Fixes

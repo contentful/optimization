@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.3](https://github.com/contentful/optimization/compare/optimization-nextjs-v2.1.2...optimization-nextjs-v2.1.3) (2026-11-06)
+
+### Bug Fixes
+
+- **api-client:** standardize profile contracts for Insights ([#583](https://github.com/contentful/optimization/issues/583)) ([b5240b0](https://github.com/contentful/optimization/commit/b5240b04092e6ace0489831939dfd57702618c1d))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-node bumped to 2.2.1
+    - @contentful/optimization-react-web bumped to 2.1.3
+
 ## [2.1.2](https://github.com/contentful/optimization/compare/optimization-nextjs-v2.1.1...optimization-nextjs-v2.1.2) (2026-11-04)
 
 ### Dependencies
