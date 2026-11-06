@@ -60,6 +60,15 @@ export const Profile = z.object({
    * @see {@link SessionStatistics}
    */
   session: SessionStatistics,
+
+  /**
+   * Data-residency jurisdiction of the profile's storage, when the Experience API reports it.
+   *
+   * @remarks
+   * Set by the Experience API host the profile was written through
+   * (`experience.eu.ninetailed.co` stores it in the EU).
+   */
+  jurisdiction: z.optional(z.enum(['US', 'EU'])),
 })
 
 /**

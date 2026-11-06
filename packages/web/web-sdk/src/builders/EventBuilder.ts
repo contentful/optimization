@@ -1,4 +1,5 @@
-import type { Dictionary, Page } from '@contentful/optimization-core/api-schemas'
+import { createQueryFromSearchParams } from '@contentful/optimization-core'
+import type { Page, Query } from '@contentful/optimization-core/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 
 const logger = createScopedLogger('Web:EventBuilder')
@@ -7,12 +8,12 @@ const logger = createScopedLogger('Web:EventBuilder')
  * Build a plain-object representation of the query string from a URL.
  *
  * @param url - A URL instance or string from which to extract query parameters.
- * @returns A dictionary of query parameter keys to values.
+ * @returns Query parameter keys mapped to their value, or to all values for a repeated key.
  *
  * @internal
  */
-function buildQuery(url: string | URL): Dictionary {
-  return Object.fromEntries(new URL(url).searchParams)
+function buildQuery(url: string | URL): Query {
+  return createQueryFromSearchParams(new URL(url).searchParams)
 }
 
 /**

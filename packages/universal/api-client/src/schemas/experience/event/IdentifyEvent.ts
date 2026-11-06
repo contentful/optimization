@@ -24,6 +24,14 @@ export const IdentifyEvent = z.extend(UniversalEventProperties, {
    * @see {@link Traits}
    */
   traits: Traits,
+
+  /**
+   * Identifier of the user being identified.
+   *
+   * @remarks
+   * Required for identify events, as the Experience API requires it.
+   */
+  userId: z.string(),
 })
 
 /**

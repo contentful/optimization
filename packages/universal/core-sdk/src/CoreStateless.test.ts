@@ -314,7 +314,7 @@ describe('CoreStateless', () => {
         builder.buildScreenView({ name: 'screen', properties: {} }),
         builder.buildTrack({ event: 'purchase' }),
       ]
-      expect(events.map((event) => event.context.gdpr.isConsentGiven)).toEqual([
+      expect(events.map((event) => event.context.gdpr?.isConsentGiven)).toEqual([
         false,
         false,
         false,
@@ -777,7 +777,7 @@ describe('CoreStateless', () => {
 
     await requestOptimization.track({ event: 'server-preflight' })
 
-    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(false)
+    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr?.isConsentGiven).toBe(false)
   })
 
   it('uses the flag allow-list selector without allowing entry views before consent', async () => {

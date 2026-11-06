@@ -258,12 +258,12 @@ describe('CoreStateful blocked event handling', () => {
 
     await core.identify({ userId: 'user-1' })
 
-    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(false)
+    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr?.isConsentGiven).toBe(false)
 
     core.consent({ events: true })
     await core.identify({ userId: 'user-2' })
 
-    expect(upsertProfile.mock.calls[1]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(true)
+    expect(upsertProfile.mock.calls[1]?.[0].events[0]?.context.gdpr?.isConsentGiven).toBe(true)
   })
 
   it('purges queued Experience events when event consent is withdrawn', async () => {

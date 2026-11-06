@@ -1,7 +1,27 @@
-import type { Page } from '@contentful/optimization-api-client/api-schemas'
+import type { Page, Query } from '@contentful/optimization-api-client/api-schemas'
 
 export interface CreatePageContextFromUrlOptions {
   readonly referrer?: string
+}
+
+/**
+ * Convert URL search parameters into the {@link Query} shape the Experience API accepts.
+ *
+ * @param searchParams - Search parameters to convert.
+ * @returns A key that appears once maps to its value; a repeated key maps to all of its
+ * values in order.
+ *
+ * @public
+ */
+export function createQueryFromSearchParams(searchParams: URLSearchParams): Query {
+  const query: Query = {}
+
+  for (const key of new Set(searchParams.keys())) {
+    const values = searchParams.getAll(key)
+    query[key] = values.length === 1 ? (values[0] ?? '') : values
+  }
+
+  return query
 }
 
 export function createPageContextFromUrl(
@@ -12,7 +32,7 @@ export function createPageContextFromUrl(
 
   return {
     path: url.pathname,
-    query: Object.fromEntries(url.searchParams),
+    query: createQueryFromSearchParams(url.searchParams),
     referrer: referrer ?? '',
     search: url.search,
     url: url.toString(),

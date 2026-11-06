@@ -180,7 +180,7 @@ describe('ContentfulOptimization', () => {
     expect(node.allowedEventTypes).toEqual(['identify', 'page'])
     expect(upsertProfile).toHaveBeenCalledTimes(2)
     expect(
-      upsertProfile.mock.calls.map((call) => call[0].events[0]?.context.gdpr.isConsentGiven),
+      upsertProfile.mock.calls.map((call) => call[0].events[0]?.context.gdpr?.isConsentGiven),
     ).toEqual([false, false])
     expect(sendBatchEvents).not.toHaveBeenCalled()
   })
@@ -260,7 +260,7 @@ describe('ContentfulOptimization', () => {
       .page({ locale: 'en-US' })
 
     expect(
-      upsertProfile.mock.calls.map((call) => call[0].events[0]?.context.gdpr.isConsentGiven),
+      upsertProfile.mock.calls.map((call) => call[0].events[0]?.context.gdpr?.isConsentGiven),
     ).toEqual([true, false])
   })
 
@@ -289,7 +289,7 @@ describe('ContentfulOptimization', () => {
       })
 
     expect(
-      sendBatchEvents.mock.calls.map(([[batch]]) => batch?.events[0]?.context.gdpr.isConsentGiven),
+      sendBatchEvents.mock.calls.map(([[batch]]) => batch?.events[0]?.context.gdpr?.isConsentGiven),
     ).toEqual([true, false])
   })
 
@@ -324,6 +324,6 @@ describe('ContentfulOptimization', () => {
 
     await node.forRequest({ consent: true, profileId: 'f0837d7dc6344c36a3a0a06c4cde754b' }).page()
 
-    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(true)
+    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr?.isConsentGiven).toBe(true)
   })
 })
