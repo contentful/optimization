@@ -32,6 +32,7 @@ import type {
   NextjsBoundOptimizedEntryProps,
   NextjsBoundProviderConfig,
 } from './bound-component-types'
+import { toNextjsAnonymousIdCookieOptions } from './cookies'
 import {
   createHandoffFromSelections,
   createOptimizationCacheKey,
@@ -44,6 +45,10 @@ import {
   type NextjsCreateHandoffFromSelectionsOptions,
   type NextjsCreatePublicPermutationHandoffOptions,
 } from './handoff'
+import {
+  createNextjsOptimizationContextHandler,
+  type NextjsOptimizationRequestHandler,
+} from './request-handler'
 import { configureNextjsServerOptimization, type OptimizationNodeConfig } from './server'
 import {
   renderOptimizedEntryOnServer,
@@ -106,6 +111,7 @@ export interface NextjsAppRouterServerOptimization {
   readonly OptimizedEntry: NextjsBoundOptimizedEntryComponent<Promise<ReactElement>>
   readonly NextAppAutoPageTracker: typeof NextAppAutoPageTracker
   readonly request: NextjsAppRouterRequestOptimization
+  readonly requestHandler: NextjsOptimizationRequestHandler
   readonly createRequestHandoff: (
     options: AppRouterCreateRequestHandoffOptions,
   ) => Promise<ContentOptimizationHandoff>
@@ -134,7 +140,7 @@ export function bindNextjsAppRouterServerOptimization(
 ): NextjsAppRouterServerOptimization {
   const sdk = configureNextjsServerOptimization(toServerOptimizationConfig(config))
   const rootConfig = toClientRootConfig(config)
-  const providerConfig = toClientProviderConfig(config)
+  const { liveUpdates: _liveUpdates, ...providerConfig } = rootConfig
   const analyticsRootConfig = providerConfig
 
   function createBoundHandoffFromSelections(
@@ -241,13 +247,14 @@ export function bindNextjsAppRouterServerOptimization(
     handoff,
     hydration,
     prefetchManagedEntries,
+    routeKey,
   }: BoundNextjsOptimizationProviderProps): Promise<ReactElement | null> {
     const effectiveHandoff = await resolveHandoffEntries(handoff, prefetchManagedEntries)
     rememberRequestHandoff(effectiveHandoff)
 
     return createElement(
       ReactWebOptimizationProvider,
-      { ...withRequestDefaults(providerConfig), handoff: effectiveHandoff, hydration },
+      { ...withRequestDefaults(providerConfig), handoff: effectiveHandoff, hydration, routeKey },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -290,7 +297,6 @@ export function bindNextjsAppRouterServerOptimization(
         cache: { scope: 'static' },
         entries,
         hydration: 'preserve-server',
-        initialPageEvent: 'emit',
         selectedOptimizations: [],
       })
     }
@@ -411,6 +417,12 @@ export function bindNextjsAppRouterServerOptimization(
     createPublicPermutationHandoff: createBoundPublicPermutationHandoff,
     createRequestHandoff,
     request,
+    requestHandler: createNextjsOptimizationContextHandler({
+      sdk,
+      consent: config.consent?.server ?? false,
+      locale: config.locale,
+      cookieOptions: toNextjsAnonymousIdCookieOptions(config.cookie),
+    }),
     resolveEntriesForSelections,
   }
 }
@@ -470,24 +482,10 @@ function toServerOptimizationConfig(
 function toClientRootConfig(
   config: NextjsAppRouterServerOptimizationConfig,
 ): NextjsBoundProviderConfig & Pick<ReactWebOptimizationRootProps, 'liveUpdates'> {
-  const {
-    consent,
-    contentful: _contentful,
-    cookie: _cookie,
-    request: _request,
-    ...clientConfig
-  } = config
+  const { consent, contentful: _contentful, request: _request, ...clientConfig } = config
 
   return {
     ...clientConfig,
     defaults: consent?.clientDefaults,
   }
-}
-
-function toClientProviderConfig(
-  config: NextjsAppRouterServerOptimizationConfig,
-): NextjsBoundProviderConfig {
-  const { liveUpdates: _liveUpdates, ...rootConfig } = toClientRootConfig(config)
-
-  return rootConfig
 }

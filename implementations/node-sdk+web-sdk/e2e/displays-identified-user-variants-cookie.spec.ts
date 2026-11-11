@@ -1,13 +1,28 @@
-import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
-import { expect, test } from '@playwright/test'
+import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
-const CUSTOM_PROFILE_ID = 'custom-profile-id'
 const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
-test.describe('identified user: cookie', () => {
-  test.beforeEach(async ({ page, context }) => {
-    // user is already identified with a custom profile id
+async function visitReturningUser(page: Page, context: BrowserContext): Promise<string> {
+  const delivery = page.waitForResponse(
+    (response) =>
+      response.url().includes('/experience/') &&
+      response.request().method() === 'POST' &&
+      response.ok(),
+  )
+  await page.goto('/')
+  await expect.poll(async () => await getAnonymousIdFromCookie(context)).toBeTruthy()
+  const initialProfileId = await getAnonymousIdFromCookie(context)
+  if (initialProfileId === undefined) throw new Error('The first visit did not issue a profile ID.')
+  await delivery
+
+  await page.goto('/user/someone')
+  await page.waitForLoadState('domcontentloaded')
+  return initialProfileId
+}
+
+test.describe('identified returning user: cookie', () => {
+  test.beforeEach(async ({ context }) => {
     await context.addCookies([
       {
         name: APP_PERSONALIZATION_CONSENT_COOKIE,
@@ -16,33 +31,24 @@ test.describe('identified user: cookie', () => {
         path: '/',
         sameSite: 'Lax',
       },
-      {
-        name: ANONYMOUS_ID_COOKIE,
-        value: CUSTOM_PROFILE_ID,
-        domain: 'localhost',
-        path: '/',
-        sameSite: 'Lax', // good default for same-site apps
-      },
     ])
-    await page.goto(`/user/someone`)
-    await page.waitForLoadState('domcontentloaded')
   })
 
-  test('should preserve custom profile id in cookie', async ({ context }) => {
-    const cookieId = await getAnonymousIdFromCookie(context)
-    expect(cookieId).toBeDefined()
-    expect(cookieId).toEqual(CUSTOM_PROFILE_ID)
+  test('preserves the API-issued profile ID on the next visit', async ({ context, page }) => {
+    const initialProfileId = await visitReturningUser(page, context)
+    await expect.poll(async () => await getAnonymousIdFromCookie(context)).toBe(initialProfileId)
   })
 
-  test('should sync profile id between cookie and localStorage', async ({ context }) => {
-    const cookieId = await getAnonymousIdFromCookie(context)
-    const storedId = await getAnonymousIdFromStorage(context)
-
-    expect(storedId).toBeDefined()
-    expect(storedId).toEqual(cookieId)
+  test('syncs the returned profile ID between cookie and localStorage', async ({
+    context,
+    page,
+  }) => {
+    const initialProfileId = await visitReturningUser(page, context)
+    await expect.poll(async () => await getAnonymousIdFromStorage(context)).toBe(initialProfileId)
   })
 
-  test('displays common variants', async ({ page }) => {
+  test('displays common variants', async ({ context, page }) => {
+    await visitReturningUser(page, context)
     await expect(
       page.getByText(
         'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
@@ -58,7 +64,8 @@ test.describe('identified user: cookie', () => {
     ).toBeVisible()
   })
 
-  test('displays identified user variants', async ({ page }) => {
+  test('displays identified user variants', async ({ context, page }) => {
+    await visitReturningUser(page, context)
     await expect(page.getByText('This is a level 0 nested variant entry.')).toBeVisible()
 
     await expect(page.getByText('This is a level 1 nested variant entry.')).toBeVisible()

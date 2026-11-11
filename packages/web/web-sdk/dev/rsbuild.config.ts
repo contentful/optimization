@@ -51,6 +51,12 @@ export default defineConfig({
     templateParameters: env,
   },
 
+  server: {
+    proxy: {
+      '/__handoff': { target: process.env.HANDOFF_SERVER_URL ?? 'http://localhost:3001' },
+    },
+  },
+
   output: {
     target: 'web',
   },

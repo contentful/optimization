@@ -1,22 +1,20 @@
 import type { App } from '@contentful/optimization-react-web/api-schemas'
 import {
-  assertOptimizationCacheSafety,
   CoreStateless,
   createPageContextFromUrl,
   type CoreStatelessConfig,
+  type CoreStatelessForRequestOptions,
   type CoreStatelessInsightsOptions,
   type CoreStatelessRequest,
   type CoreStatelessRequestConsent,
   type CoreStatelessRequestOptions,
-  type EventEmissionResult,
   type EventType,
+  type InitialExperienceEvent,
   type ManagedEntryHandoff,
   type OptimizationCacheMetadata,
   type OptimizationData,
-  type OptimizationHandoff,
   type PageViewBuilderArgs,
   type PrivateRequestOptimizationCacheMetadata,
-  type Profile,
   type UniversalEventBuilderArgs,
 } from '@contentful/optimization-react-web/core-sdk'
 import type {
@@ -32,7 +30,7 @@ import {
   createNextjsAnonymousIdSetCookieHeader,
   DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
   isNextjsCookieReader,
-  type NextjsAnonymousIdCookieOptions,
+  toNextjsAnonymousIdCookieOptions,
   type PersistNextjsAnonymousIdOptions,
 } from './cookies'
 import {
@@ -50,7 +48,6 @@ const EDGE_SDK_NAME = '@contentful/optimization-nextjs'
 const EMPTY_COOKIE_READER = {
   get: () => undefined,
 }
-const SECONDS_IN_DAY = 86_400
 
 export type NextjsEdgeRequest = Request | NextjsEdgeRequestSnapshot
 
@@ -79,18 +76,16 @@ export interface NextjsEdgeRequestHandoffOptions extends PersistNextjsAnonymousI
   readonly hydration: OptimizationHydrationMode
   readonly insightsOptions?: CoreStatelessInsightsOptions
   readonly locale?: string
-  readonly pagePayload: PageViewBuilderArgs
-  /** Complete profile snapshot; takes precedence over `profileId`. */
-  readonly profile?: Profile
-  /** Personalization identity only; falls back to the anonymous ID cookie when omitted. */
-  readonly profileId?: string
+  readonly pagePayload?: PageViewBuilderArgs
+  readonly initialEvents?: readonly InitialExperienceEvent[]
+  /** Complete profile or personalization ID; falls back to the anonymous ID cookie when omitted. */
+  readonly profile?: CoreStatelessForRequestOptions['profile']
   readonly request: NextjsEdgeRequest
 }
 
 export interface NextjsEdgeRequestHandoff {
   readonly data: OptimizationData | undefined
   readonly handoff: BrowserOptimizationHandoff
-  readonly pageResult: EventEmissionResult
   readonly persist: (response: Response) => void
   readonly requestOptimization: CoreStatelessRequest
 }
@@ -127,31 +122,34 @@ export function configureNextjsEdgeOptimization(
       experienceOptions: options.experienceOptions,
       insightsOptions: options.insightsOptions,
       locale: options.locale ?? config.locale,
-      profile: options.profile,
-      profileId: options.profileId ?? anonymousId,
+      profile: options.profile ?? (anonymousId === undefined ? undefined : { id: anonymousId }),
     })
-    const pageResult = await requestOptimization.page(options.pagePayload)
-    const { data } = pageResult
+    const url = new URL(request.url)
+    const { handoff: prepared, data } = await requestOptimization.prepareRequestHandoff({
+      routeKey: `${url.pathname}${url.search}`,
+      initialEvents: options.initialEvents,
+      page: options.pagePayload,
+    })
     const handoff = addBrowserHandoffMetadata(
-      createEdgeRequestOptimizationHandoff({
-        cache,
-        data,
-        entries: options.entries,
-      }),
       {
-        hydration: options.hydration,
-        initialPageEvent: pageResult.accepted ? 'skip' : 'emit',
+        ...prepared,
+        cache,
+        entries: options.entries,
+        state: data,
       },
+      { hydration: options.hydration },
     )
 
     return {
       data,
       handoff,
-      pageResult,
       persist: (response) => {
         persistEdgeAnonymousId(response, requestOptimization, data, {
           anonymousIdCookieName: options.anonymousIdCookieName,
-          cookieOptions: options.cookieOptions ?? toConfigCookieOptions(config.cookie),
+          cookieOptions: {
+            ...(options.cookieOptions ?? toNextjsAnonymousIdCookieOptions(config.cookie)),
+            httpOnly: false,
+          },
           deleteWhenProfileCannotPersist: options.deleteWhenProfileCannotPersist,
         })
       },
@@ -241,30 +239,6 @@ function mergeEdgeRequestPage(
   return eventPage === undefined ? requestPage : { ...requestPage, ...eventPage }
 }
 
-function createEdgeRequestOptimizationHandoff(input: {
-  readonly cache?: PrivateRequestOptimizationCacheMetadata
-  readonly data?: OptimizationData
-  readonly entries?: readonly ManagedEntryHandoff[]
-}): OptimizationHandoff {
-  const handoff: OptimizationHandoff = {
-    cache: input.cache ?? { scope: 'private-request' },
-    ...(input.entries === undefined ? {} : { entries: input.entries }),
-    ...(input.data === undefined
-      ? {}
-      : {
-          state: {
-            changes: input.data.changes,
-            profile: input.data.profile,
-            selectedOptimizations: input.data.selectedOptimizations,
-          },
-        }),
-  }
-
-  assertOptimizationCacheSafety(handoff)
-
-  return handoff
-}
-
 function assertEdgeRequestHandoffCacheMetadata(
   cache: OptimizationCacheMetadata,
 ): asserts cache is PrivateRequestOptimizationCacheMetadata {
@@ -294,19 +268,6 @@ function persistEdgeAnonymousId(
   if (setCookie === undefined) return
 
   response.headers.append('set-cookie', setCookie)
-}
-
-function toConfigCookieOptions(
-  cookie: NextjsOptimizationCookieConfig | undefined,
-): NextjsAnonymousIdCookieOptions | undefined {
-  if (cookie === undefined) return undefined
-
-  return {
-    ...(cookie.domain ? { domain: cookie.domain } : {}),
-    ...(typeof cookie.expires === 'number' && Number.isFinite(cookie.expires)
-      ? { maxAge: Math.trunc(cookie.expires * SECONDS_IN_DAY) }
-      : {}),
-  }
 }
 
 export {

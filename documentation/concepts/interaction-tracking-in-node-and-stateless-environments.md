@@ -135,7 +135,7 @@ before emitting events.
 
 The object returned by `forRequest()` is request-local. It retains the profile, consent, locale,
 page context, and request options passed at construction for that object's lifecycle. Bind an ID
-through `profileId` or a full `Profile` snapshot through `profile`. Experience API responses from
+as `profile: { id }` or a full `Profile` snapshot through the same `profile` input. Experience API responses from
 `page()`, `identify()`, `track()`, `screen()`, and sticky `trackView()` update that request-local
 profile, so later calls on the same request object can use it. Do not reuse a request object across
 independent HTTP requests.
@@ -195,6 +195,8 @@ Sticky entry views touch both paths. In Node, `trackView({ sticky: true })` send
 through Experience first, then sends the paired Insights event using the response profile.
 Non-sticky `trackView()` and other Insights-only calls require a full `Profile` supplied through
 `forRequest({ profile })` or returned by an Experience call on the same request client.
+Binding retains the supplied input unchanged without validating the complete snapshot. Admitted
+Insights methods validate it before delivery; an ID-only input does not satisfy that requirement.
 
 The interaction wire event types are:
 
@@ -240,7 +242,7 @@ const requestOptimization = optimization.forRequest({
     },
     userAgent: req.get('user-agent') ?? 'node-server',
   },
-  profileId,
+  profile: profileId === undefined ? undefined : { id: profileId },
 })
 
 const pageResult = await requestOptimization.page()
@@ -462,11 +464,12 @@ delivery. Choose one of these patterns before enabling interaction tracking:
   call the Node SDK with a full profile snapshot held by the server. This manual tracking
   architecture requires application-owned browser observation.
 
-In Next.js server-rendered integrations, `initialPageEvent="skip"` intentionally avoids the initial
-browser Experience API `page()` request when the server or edge helper already accepted that page
-event. If that skip leaves the browser with neither a bound root or provider `handoff` nor manual
-handoff, and without a prior persisted browser profile, automatic entry views, clicks, and hovers
-cannot deliver until a later browser Experience API call populates profile state.
+In Next.js private request handoffs, the server prepares the initial page event and previews the
+result for rendering. The browser admits the prepared event batch, including that page, to its normal
+Experience queue. Keep the request handoff with the page rendered from its preview so the matching
+browser route can commit the batch and hydrate the profile state used by automatic entry tracking.
+If preview fails before an API-issued profile ID is available, the prepared batch can still reach the
+browser and use the API's profile-creation path when admitted.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.
@@ -643,7 +646,7 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 - Decide which events are server facts and which require browser observation.
 - Gate every Node SDK event with the application consent policy before calling the SDK.
 - Persist the returned `profile.id` when consent allows continuity.
-- Pass `{ profileId }` into stateless Experience calls when a profile ID exists; bind a
+- Bind `{ profile: { id } }` with `forRequest()` when a profile ID exists; bind a
   complete profile snapshot for Insights-only calls.
 - Render `data-ctfl-entry-id` with the resolved entry ID, not only the baseline entry ID.
 - Render `data-ctfl-optimization-id`, `data-ctfl-sticky`, and `data-ctfl-variant-index` when an

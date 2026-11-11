@@ -152,7 +152,10 @@ export class InsightsQueue {
     token: object,
   ): Promise<void> {
     try {
-      const sendSuccess = await this.trySendBatches(batches, beacon ? { beacon } : undefined)
+      const sendSuccess = await this.trySendBatches(
+        batches,
+        beacon === undefined ? undefined : { beacon },
+      )
       if (!this.isCurrent(token)) return
 
       if (sendSuccess) {
