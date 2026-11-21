@@ -42,9 +42,9 @@
   "devDependencies": {
     "@babel/core": "7.29.13",
     "@babel/plugin-proposal-decorators": "7.29.7",
-    "@babel/plugin-transform-class-static-block": "7.29.7",
+    "@babel/plugin-transform-class-static-block": "7.29.14",
     "@babel/plugin-transform-export-namespace-from": "7.29.7",
-    "@babel/runtime": "7.29.13",
+    "@babel/runtime": "7.29.14",
     "@jest/globals": "30.5.2",
     "@react-native-community/cli": "20.2.0",
     "@react-native-community/cli-platform-android": "20.2.0",
